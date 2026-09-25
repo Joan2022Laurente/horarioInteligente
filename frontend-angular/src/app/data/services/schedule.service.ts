@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, from, catchError, map } from 'rxjs';
+import { Observable, of, from, catchError, map, firstValueFrom } from 'rxjs';
 import { ScheduleInterval, ApiResponse, UTPCurrentInterval, ProcessedCourse, UTPEvent } from '@domain/models/utp.model';
 import { getProcessedCourses } from '@data/schedule-parser';
 import { getCachedCalendarData, saveCachedCalendarData, getCachedStudentProfile } from '@data/syllabus/client-storage';
@@ -205,24 +205,12 @@ export class ScheduleService {
 
     // 2. Si no estaba sincronizado hoy en Supabase, consultar UTP Academic Gateway
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      if (studentCode) {
-        headers['x-user-id'] = studentCode;
-      }
+      const res = await firstValueFrom(
+        this.http.get<ApiResponse<ScheduleInterval>>(`${environment.academicApiUrl}/schedule`)
+      );
 
-      const backendRes = await fetch(`${environment.academicApiUrl}/schedule`, {
-        headers,
-      });
-
-      if (backendRes.ok) {
-        const json = await backendRes.json();
-        if (json?.data?.classes && json.data.classes.length > 0) {
-          const scheduleData: ScheduleInterval = json.data;
+      if (res?.success && res.data?.classes && res.data.classes.length > 0) {
+        const scheduleData: ScheduleInterval = res.data;
           const events: UTPEvent[] = scheduleData.classes.map((c: any) => ({
             id: c.id,
             title: `${c.courseName}${c.section && c.section !== 'Sección Única' ? ' (' + c.section + ')' : ''} (Semana ${scheduleData.weekNumber}) - Sesión`,
@@ -290,7 +278,6 @@ export class ScheduleService {
 
           return scheduleData;
         }
-      }
     } catch (e: any) {
       console.warn('[ScheduleService] ℹ️ Academic Gateway offline o no disponible; sirviendo desde caché local:', e.message);
     }

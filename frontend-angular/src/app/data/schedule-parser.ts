@@ -1,4 +1,5 @@
 import { ProcessedCourse, UTPEvent, CourseSessionSchedule, CourseEvaluation, AcademicMilestone } from '@domain/models/utp.model';
+import { normalizeKey, parseNormalizedDate } from '@core/utils/string.utils';
 import { KNOWN_SYLLABUS_MAP } from './syllabus/official-registry';
 import { getAllEvaluationsFromRegistry } from './syllabus-parser';
 
@@ -40,13 +41,8 @@ export function formatCourseName(rawName: string): string {
 }
 
 export function getCanonicalCourseKey(name: string): string {
-  return (name || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
+  return normalizeKey(name)
     .replace(/-\s*\d{4,6}$/g, '')
-    .replace(/[^A-Z0-9]/g, ' ')
-    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -113,9 +109,7 @@ export function getDayName(dayIndex: number): string {
 }
 
 export function parseDate(dateStr: string): Date {
-  // Maneja formato "2026-08-27 16:00:00" o ISO
-  const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
-  return new Date(normalized);
+  return parseNormalizedDate(dateStr);
 }
 
 export function formatTime(dateStr: string): string {

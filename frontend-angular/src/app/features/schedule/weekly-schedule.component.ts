@@ -17,6 +17,7 @@ import { resolveEventLocation, getClassroomLocation } from '@data/classroom-help
 import { getCachedCalendarData } from '@data/syllabus/client-storage';
 import { getAuroraStyle } from '@data/aurora.helper';
 import { ScheduleService } from '@data/services/schedule.service';
+import { normalizeKey } from '../../core/utils/string.utils';
 
 @Component({
   selector: 'app-weekly-schedule',
@@ -396,14 +397,7 @@ export class WeeklyScheduleComponent implements OnInit {
     const seen = new Set<string>();
     const unique: ProcessedCourse[] = [];
     for (const c of raw) {
-      const key = (c.name || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase()
-        .replace(/-\s*\d{4,6}$/g, '')
-        .replace(/[^A-Z0-9]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      const key = normalizeKey((c.name || '').replace(/-\s*\d{4,6}$/g, ''));
       if (!seen.has(key)) {
         seen.add(key);
         unique.push(c);

@@ -2,6 +2,8 @@ package com.utp.horario.presentation.controller;
 
 import com.utp.horario.domain.model.Syllabus;
 import com.utp.horario.domain.port.in.SyllabusServicePort;
+import com.utp.horario.infrastructure.security.CurrentStudent;
+import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import com.utp.horario.presentation.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +24,7 @@ import java.util.List;
 public class SyllabusController {
 
     private final SyllabusServicePort syllabusServicePort;
-    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
+    private final SecurityIdentityResolver identityResolver;
 
     @GetMapping("/{courseCode}")
     public ResponseEntity<ApiResponse<Syllabus>> getSyllabus(
@@ -36,11 +38,8 @@ public class SyllabusController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Syllabus>>> getAllSyllabi(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(required = false) String studentId) {
-        String effectiveStudentId = identityResolver.resolveStudentCode(authHeader, studentId);
-        List<Syllabus> list = syllabusServicePort.getAllSyllabiForStudent(effectiveStudentId);
+    public ResponseEntity<ApiResponse<List<Syllabus>>> getAllSyllabi(@CurrentStudent String studentId) {
+        List<Syllabus> list = syllabusServicePort.getAllSyllabiForStudent(studentId);
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
@@ -64,7 +63,7 @@ public class SyllabusController {
             @RequestParam(required = false) String sectionId,
             @RequestParam(required = false) String pdfUrl,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        String token = identityResolver.extractBearerToken(authHeader);
         String rawText = syllabusServicePort.fetchRawSyllabusText(courseCode, sectionId, pdfUrl, token);
         return ResponseEntity.ok(ApiResponse.ok("Texto de sílabo obtenido", rawText));
     }
