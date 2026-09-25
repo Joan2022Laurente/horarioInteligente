@@ -1,0 +1,52 @@
+# ==========================================
+# Environment Variables & Secrets (CRITICAL)
+# ==========================================
+.env
+.env.*
+*.env
+!.env.example
+
+# ==========================================
+# Backend (Spring Boot / Maven / Java)
+# ==========================================
+backend-springboot/target/
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+
+# ==========================================
+# Frontend (Angular / Node / NPM)
+# ==========================================
+frontend-angular/node_modules/
+**/node_modules/
+frontend-angular/dist/
+**/dist/
+frontend-angular/.angular/
+**/.angular/
+frontend-angular/tmp/
+frontend-angular/out-tsc/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==========================================
+# IDE & System Files
+# ==========================================
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.log
+logs/
+*.pid

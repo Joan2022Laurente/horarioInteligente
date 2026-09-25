@@ -1,0 +1,50 @@
+server:
+  port: ${PORT:8080}
+  max-http-request-header-size: 65536
+  tomcat:
+    max-http-response-header-size: 65536
+
+spring:
+  application:
+    name: horario-backend-negocio
+  datasource:
+    url: ${SUPABASE_DB_URL:jdbc:h2:mem:horariodb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${SUPABASE_DB_DRIVER:org.h2.Driver}
+    username: ${SUPABASE_DB_USER:sa}
+    password: ${SUPABASE_DB_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+# Conexión con la API Externa Institucional (Heroku)
+academic:
+  gateway:
+    url: ${ACADEMIC_GATEWAY_URL:https://utp-academic-gateway-c0da87808dcb.herokuapp.com/api/v1}
+
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration-ms: 86400000 # 24 horas
+  rate-limit:
+    daily-quota: 6
+    unlimited-emails:
+      - admin@utp.edu.pe
+  openrouter:
+    api-url: https://openrouter.ai/api/v1/chat/completions
+    api-key: ${OPENROUTER_API_KEY:}
+    api-key-2: ${OPENROUTER_API_KEY_2:}
+    api-key-3: ${OPENROUTER_API_KEY_3:}
+    api-key-4: ${OPENROUTER_API_KEY_4:}
+    api-key-5: ${OPENROUTER_API_KEY_5:}
+    api-keys: ${OPENROUTER_API_KEYS:}
+    primary-model: ${OPENROUTER_PRIMARY_MODEL:}
+    models:
+      - nvidia/nemotron-3.5-lightning:free
+      - nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+      - nvidia/nemotron-3-super-120b-a12b:free
+      - nvidia/nemotron-3-ultra-550b-a55b:free

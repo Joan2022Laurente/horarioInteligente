@@ -1,0 +1,26 @@
+{
+  "/utp-api": {
+    "target": "https://api-pao.utpxpedition.com",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/utp-api": ""
+    },
+    "headers": {
+      "Origin": "https://class.utp.edu.pe",
+      "Referer": "https://class.utp.edu.pe/"
+    }
+  },
+  "/utp-portal-api": {
+    "target": "https://api-portal.utpxpedition.com",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/utp-portal-api": ""
+    },
+    "headers": {
+      "Origin": "https://portal.utp.edu.pe",
+      "Referer": "https://portal.utp.edu.pe/"
+    }
+  }
+}
