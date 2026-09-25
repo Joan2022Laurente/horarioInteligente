@@ -50,3 +50,8 @@ Thumbs.db
 *.log
 logs/
 *.pid
+
+# Frontend build outputs in backend resources
+backend-springboot/src/main/resources/static/*.js
+backend-springboot/src/main/resources/static/*.css
+backend-springboot/src/main/resources/static/*.map

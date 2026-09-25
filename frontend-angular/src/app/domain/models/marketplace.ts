@@ -15,6 +15,8 @@ export type ServiceSortBy = 'POPULAR' | 'RATING' | 'RECENT' | 'PRICE_LOW' | 'PRI
 
 export type MarketplaceType = 'PRODUCT' | 'SERVICE';
 
+export type MarketplaceItem = ServiceItem;
+
 export interface ServiceItem {
   id: string;
   itemType?: MarketplaceType;

@@ -15,6 +15,7 @@ import { LoginPageComponent } from './features/auth/login-page.component';
 import { PrivacyPageComponent } from './features/privacy/privacy-page.component';
 
 import { SyllabusService } from '@data/services/syllabus.service';
+import { UiFeedbackService } from './core/services/ui-feedback.service';
 
 @Component({
   selector: 'app-root',
@@ -77,6 +78,24 @@ import { SyllabusService } from '@data/services/syllabus.service';
           [isOpen]="isSettingsModalOpen"
           (close)="isSettingsModalOpen = false">
         </app-settings-modal>
+
+        <!-- Contenedor flotante de notificaciones Toasts desacoplado -->
+        <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+          @for (toast of feedbackService.toasts(); track toast.id) {
+            <div 
+              class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border text-xs font-semibold shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+              [ngClass]="{
+                'bg-emerald-950/90 border-emerald-500/30 text-emerald-200': toast.type === 'success',
+                'bg-rose-950/90 border-rose-500/30 text-rose-200': toast.type === 'error',
+                'bg-amber-950/90 border-amber-500/30 text-amber-200': toast.type === 'warning',
+                'bg-[#16161a]/95 border-white/15 text-neutral-200': toast.type === 'info'
+              }"
+            >
+              <span class="flex-1">{{ toast.message }}</span>
+              <button (click)="feedbackService.dismiss(toast.id)" class="text-white/60 hover:text-white border-none bg-transparent cursor-pointer p-0.5">✕</button>
+            </div>
+          }
+        </div>
       </div>
     }
   `
@@ -91,6 +110,7 @@ export class AppComponent implements OnInit {
   constructor(
     public authService: AuthService,
     public scheduleService: ScheduleService,
+    public feedbackService: UiFeedbackService,
     private syllabusService: SyllabusService
   ) {}
 

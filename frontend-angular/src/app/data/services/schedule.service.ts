@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, from, catchError, map, firstValueFrom } from 'rxjs';
 import { ScheduleInterval, ApiResponse, UTPCurrentInterval, ProcessedCourse, UTPEvent } from '@domain/models/utp.model';
@@ -6,6 +6,7 @@ import { getProcessedCourses } from '@data/schedule-parser';
 import { getCachedCalendarData, saveCachedCalendarData, getCachedStudentProfile } from '@data/syllabus/client-storage';
 import { AppDiagnosticLogger } from '@data/diagnostic-logger';
 import { environment } from '@env/environment';
+import { UiFeedbackService } from '../../core/services/ui-feedback.service';
 
 const DAILY_SYNC_KEY = 'utp_schedule_last_sync_date';
 
@@ -13,13 +14,22 @@ const DAILY_SYNC_KEY = 'utp_schedule_last_sync_date';
   providedIn: 'root',
 })
 export class ScheduleService {
+  private readonly feedback = inject(UiFeedbackService);
   private activeStudentCode: string = '';
+
+  private readonly loadingSignal = signal<boolean>(false);
+  readonly loading = this.loadingSignal.asReadonly();
 
   private scheduleSignal = signal<ScheduleInterval | null>(null);
   readonly currentSchedule = this.scheduleSignal.asReadonly();
 
   private intervalSignal = signal<UTPCurrentInterval | null>(null);
   readonly currentInterval = this.intervalSignal.asReadonly();
+
+  readonly calendarData = computed(() => {
+    const interval = this.intervalSignal();
+    return interval ? { current_interval: interval } : null;
+  });
 
   readonly processedCourses = computed<ProcessedCourse[]>(() => {
     const interval = this.intervalSignal();
@@ -135,14 +145,16 @@ export class ScheduleService {
    * Aplica Daily Gate: Si ya se sincronizó hoy en Supabase, lee desde la BD (0 llamadas a UTP).
    */
   private async syncDailyInBackground(todayDateStr: string, tokenOverride?: string): Promise<ScheduleInterval | null> {
-    const profile = getCachedStudentProfile();
-    const token = tokenOverride || profile?.token;
-    const studentCode = (profile?.username || profile?.userId || localStorage.getItem('utp_current_student_code') || '').toUpperCase();
+    this.loadingSignal.set(true);
+    try {
+      const profile = getCachedStudentProfile();
+      const token = tokenOverride || profile?.token;
+      const studentCode = (profile?.username || profile?.userId || localStorage.getItem('utp_current_student_code') || '').toUpperCase();
 
-    if (!token && !studentCode) {
-      console.log('[ScheduleService] ℹ️ No hay sesión activa de UTP para sincronizar horario.');
-      return this.scheduleSignal();
-    }
+      if (!token && !studentCode) {
+        console.log('[ScheduleService] ℹ️ No hay sesión activa de UTP para sincronizar horario.');
+        return this.scheduleSignal();
+      }
 
     // 1. GATEWAY SUPABASE: Verificar si ya existe horario del día en Supabase
     if (studentCode) {
@@ -276,13 +288,15 @@ export class ScheduleService {
             isFreshToday: true
           });
 
-          return scheduleData;
         }
-    } catch (e: any) {
-      console.warn('[ScheduleService] ℹ️ Academic Gateway offline o no disponible; sirviendo desde caché local:', e.message);
-    }
+      } catch (e: any) {
+        console.warn('[ScheduleService] ℹ️ Academic Gateway offline o no disponible; sirviendo desde caché local:', e.message);
+      }
 
-    return this.scheduleSignal();
+      return this.scheduleSignal();
+    } finally {
+      this.loadingSignal.set(false);
+    }
   }
 
   /**
@@ -350,11 +364,14 @@ export class ScheduleService {
         message: 'Horario verificado del día',
         data: schedule,
       })),
-      catchError(() => of({
-        success: true,
-        message: 'Horario mantenido en caché',
-        data: this.scheduleSignal(),
-      }))
+      catchError(() => {
+        this.feedback.show('Modo sin conexión: mostrando horario guardado localmente.', 'info');
+        return of({
+          success: true,
+          message: 'Horario mantenido en caché',
+          data: this.scheduleSignal(),
+        });
+      })
     );
   }
 
@@ -369,11 +386,14 @@ export class ScheduleService {
         message: 'Horario sincronizado manualmente',
         data: schedule,
       })),
-      catchError(() => of({
-        success: false,
-        message: 'Error al sincronizar horario',
-        data: this.scheduleSignal(),
-      }))
+      catchError(() => {
+        this.feedback.show('Modo sin conexión: mostrando horario guardado localmente.', 'info');
+        return of({
+          success: false,
+          message: 'Error al sincronizar horario',
+          data: this.scheduleSignal(),
+        });
+      })
     );
   }
 }

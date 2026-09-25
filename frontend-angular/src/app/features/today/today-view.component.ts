@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { 
@@ -25,6 +25,7 @@ import { getCachedCalendarData, saveCachedCalendarData, getCachedSyllabus, getAl
 import { getAuroraStyle } from '@data/aurora.helper';
 import { ScheduleService } from '@data/services/schedule.service';
 import { ClassDetailModalComponent } from '@features/schedule/class-detail-modal.component';
+import { TodayStore } from './today.store';
 
 export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
@@ -595,8 +596,31 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   activeSection: TodayTabSection = 'todayClasses';
   taskFilter: 'all' | 'graded' | 'practice' = 'all';
 
-  now: Date = new Date();
-  private timer: any;
+  readonly todayStore = inject(TodayStore);
+
+  get now(): Date {
+    return this.todayStore.now();
+  }
+
+  get bannerClass(): UTPEvent | null {
+    return this.todayStore.currentClass() || this.todayStore.nextClass();
+  }
+
+  get isLiveNow(): boolean {
+    return !!this.todayStore.currentClass();
+  }
+
+  get minutesRemainingCurrent(): number | null {
+    return this.todayStore.minutesRemainingCurrent();
+  }
+
+  get minutesToNext(): number | null {
+    return this.todayStore.minutesToNext();
+  }
+
+  get todayEvents(): UTPEvent[] {
+    return this.todayStore.eventsForToday();
+  }
 
   currentInterval: UTPCurrentInterval = {
     period_name: '2026 - Ciclo 2 Agosto',
@@ -610,11 +634,6 @@ export class TodayViewComponent implements OnInit, OnDestroy {
     events: []
   };
 
-  todayEvents: UTPEvent[] = [];
-  bannerClass: UTPEvent | null = null;
-  isLiveNow = false;
-  minutesRemainingCurrent: number | null = null;
-  minutesToNext: number | null = null;
   currentWeek = 6;
   totalWeeks = 18;
   periodName = '2026 - Ciclo 2 Agosto';
@@ -637,14 +656,10 @@ export class TodayViewComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.refreshData();
-    this.timer = setInterval(() => {
-      this.now = new Date();
-      this.calculateCurrentBanner();
-    }, 30000);
   }
 
   ngOnDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    // Ciclo de reloj gestionado por TodayStore
   }
 
   refreshData(): void {
@@ -764,13 +779,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   }
 
   calculateCurrentBanner(): void {
-    const events = this.currentInterval.events || [];
-    const { currentClass, nextClass, minutesToNext, minutesRemainingCurrent } = getCurrentAndNextClass(events, this.now);
-    this.bannerClass = currentClass || nextClass;
-    this.isLiveNow = !!currentClass;
-    this.minutesRemainingCurrent = minutesRemainingCurrent;
-    this.minutesToNext = minutesToNext;
-    this.todayEvents = getEventsForDay(events, this.now);
+    // El estado temporal y eventos del día se calculan reactivamente en TodayStore
   }
 
   get parsedBannerTitle(): string {
