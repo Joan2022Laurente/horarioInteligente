@@ -27,15 +27,15 @@ public class AiChatController {
     public ResponseEntity<ApiResponse<AiChatMessage>> chat(
             @CurrentStudent(required = false) String studentId,
             @RequestBody AiChatRequest request) {
-        String effectiveUserId = (studentId != null && !studentId.isBlank()) 
+        String effectiveStudentCode = (studentId != null && !studentId.isBlank()) 
                 ? studentId 
-                : (request.getUserId() != null && !request.getUserId().isBlank() ? request.getUserId() : "anonymous_user");
+                : (request.getUserId() != null && !request.getUserId().isBlank() ? request.getUserId() : "current-student");
 
         AiChatMessage response = aiAssistantServicePort.processUserQuery(
-                effectiveUserId,
+                effectiveStudentCode,
                 request.getMessage(),
-                request.getSchedule(),
-                request.getSyllabi(),
+                null,
+                null,
                 request.getModel()
         );
         return ResponseEntity.ok(ApiResponse.ok(response));
