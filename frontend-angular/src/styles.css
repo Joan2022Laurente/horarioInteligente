@@ -727,6 +727,10 @@ video {
   z-index: 50;
 }
 
+.col-span-full{
+  grid-column: 1 / -1;
+}
+
 .-my-2{
   margin-top: -0.5rem;
   margin-bottom: -0.5rem;

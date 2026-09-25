@@ -20,27 +20,37 @@ import java.util.List;
 public class TaskController {
 
     private final TaskSyncServicePort taskSyncServicePort;
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TaskSyncItem>>> getTasks(
-            @RequestParam(defaultValue = "current-student") String studentId) {
-        List<TaskSyncItem> tasks = taskSyncServicePort.getTasksForStudent(studentId);
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String studentId) {
+        String effectiveStudentId = identityResolver.resolveStudentCode(authHeader, studentId);
+        List<TaskSyncItem> tasks = taskSyncServicePort.getTasksForStudent(effectiveStudentId);
         return ResponseEntity.ok(ApiResponse.ok(tasks));
     }
 
     @PostMapping("/sync")
     public ResponseEntity<ApiResponse<List<TaskSyncItem>>> syncTasks(
-            @RequestParam(defaultValue = "demo-token") String token,
-            @RequestParam(defaultValue = "34374") String sectionId) {
-        List<TaskSyncItem> synced = taskSyncServicePort.syncTasksFromUtp(token, sectionId);
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String token,
+            @RequestParam String sectionId) {
+        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        if (effectiveToken == null || effectiveToken.isBlank()) {
+            throw new SecurityException("Se requiere un token de sesión legítimo para sincronizar tareas");
+        }
+        List<TaskSyncItem> synced = taskSyncServicePort.syncTasksFromUtp(effectiveToken, sectionId);
         return ResponseEntity.ok(ApiResponse.ok("Tareas sincronizadas", synced));
     }
 
     @PostMapping("/{taskId}/deliver")
     public ResponseEntity<ApiResponse<TaskSyncItem>> markDelivered(
             @PathVariable String taskId,
-            @RequestParam(defaultValue = "current-student") String studentId) {
-        TaskSyncItem updated = taskSyncServicePort.markTaskAsDelivered(taskId, studentId);
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String studentId) {
+        String effectiveStudentId = identityResolver.resolveStudentCode(authHeader, studentId);
+        TaskSyncItem updated = taskSyncServicePort.markTaskAsDelivered(taskId, effectiveStudentId);
         return ResponseEntity.ok(ApiResponse.ok("Tarea marcada como entregada", updated));
     }
 }

@@ -1,5 +1,5 @@
 import { ParsedSyllabus } from './types';
-import { UTPCalendarResponse, StudentProfile } from '@/types/utp';
+import { UTPCalendarResponse, StudentProfile } from '@domain/models/utp.model';
 import { getSyllabusForCourse } from './official-registry';
 
 /**
@@ -11,6 +11,17 @@ import { getSyllabusForCourse } from './official-registry';
 const SYLLABUS_STORAGE_PREFIX = 'utp_syllabus_live_';
 const CALENDAR_STORAGE_KEY = 'utp_calendar_data';
 const PROFILE_STORAGE_KEY = 'utp_student_profile';
+
+export function getActiveStudentCode(): string {
+  if (typeof window === 'undefined') return '';
+  const profile = getCachedStudentProfile();
+  return (profile?.studentCode || profile?.username || profile?.userId || localStorage.getItem('utp_current_student_code') || '').toUpperCase().trim();
+}
+
+export function getTenantCalendarKey(studentCode?: string): string {
+  const code = (studentCode || getActiveStudentCode()).toUpperCase().trim();
+  return code ? `utp_${code}_calendar_data` : CALENDAR_STORAGE_KEY;
+}
 
 /**
  * Obtiene todos los sílabos parseados guardados en localStorage
@@ -127,12 +138,17 @@ export function saveCachedSyllabus(courseIdOrName: string, syllabus: ParsedSylla
 }
 
 /**
- * Obtiene el calendario y eventos guardados en localStorage
+ * Obtiene el calendario y eventos guardados en localStorage para el estudiante actual
  */
-export function getCachedCalendarData(): UTPCalendarResponse | null {
+export function getCachedCalendarData(studentCode?: string): UTPCalendarResponse | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(CALENDAR_STORAGE_KEY);
+    const key = getTenantCalendarKey(studentCode);
+    let raw = localStorage.getItem(key);
+    // Retrocompatibilidad con clave global no particionada
+    if (!raw && key !== CALENDAR_STORAGE_KEY) {
+      raw = localStorage.getItem(CALENDAR_STORAGE_KEY);
+    }
     if (raw) {
       return JSON.parse(raw) as UTPCalendarResponse;
     }
@@ -143,12 +159,13 @@ export function getCachedCalendarData(): UTPCalendarResponse | null {
 }
 
 /**
- * Guarda el calendario y eventos en localStorage
+ * Guarda el calendario y eventos en localStorage particionado por estudiante
  */
-export function saveCachedCalendarData(data: UTPCalendarResponse): void {
+export function saveCachedCalendarData(data: UTPCalendarResponse, studentCode?: string): void {
   if (typeof window === 'undefined' || !data) return;
   try {
-    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(data));
+    const key = getTenantCalendarKey(studentCode);
+    localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
     console.warn('[client-storage] Error guardando datos de calendario en localStorage:', e);
   }
@@ -205,20 +222,26 @@ export function clearAllLocalUserData(): void {
   try {
     localStorage.removeItem(PROFILE_STORAGE_KEY);
     localStorage.removeItem(CALENDAR_STORAGE_KEY);
+    localStorage.removeItem('utp_auth_profile');
+    localStorage.removeItem('utp_current_student_code');
+    localStorage.removeItem('utp_schedule_last_sync_date');
+    localStorage.removeItem('utp_community_posts_cache');
+    localStorage.removeItem('utp_networking_matches_cache');
+    localStorage.removeItem('utp_my_networking_profile');
+    localStorage.removeItem('utp_networking_profile_hash');
 
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (
         key.startsWith(SYLLABUS_STORAGE_PREFIX) || 
-        key.startsWith('utp_schedule_last_sync') ||
+        key.startsWith('utp_') ||
         key.startsWith('networking_')
       )) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
-    localStorage.removeItem('utp_schedule_last_sync_date');
   } catch (e) {
     console.warn('[client-storage] Error limpiando datos locales:', e);
   }

@@ -19,11 +19,10 @@ public class TaskSyncServiceImpl implements TaskSyncServicePort {
 
     @Override
     public List<TaskSyncItem> getTasksForStudent(String studentId) {
-        List<TaskSyncItem> tasks = taskSyncRepositoryPort.findByStudentId(studentId);
-        if (tasks.isEmpty()) {
-            tasks = syncTasksFromUtp("demo-token", "34374");
+        if (studentId == null || studentId.isBlank() || "current-student".equalsIgnoreCase(studentId)) {
+            return List.of();
         }
-        return tasks;
+        return taskSyncRepositoryPort.findByStudentId(studentId);
     }
 
     @Override

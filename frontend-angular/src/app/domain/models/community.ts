@@ -85,3 +85,6 @@ export interface CreatePostDto {
   poll_options?: string[];
   tags: string[];
 }
+
+export type PostRow = CommunityPost;
+export type PostCommentRow = CommunityComment;

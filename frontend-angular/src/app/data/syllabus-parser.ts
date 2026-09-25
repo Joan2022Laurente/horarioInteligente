@@ -1,4 +1,4 @@
-import { CourseEvaluation } from '@/types/utp';
+import { CourseEvaluation } from '@domain/models/utp.model';
 import { 
   SyllabusGeneralInfo, 
   SyllabusEvaluationItem, 

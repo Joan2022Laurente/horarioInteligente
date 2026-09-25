@@ -22,6 +22,7 @@ import java.util.List;
 public class SyllabusController {
 
     private final SyllabusServicePort syllabusServicePort;
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
 
     @GetMapping("/{courseCode}")
     public ResponseEntity<ApiResponse<Syllabus>> getSyllabus(
@@ -29,14 +30,17 @@ public class SyllabusController {
             @RequestParam(required = false) String sectionId,
             @RequestParam(required = false) String pdfUrl,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        String token = identityResolver.extractBearerToken(authHeader);
         Syllabus syllabus = syllabusServicePort.getSyllabus(courseCode, sectionId, pdfUrl, token);
         return ResponseEntity.ok(ApiResponse.ok(syllabus));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Syllabus>>> getAllSyllabi(@RequestParam(defaultValue = "current-student") String studentId) {
-        List<Syllabus> list = syllabusServicePort.getAllSyllabiForStudent(studentId);
+    public ResponseEntity<ApiResponse<List<Syllabus>>> getAllSyllabi(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String studentId) {
+        String effectiveStudentId = identityResolver.resolveStudentCode(authHeader, studentId);
+        List<Syllabus> list = syllabusServicePort.getAllSyllabiForStudent(effectiveStudentId);
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 

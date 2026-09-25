@@ -262,3 +262,33 @@ export interface ApiResponse<T> {
   data: T;
   error?: string;
 }
+
+export interface UTPRawPendingActivity {
+  contentId: string;
+  type: 'HOMEWORK' | 'FORUM' | string;
+  activityId: string;
+  activityTitle: string;
+  evaluationTopScore: number;
+  publishAt: string;
+  finishAt: string;
+  isQualificated: boolean;
+  courseId: string;
+  sectionId: string;
+  weekNumber: number;
+  themeId: string;
+  unityId: string;
+  activityStatusFinal: string;
+  courseName: string;
+  sectionCode: string;
+  content?: string;
+  deliverables?: string;
+  files?: any[];
+}
+
+export interface UTPPendingActivitiesResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  data: UTPRawPendingActivity[];
+  idTransaction: string;
+}

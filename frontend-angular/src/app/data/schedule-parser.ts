@@ -1,4 +1,4 @@
-import { ProcessedCourse, UTPEvent, CourseSessionSchedule, CourseEvaluation, AcademicMilestone } from '@/types/utp';
+import { ProcessedCourse, UTPEvent, CourseSessionSchedule, CourseEvaluation, AcademicMilestone } from '@domain/models/utp.model';
 import { KNOWN_SYLLABUS_MAP } from './syllabus/official-registry';
 import { getAllEvaluationsFromRegistry } from './syllabus-parser';
 

@@ -28,37 +28,43 @@ import { TaskSyncItem } from '@domain/models/task.model';
           <span>Acción</span>
         </div>
 
-        @for (task of taskService.tasks(); track task.id) {
-          <div class="table-row" [class.delivered-row]="task.isDelivered">
-            <div class="task-info">
-              <strong class="task-title">{{ task.title }}</strong>
-              <span class="task-type">{{ task.type }}</span>
-            </div>
-
-            <span class="course-name">{{ task.courseName }}</span>
-
-            <span class="week-tag mono">Sem {{ task.week }}</span>
-
-            <div>
-              @if (task.isDelivered || task.homeworkStatus === 'DELIVERED') {
-                <span class="badge badge-success">Entregado</span>
-              } @else {
-                <span class="badge badge-amber">Pendiente</span>
-              }
-            </div>
-
-            <div>
-              @if (!task.isDelivered && task.homeworkStatus !== 'DELIVERED') {
-                <button class="btn btn-primary deliver-btn" (click)="markDelivered(task.id)">
-                  Marcar Entregado
-                </button>
-              } @else {
-                <span class="delivered-date mono">
-                  {{ task.deliveredDate ? 'Enviado' : 'Completado' }}
-                </span>
-              }
-            </div>
+        @if (taskService.tasks().length === 0) {
+          <div class="empty-state">
+            <p>No hay tareas registradas para tu horario actual o no se ha sincronizado aún.</p>
           </div>
+        } @else {
+          @for (task of taskService.tasks(); track task.id) {
+            <div class="table-row" [class.delivered-row]="task.isDelivered">
+              <div class="task-info">
+                <strong class="task-title">{{ task.title }}</strong>
+                <span class="task-type">{{ task.type }}</span>
+              </div>
+
+              <span class="course-name">{{ task.courseName }}</span>
+
+              <span class="week-tag mono">Sem {{ task.week }}</span>
+
+              <div>
+                @if (task.isDelivered || task.homeworkStatus === 'DELIVERED') {
+                  <span class="badge badge-success">Entregado</span>
+                } @else {
+                  <span class="badge badge-amber">Pendiente</span>
+                }
+              </div>
+
+              <div>
+                @if (!task.isDelivered && task.homeworkStatus !== 'DELIVERED') {
+                  <button class="btn btn-primary deliver-btn" (click)="markDelivered(task.id)">
+                    Marcar Entregado
+                  </button>
+                } @else {
+                  <span class="delivered-date mono">
+                    {{ task.deliveredDate ? 'Enviado' : 'Completado' }}
+                  </span>
+                }
+              </div>
+            </div>
+          }
         }
       </div>
     </div>

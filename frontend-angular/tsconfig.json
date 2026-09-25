@@ -25,8 +25,8 @@
       "@shared/*": ["src/app/shared/*"],
       "@env/*": ["src/environments/*"],
       "@env/environment": ["src/environments/environment.ts"],
-      "@/types/utp": ["src/app/types/utp.ts"],
-      "@/types/*": ["src/app/types/*"],
+      "@/types/utp": ["src/app/domain/models/utp.model.ts"],
+      "@/types/*": ["src/app/domain/models/*"],
       "@/lib/*": ["src/app/data/*"],
       "@/*": ["src/*"]
     }

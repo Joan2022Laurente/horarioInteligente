@@ -2,7 +2,7 @@ import {
   CourseAssignment, 
   SyllabusWeekSyncContext, 
   TaskWithSyllabusContext 
-} from '@/types/utp';
+} from '@domain/models/utp.model';
 import { getSyllabusForCourse, ParsedSyllabus } from './syllabus-parser';
 import { getCachedSyllabus } from './syllabus/client-storage';
 import { VERIFIED_ASSIGNMENT_RUBRICS } from './rubrics/verified-rubrics';

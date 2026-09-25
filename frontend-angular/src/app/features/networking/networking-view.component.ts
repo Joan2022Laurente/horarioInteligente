@@ -84,6 +84,12 @@ import { formatCourseName } from '@data/schedule-parser';
 
       <!-- TAB 1: Matching Dual 1 a 1 -->
       @if (activeTab === 'buddies') {
+        @if (filteredBuddies.length === 0) {
+          <div class="col-span-full p-12 text-center space-y-2 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-subtle)]">
+            <p class="text-sm font-bold text-white">No hay compañeros de estudio disponibles en este momento</p>
+            <p class="text-xs text-neutral-400">Las coincidencias se generan automáticamente cuando otros estudiantes de tu sede registren sus horarios.</p>
+          </div>
+        } @else {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           @for (buddy of filteredBuddies; track buddy.id) {
             <div class="flex flex-col justify-between rounded-3xl bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border border-[var(--border-subtle)] hover:border-neutral-500 p-5 space-y-4 shadow-none transition-all group">
@@ -181,6 +187,7 @@ import { formatCourseName } from '@data/schedule-parser';
             </div>
           }
         </div>
+        }
       }
 
       <!-- TAB 2: Mesas de Estudio (Beacons) -->

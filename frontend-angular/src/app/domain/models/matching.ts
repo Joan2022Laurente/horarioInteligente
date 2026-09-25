@@ -4,6 +4,15 @@ export type MatchIntent = 'PROJECT_TEAM' | 'STUDY_BUDDY' | 'EXAM_PREP' | 'COFFEE
 export type BeaconStatus = 'ACTIVE' | 'FULL' | 'EXPIRED' | 'CANCELLED';
 export type SquadRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
 
+export interface NetworkingProfileRow {
+  student_id: string;
+  skills: string[];
+  interests: string[];
+  match_intent: MatchIntent;
+  ghost_mode: boolean;
+  updated_at: string;
+}
+
 export interface FreeWindow {
   dayNumber: number; // 1 = Lunes, 2 = Martes, ...
   dayName: string;

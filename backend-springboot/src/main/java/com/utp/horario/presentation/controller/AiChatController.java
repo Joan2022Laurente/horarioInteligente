@@ -22,11 +22,26 @@ public class AiChatController {
 
     private final AiAssistantServicePort aiAssistantServicePort;
     private final DailyQuotaServicePort dailyQuotaServicePort;
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
 
     @PostMapping("/chat")
-    public ResponseEntity<ApiResponse<AiChatMessage>> chat(@RequestBody AiChatRequest request) {
+    public ResponseEntity<ApiResponse<AiChatMessage>> chat(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody AiChatRequest request) {
+        String effectiveUserId = request.getUserId();
+        try {
+            if (authHeader != null && !authHeader.isBlank()) {
+                effectiveUserId = identityResolver.resolveStudentCode(authHeader, request.getUserId());
+            }
+        } catch (Exception e) {
+            // Si no se puede resolver del token, usar el userId del body
+        }
+        if (effectiveUserId == null || effectiveUserId.isBlank()) {
+            effectiveUserId = "anonymous_user";
+        }
+
         AiChatMessage response = aiAssistantServicePort.processUserQuery(
-                request.getUserId(),
+                effectiveUserId,
                 request.getMessage(),
                 request.getSchedule(),
                 request.getSyllabi(),
@@ -37,8 +52,17 @@ public class AiChatController {
 
     @GetMapping("/quota")
     public ResponseEntity<ApiResponse<DailyQuotaStatus>> getQuota(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(defaultValue = "anonymous_user") String userId) {
-        DailyQuotaStatus status = dailyQuotaServicePort.checkQuota(userId);
+        String effectiveUserId = userId;
+        try {
+            if (authHeader != null && !authHeader.isBlank()) {
+                effectiveUserId = identityResolver.resolveStudentCode(authHeader, userId);
+            }
+        } catch (Exception e) {
+            // fallback
+        }
+        DailyQuotaStatus status = dailyQuotaServicePort.checkQuota(effectiveUserId);
         return ResponseEntity.ok(ApiResponse.ok(status));
     }
 }

@@ -17,16 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ScheduleController {
 
     private final ScheduleServicePort scheduleServicePort;
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
 
     @GetMapping
     public ResponseEntity<ApiResponse<ScheduleInterval>> getSchedule(
             @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(defaultValue = "current-student") String studentId,
+            @RequestParam(required = false) String studentId,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
-        String token = (authHeader != null && authHeader.startsWith("Bearer ")) 
-                ? authHeader.substring(7).trim() 
-                : null;
-        ScheduleInterval schedule = scheduleServicePort.getStudentSchedule(studentId, period, token);
+        String token = identityResolver.extractBearerToken(authHeader);
+        String effectiveStudentId = identityResolver.resolveStudentCode(authHeader, studentId);
+        ScheduleInterval schedule = scheduleServicePort.getStudentSchedule(effectiveStudentId, period, token);
         return ResponseEntity.ok(ApiResponse.ok(schedule));
     }
 
@@ -34,12 +34,11 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse<ScheduleInterval>> syncSchedule(
             @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token,
+            @RequestParam(required = false) String studentId,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
-        String effectiveToken = token;
-        if ((effectiveToken == null || effectiveToken.isBlank()) && authHeader != null && authHeader.startsWith("Bearer ")) {
-            effectiveToken = authHeader.substring(7).trim();
-        }
-        ScheduleInterval synced = scheduleServicePort.syncScheduleFromUtp(effectiveToken, period);
+        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        String effectiveStudentId = identityResolver.resolveStudentCode(authHeader, studentId);
+        ScheduleInterval synced = scheduleServicePort.syncScheduleFromUtp(effectiveStudentId, effectiveToken, period);
         return ResponseEntity.ok(ApiResponse.ok("Horario sincronizado con UTP", synced));
     }
 }

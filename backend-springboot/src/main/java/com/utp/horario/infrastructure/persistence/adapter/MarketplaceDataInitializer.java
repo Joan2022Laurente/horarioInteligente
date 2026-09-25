@@ -15,6 +15,11 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        name = "app.marketplace.seed-enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 @RequiredArgsConstructor
 public class MarketplaceDataInitializer implements CommandLineRunner {
 

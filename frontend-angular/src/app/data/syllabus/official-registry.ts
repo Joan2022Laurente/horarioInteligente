@@ -1,4 +1,4 @@
-import { CourseEvaluation } from '@/types/utp';
+import { CourseEvaluation } from '@domain/models/utp.model';
 import { ParsedSyllabus } from './types';
 import { getAllCachedSyllabi } from './client-storage';
 

@@ -3,13 +3,18 @@ package com.utp.horario.application.usecase;
 import com.utp.horario.application.service.SyllabusParserEngine;
 import com.utp.horario.domain.model.Syllabus;
 import com.utp.horario.domain.port.in.SyllabusServicePort;
+import com.utp.horario.domain.port.out.ScheduleRepositoryPort;
 import com.utp.horario.domain.port.out.SyllabusRepositoryPort;
 import com.utp.horario.domain.port.out.UtpPortalGatewayPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -17,6 +22,7 @@ import java.util.List;
 public class SyllabusServiceImpl implements SyllabusServicePort {
 
     private final SyllabusRepositoryPort syllabusRepositoryPort;
+    private final ScheduleRepositoryPort scheduleRepositoryPort;
     private final UtpPortalGatewayPort utpPortalGatewayPort;
     private final SyllabusParserEngine syllabusParserEngine;
 
@@ -45,7 +51,33 @@ public class SyllabusServiceImpl implements SyllabusServicePort {
 
     @Override
     public List<Syllabus> getAllSyllabiForStudent(String studentId) {
-        return syllabusRepositoryPort.findAll();
+        if (studentId == null || studentId.isBlank() || "current-student".equalsIgnoreCase(studentId)) {
+            return List.of();
+        }
+
+        // Obtener códigos de cursos matriculados según el horario persistido del estudiante
+        Optional<com.utp.horario.domain.model.ScheduleInterval> scheduleOpt = 
+                scheduleRepositoryPort.findByStudentIdAndPeriod(studentId, "2026 - Ciclo 2 Agosto");
+
+        Set<String> enrolledCodes = new HashSet<>();
+        scheduleOpt.ifPresent(schedule -> {
+            if (schedule.getCourses() != null) {
+                schedule.getCourses().forEach(c -> {
+                    if (c.getCode() != null && !c.getCode().isBlank()) enrolledCodes.add(c.getCode().trim());
+                });
+            }
+            if (schedule.getClasses() != null) {
+                schedule.getClasses().forEach(cs -> {
+                    if (cs.getCourseCode() != null && !cs.getCourseCode().isBlank()) enrolledCodes.add(cs.getCourseCode().trim());
+                });
+            }
+        });
+
+        if (enrolledCodes.isEmpty()) {
+            return List.of();
+        }
+
+        return syllabusRepositoryPort.findAllByCourseCodes(new ArrayList<>(enrolledCodes));
     }
 
     @Override

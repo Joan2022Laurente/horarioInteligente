@@ -19,6 +19,7 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AiChatRequest {
     private String message;
+    @JsonAlias({"studentId", "user_id"})
     private String userId;
 
     @JsonAlias({"calendarData", "schedule"})

@@ -10,7 +10,6 @@ import {
   PostCategory,
   PostSortBy
 } from '@domain/models/community';
-import { INITIAL_COMMUNITY_POSTS } from '../community/initial-posts';
 import { getCachedStudentProfile } from '../syllabus/client-storage';
 
 const COMMUNITY_POSTS_CACHE_KEY = 'utp_community_posts_cache';
@@ -122,8 +121,8 @@ export class CommunityService {
       }
     } catch {}
 
-    // Fallback inicial
-    this.postsSignal.set(INITIAL_COMMUNITY_POSTS);
+    // Estado inicial limpio
+    this.postsSignal.set([]);
   }
 
   /**
@@ -151,8 +150,6 @@ export class CommunityService {
         let combined: CommunityPost[] = [];
         if (remotePosts && remotePosts.length > 0) {
           combined = remotePosts.map(p => this.mapRemoteToCommunityPost(p));
-        } else {
-          combined = INITIAL_COMMUNITY_POSTS;
         }
 
         this.postsSignal.set(combined);
@@ -164,7 +161,7 @@ export class CommunityService {
         return combined;
       }),
       catchError(() => {
-        const fallback = this.postsSignal().length > 0 ? this.postsSignal() : INITIAL_COMMUNITY_POSTS;
+        const fallback = this.postsSignal().length > 0 ? this.postsSignal() : [];
         this.postsSignal.set(fallback);
         this.inFlightPosts$ = null;
         return of(fallback);
