@@ -4,7 +4,7 @@ import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MatrixOrbComponent } from '../ai-assistant/matrix-orb.component';
 
-export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'community' | 'marketplace';
+export type NavigationTab = 'today' | 'weekly' | 'courses';
 
 @Component({
   selector: 'app-navbar',

@@ -1,7 +1,6 @@
 import { ProcessedCourse, UTPEvent, CourseSessionSchedule, CourseEvaluation, AcademicMilestone } from '@domain/models/utp.model';
 import { normalizeKey, parseNormalizedDate } from '@core/utils/string.utils';
-import { KNOWN_SYLLABUS_MAP } from './syllabus/official-registry';
-import { getAllEvaluationsFromRegistry } from './syllabus-parser';
+import { KNOWN_SYLLABUS_MAP, getAllEvaluationsFromRegistry } from './syllabus/official-registry';
 
 export interface ParsedEventInfo {
   cleanTitle: string;

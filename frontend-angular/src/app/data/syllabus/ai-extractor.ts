@@ -82,44 +82,52 @@ async function callOpenRouterWithFailover(body: Record<string, unknown>, preferr
 }
 
 
+export function cleanRawSyllabusText(text: string): string {
+  let clean = text.replace(/\r\n/g, '\n');
+  // Descartar bibliografía, fuentes de información, reglamentos y anexos finales (-60% tokens)
+  clean = clean.replace(/(?:##\s*)?(?:8|VIII)\.\s*FUENTES DE INFORMACI[ÓO]N[\s\S]*?(?=(?:##\s*)?(?:9|10|IX|X)\.|$)/gi, '');
+  clean = clean.replace(/(?:##\s*)?BIBLIOGRAF[ÍI]A[\s\S]*?(?=(?:##\s*)?(?:9|10|CRONOGRAMA)|$)/gi, '');
+  clean = clean.replace(/(?:##\s*)?REGLAMENTO[\s\S]*?(?=(?:##\s*)?(?:CRONOGRAMA)|$)/gi, '');
+  clean = clean.replace(/(?:##\s*)?ANEXOS?[\s\S]*$/gi, '');
+  return clean.trim();
+}
+
 function partitionSyllabusText(text: string): { generalText: string; scheduleText: string } {
-  const clean = text.replace(/\r\n/g, '\n');
+  const clean = cleanRawSyllabusText(text);
 
   // En sílabos UTP:
   // Sección 1 a 4: Datos generales, Fundamentación, Sumilla, Logro General
   // Sección 7: Sistema de Evaluación (Fórmula, Ponderaciones, Rúbricas, Políticas)
-  // Sección 8: Bibliografía (Se excluye para ahorrar tokens)
   // Sección 10: Cronograma de Actividades (Semanas 1 a 18)
-  const evalIndex = clean.search(/(?:##\s*)?7\.\s*SISTEMA DE EVALUACI[ÓO]N/i);
-  const biblioIndex = clean.search(/(?:##\s*)?8\.\s*FUENTES DE INFORMACI[ÓO]N/i);
-  const scheduleIndex = clean.search(/(?:##\s*)?10\.\s*CRONOGRAMA DE ACTIVIDADES/i);
+  const evalIndex = clean.search(/(?:##\s*)?(?:7|VII)\.\s*SISTEMA DE EVALUACI[ÓO]N/i);
+  const biblioIndex = clean.search(/(?:##\s*)?(?:8|VIII)\.\s*FUENTES DE INFORMACI[ÓO]N/i);
+  const scheduleIndex = clean.search(/(?:##\s*)?(?:10|X)\.\s*CRONOGRAMA DE ACTIVIDADES/i);
 
   let generalText = '';
   if (evalIndex !== -1) {
-    const evalEnd = biblioIndex !== -1 ? biblioIndex : (evalIndex + 3000);
-    const headerPart = clean.slice(0, evalIndex);
+    const evalEnd = biblioIndex !== -1 && biblioIndex > evalIndex ? biblioIndex : (scheduleIndex !== -1 && scheduleIndex > evalIndex ? scheduleIndex : evalIndex + 3500);
+    const headerPart = clean.slice(0, Math.min(evalIndex, 3000));
     const evalPart = clean.slice(evalIndex, evalEnd);
     generalText = `${headerPart}\n\n${evalPart}`;
   } else {
-    generalText = clean.slice(0, 5000);
+    generalText = clean.slice(0, 4000);
   }
 
   let scheduleText = '';
   if (scheduleIndex !== -1) {
     scheduleText = clean.slice(scheduleIndex);
   } else {
-    const unitsIndex = clean.search(/(?:##\s*)?5\.\s*UNIDADES/i);
+    const unitsIndex = clean.search(/(?:##\s*)?(?:5|V)\.\s*UNIDADES/i);
     scheduleText = unitsIndex !== -1 ? clean.slice(unitsIndex) : clean;
   }
 
   return { generalText, scheduleText };
 }
 
-
 /**
- * Pipeline de Extracción en 2 Fases (Two-Pass Anti-Truncation):
- * Fase 1: Metadatos, Logro, Fórmula y Sistema de Evaluación completo.
- * Fase 2: Cronograma detallado semana a semana (1 a N) con temas y actividades.
+ * Pipeline de Extracción en Paralelo con IA (Promise.all):
+ * Fase 1: Fórmula de notas y ponderaciones de evaluación.
+ * Fase 2: Cronograma de las 18 semanas de clase.
  * Fase 3: Validación determinística estricta (100% pesos, cronología y semanas).
  */
 export async function extractSyllabusStructured(
@@ -135,18 +143,18 @@ export async function extractSyllabusStructured(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[LLM Extractor] 🚀 Iniciando Pase 1 (Fórmula + Metadatos) - Intento ${attempt}/${maxRetries}...`);
+      console.log(`[LLM Extractor] 🚀 Iniciando Extracción en Paralelo (Fase 1: Fórmula + Fase 2: Cronograma 18 semanas) - Intento ${attempt}/${maxRetries}...`);
 
       // ==========================================
-      // FASE 1: Estructura de Evaluación y Metadatos
+      // FASE 1: Prompts para Fórmula y Evaluaciones
       // ==========================================
       const promptPhase1 = `Eres un extractor de datos académicos de alta precisión para universidades (UTP).
 Extrae del siguiente texto oficial de sílabo los metadatos generales y la estructura completa de evaluaciones.
 
 REGLAS ESTRICTAS PARA EVALUACIONES:
-1. "formula": Copia la fórmula matemática EXACTA tal como aparece en el texto (ej. "(10%)PC1 + (20%)PC2 + (20%)PA + (20%)EP + (30%)EF" o "(10%)ATI1 + (20%)ATI2 + (20%)ATI3 + (20%)PA + (30%)TI").
+1. "formula": Copia la fórmula matemática EXACTA tal como aparece en el texto (ej. "(10%)PC1 + (20%)PC2 + (20%)PA + (20%)EP + (30%)EF" o "(20%)APF1 + (20%)APF2 + (20%)APF3 + (40%)PROY").
 2. "evaluations": Genera un item por CADA evaluación que aparezca en la tabla del sistema de evaluación.
-3. "description": Copia el nombre oficial textual de la tabla (ej. "PRÁCTICA CALIFICADA 1", "PARTICIPACIÓN EN CLASE", "AVANCE DE PORTAFOLIO 1", "AVANCE DE TRABAJO DE INVESTIGACIÓN 1", "EXAMEN PARCIAL", "PROYECTO FINAL", etc.).
+3. "description": Copia el nombre oficial textual de la tabla (ej. "PRÁCTICA CALIFICADA 1", "PARTICIPACIÓN EN CLASE", "AVANCE DE PORTAFOLIO 1", "EXAMEN PARCIAL", "PROYECTO FINAL", etc.).
 4. "weightPercent": Extrae el porcentaje numérico exacto (ej. 10, 20, 30).
 5. "week": Extrae el número de semana exacto en que se rinde (1 a 18).
 6. "modality": "Individual" o "Grupal".
@@ -155,7 +163,7 @@ REGLAS ESTRICTAS PARA EVALUACIONES:
 TEXTO DEL SÍLABO:
 ${generalText}
 
-RESPONDE ÚNICAMENTE CON ESTE OBJETO JSON VÁLIDO (ejemplo de estructura):
+RESPONDE ÚNICAMENTE CON ESTE OBJETO JSON VÁLIDO:
 {
   "generalInfo": {
     "courseCode": "100000ST61",
@@ -187,42 +195,24 @@ RESPONDE ÚNICAMENTE CON ESTE OBJETO JSON VÁLIDO (ejemplo de estructura):
   }
 }`;
 
-      const resPhase1 = await callOpenRouterWithFailover({
-        model: OPENROUTER_MODELS_POOL[0],
-        models: OPENROUTER_MODELS_POOL,
-        temperature: 0.1,
-        max_tokens: 4096,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are a precise JSON extractor. Output valid JSON only." },
-          { role: "user", content: promptPhase1 }
-        ]
-      }, apiKey);
-
-      const content1 = sanitizeJson(resPhase1.choices[0]?.message?.content || '{}');
-      const dataPhase1 = JSON.parse(content1);
-
-      const totalWeeks = dataPhase1.totalWeeksDeclared || 18;
-      console.log(`[LLM Extractor] ✅ Pase 1 completado (${dataPhase1.generalInfo?.courseName}). Total semanas declaradas: ${totalWeeks}. Iniciando Pase 2 (Cronograma 1..${totalWeeks})...`);
-
       // ==========================================
-      // FASE 2: Cronograma Semana a Semana
+      // FASE 2: Prompts para Cronograma 18 Semanas
       // ==========================================
-      const promptPhase2 = `Eres un extractor académico. Extrae la programación semana a semana del curso "${dataPhase1.generalInfo?.courseName || 'Curso'}".
+      const promptPhase2 = `Eres un extractor académico de alta precisión. Extrae la programación semana a semana (semanas 1 a 18) del curso.
 
 REGLAS CRÍTICAS:
-1. Debes extraer TODAS las semanas desde la semana 1 hasta la semana ${totalWeeks}. NO OMITAS NINGUNA SEMANA.
+1. Extrae las semanas completas de la 1 a la 18 (o total de semanas del curso). No omitas semanas.
 2. Cada semana debe contener:
-   - "week": número entero (1..${totalWeeks})
+   - "week": número entero (1..18)
    - "unit": nombre de la unidad académica (ej. "Unidad 1: Fundamentos")
    - "topics": arreglo de strings con los temas específicos tratados esa semana
    - "activities": actividades o tareas prácticas de la semana
-   - "evaluation": código o nombre corto de la evaluación si se rinde esa semana (ej. "APF1", "PC1", "ATI1", "PROY", o null si no hay evaluación)
+   - "evaluation": código o nombre corto de la evaluación si se rinde esa semana (ej. "APF1", "PC1", "EP", "PROY", o null si no hay evaluación)
 
 TEXTO DE UNIDADES Y CRONOGRAMA:
 ${scheduleText}
 
-RESPONDE ÚNICAMENTE CON ESTE OBJETO JSON VÁLIDO (ejemplo):
+RESPONDE ÚNICAMENTE CON ESTE OBJETO JSON VÁLIDO:
 {
   "weeklySchedule": [
     {
@@ -235,19 +225,36 @@ RESPONDE ÚNICAMENTE CON ESTE OBJETO JSON VÁLIDO (ejemplo):
   ]
 }`;
 
-      const resPhase2 = await callOpenRouterWithFailover({
-        model: OPENROUTER_MODELS_POOL[0],
-        models: OPENROUTER_MODELS_POOL,
-        temperature: 0.1,
-        max_tokens: 4096,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are a precise JSON extractor. Output valid JSON only." },
-          { role: "user", content: promptPhase2 }
-        ]
-      }, apiKey);
+      // Invocación en paralelo con Promise.all
+      const [resPhase1, resPhase2] = await Promise.all([
+        callOpenRouterWithFailover({
+          model: OPENROUTER_MODELS_POOL[0],
+          models: OPENROUTER_MODELS_POOL,
+          temperature: 0.1,
+          max_tokens: 4096,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: "You are a precise JSON extractor. Output valid JSON only." },
+            { role: "user", content: promptPhase1 }
+          ]
+        }, apiKey),
+        callOpenRouterWithFailover({
+          model: OPENROUTER_MODELS_POOL[0],
+          models: OPENROUTER_MODELS_POOL,
+          temperature: 0.1,
+          max_tokens: 4096,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: "You are a precise JSON extractor. Output valid JSON only." },
+            { role: "user", content: promptPhase2 }
+          ]
+        }, apiKey)
+      ]);
 
+      const content1 = sanitizeJson(resPhase1.choices[0]?.message?.content || '{}');
       const content2 = sanitizeJson(resPhase2.choices[0]?.message?.content || '{}');
+
+      const dataPhase1 = JSON.parse(content1);
       const dataPhase2 = JSON.parse(content2);
 
       let weeklySchedule: SyllabusWeeklySession[] = dataPhase2.weeklySchedule || [];

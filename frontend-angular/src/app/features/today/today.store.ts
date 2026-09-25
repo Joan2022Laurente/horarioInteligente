@@ -1,4 +1,4 @@
-import { Injectable, computed, signal, inject } from '@angular/core';
+import { Injectable, computed, signal, inject, NgZone } from '@angular/core';
 import { ScheduleService } from '@data/services/schedule.service';
 import { UTPEvent } from '@domain/models/utp.model';
 import { getCurrentAndNextClass, getEventsForDay } from '@data/schedule-parser';
@@ -9,6 +9,7 @@ import { getCachedCalendarData } from '@data/syllabus/client-storage';
 })
 export class TodayStore {
   private readonly scheduleService = inject(ScheduleService);
+  private readonly ngZone = inject(NgZone);
 
   readonly selectedDate = signal<Date>(new Date());
   readonly now = signal<Date>(new Date());
@@ -20,9 +21,13 @@ export class TodayStore {
 
   private startClock(): void {
     if (typeof window !== 'undefined') {
-      this.timerId = setInterval(() => {
-        this.now.set(new Date());
-      }, 1000);
+      this.ngZone.runOutsideAngular(() => {
+        this.timerId = setInterval(() => {
+          this.ngZone.run(() => {
+            this.now.set(new Date());
+          });
+        }, 30000);
+      });
     }
   }
 

@@ -6,9 +6,6 @@ import { NavbarComponent, NavigationTab } from './features/navbar/navbar.compone
 import { TodayViewComponent } from './features/today/today-view.component';
 import { WeeklyScheduleComponent } from './features/schedule/weekly-schedule.component';
 import { SyllabusViewComponent } from './features/syllabus/syllabus-view.component';
-import { NetworkingViewComponent } from './features/networking/networking-view.component';
-import { CommunityViewComponent } from './features/community/community-view.component';
-import { MarketplaceViewComponent } from './features/marketplace/marketplace-view.component';
 import { SettingsModalComponent } from './features/settings/settings-modal.component';
 import { AiAssistantModalComponent } from './features/ai-assistant/ai-assistant-modal.component';
 import { LoginPageComponent } from './features/auth/login-page.component';
@@ -26,9 +23,6 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
     TodayViewComponent,
     WeeklyScheduleComponent,
     SyllabusViewComponent,
-    NetworkingViewComponent,
-    CommunityViewComponent,
-    MarketplaceViewComponent,
     SettingsModalComponent,
     AiAssistantModalComponent,
     LoginPageComponent,
@@ -58,12 +52,6 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
             </app-weekly-schedule>
           } @else if (activeTab === 'courses') {
             <app-syllabus-view (askAi)="openAiWithPrompt($event)"></app-syllabus-view>
-          } @else if (activeTab === 'networking') {
-            <app-networking-view></app-networking-view>
-          } @else if (activeTab === 'community') {
-            <app-community-view (askAi)="openAiWithPrompt($event)"></app-community-view>
-          } @else if (activeTab === 'marketplace') {
-            <app-marketplace-view></app-marketplace-view>
           }
         </main>
 

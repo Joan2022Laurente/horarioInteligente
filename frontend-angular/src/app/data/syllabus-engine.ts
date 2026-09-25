@@ -3,7 +3,8 @@ import {
   SyllabusWeekSyncContext, 
   TaskWithSyllabusContext 
 } from '@domain/models/utp.model';
-import { getSyllabusForCourse, ParsedSyllabus } from './syllabus-parser';
+import { getSyllabusForCourse } from './syllabus/official-registry';
+import { ParsedSyllabus } from './syllabus/types';
 import { getCachedSyllabus } from './syllabus/client-storage';
 import { VERIFIED_ASSIGNMENT_RUBRICS } from './rubrics/verified-rubrics';
 import { ACTIVE_STUDENT_TASKS } from './tasks/active-tasks';

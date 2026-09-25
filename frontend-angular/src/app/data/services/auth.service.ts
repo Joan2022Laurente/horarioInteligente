@@ -54,12 +54,17 @@ export class AuthService {
           this.currentStudentSignal.set(res.data);
           localStorage.setItem('utp_auth_profile', JSON.stringify(res.data));
           saveCachedStudentProfile({
+            id: res.data.id || '',
             name: res.data.fullName || res.data.name || '',
-            username: res.data.studentCode || res.data.username || '',
+            fullName: res.data.fullName || res.data.name || '',
+            studentCode: currentCode,
+            username: currentCode,
             email: res.data.email || '',
             userId: res.data.id || '',
-            tenantId: 'a5f469d2-3c0e-5c68-8d32-5265923a8e40',
-            role: 'STUDENT',
+            career: res.data.career || '',
+            campus: res.data.campus || '',
+            currentCycle: res.data.currentCycle || 1,
+            role: res.data.role || 'STUDENT',
             token: res.data.token || ''
           });
 
@@ -90,8 +95,8 @@ export class AuthService {
           student_code: studentCode,
           full_name: profile.fullName || profile.name || 'Estudiante UTP',
           email: profile.email || `${studentCode.toLowerCase()}@utp.edu.pe`,
-          career: profile.career || 'Ingeniería de Sistemas e Informática',
-          campus: profile.campus || 'Lima Centro',
+          career: profile.career || '',
+          campus: profile.campus || '',
           cycle: profile.currentCycle || 1,
           updated_at: new Date().toISOString()
         };

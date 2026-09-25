@@ -24,11 +24,18 @@ if (fs.existsSync(envPath)) {
 const supabaseUrl = process.env.SUPABASE_URL || envVars.SUPABASE_URL || 'https://hvunobsbasdksiajmfjf.supabase.co';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || envVars.SUPABASE_ANON_KEY || '';
 const businessApiUrl = process.env.BUSINESS_API_URL || envVars.BUSINESS_API_URL || 'http://localhost:8080/api/v1';
-const academicApiUrl = process.env.ACADEMIC_API_URL || envVars.ACADEMIC_API_URL || 'https://utp-academic-gateway-c0da87808dcb.herokuapp.com/api/v1';
+const academicApiUrl = process.env.ACADEMIC_API_URL || envVars.ACADEMIC_API_URL || 'http://localhost:8080/api/v1';
 
 const targetDir = path.resolve(__dirname, '../src/environments');
 if (!fs.existsSync(targetDir)) {
   fs.mkdirSync(targetDir, { recursive: true });
+}
+
+// OpenRouter Keys
+const openRouterKeysRaw = process.env.OPENROUTER_API_KEYS || envVars.OPENROUTER_API_KEYS || '';
+const openRouterKeys = openRouterKeysRaw ? openRouterKeysRaw.split(',').map(k => k.trim()).filter(Boolean) : [];
+if (openRouterKeys.length === 0 && (process.env.OPENROUTER_API_KEY || envVars.OPENROUTER_API_KEY)) {
+  openRouterKeys.push(process.env.OPENROUTER_API_KEY || envVars.OPENROUTER_API_KEY);
 }
 
 function generateEnvFile(isProd) {
@@ -40,7 +47,7 @@ export const environment = {
   academicApiUrl: '${academicApiUrl}',
   supabaseUrl: '${supabaseUrl}',
   supabaseAnonKey: '${supabaseAnonKey}',
-  openRouterApiKeys: []
+  openRouterApiKeys: ${JSON.stringify(openRouterKeys)}
 };
 `;
 }
