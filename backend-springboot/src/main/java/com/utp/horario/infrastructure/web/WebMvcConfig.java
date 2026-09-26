@@ -28,9 +28,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        // Prefijar automáticamente todos los @RestController con /api/v1 (excepto endpoints estándar como MCP)
+        // Prefijar automáticamente todos los @RestController con /api/v1 (excepto endpoints estándar como MCP y .well-known)
         configurer.addPathPrefix("/api/v1", c -> c.isAnnotationPresent(RestController.class) 
-                && !c.getSimpleName().equals("McpServerController"));
+                && !c.getSimpleName().equals("McpServerController")
+                && !c.getSimpleName().equals("WellKnownController"));
     }
 
     @Override
