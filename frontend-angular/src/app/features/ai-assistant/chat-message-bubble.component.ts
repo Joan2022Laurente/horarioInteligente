@@ -48,6 +48,13 @@ import { getStickerById, MemeSticker } from '@data/constants/stickers.config';
           <span class="text-[11px] font-bold text-neutral-400">Copiloto UTP</span>
         </div>
 
+        @if (toolsUsedList.length > 0) {
+          <div class="flex items-center gap-1.5 mb-1 text-[10px] text-cyan-400 font-mono bg-cyan-950/40 px-2 py-1 rounded-md border border-cyan-800/30 w-fit">
+            <span>🛠️ Herramienta ejecutada:</span>
+            <span class="font-bold">{{ toolsUsedList.join(', ') }}</span>
+          </div>
+        }
+
         <!-- Contenido sin card envolvente con Markdown y Stickers -->
         <app-markdown-renderer [content]="msg.content"></app-markdown-renderer>
 
@@ -130,6 +137,14 @@ export class ChatMessageBubbleComponent {
 
   get chips(): string[] {
     return this.msg.suggestedActions || this.msg.suggestions || [];
+  }
+
+  get toolsUsedList(): string[] {
+    const raw = this.msg.metadata?.['toolsUsed'];
+    if (Array.isArray(raw)) {
+      return raw.map(t => String(t));
+    }
+    return [];
   }
 
   get userSticker(): MemeSticker | undefined {

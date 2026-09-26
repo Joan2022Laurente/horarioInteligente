@@ -463,44 +463,87 @@ export class AiAssistantModalComponent implements OnChanges {
 
     const student = this.authService.currentStudent();
     const userId = student?.studentCode || student?.username || student?.email || student?.userId || 'guest-student';
-    const schedule = this.scheduleService.currentSchedule() || this.interval;
-    const syllabi = this.syllabusService.syllabiMap();
 
-    this.aiService.sendMessage(query, userId, student, schedule, syllabi).subscribe({
-      next: (res) => {
-        this.isLoading = false;
+    // Preparar mensaje de respuesta reactivo en el chat
+    const assistantMsgId = (Date.now() + 1).toString();
+    const toolsUsed: string[] = [];
+    let streamedContent = '';
 
-        if (res.success && res.data) {
-          // Actualizar cuota localmente
-          this.quota = incrementClientDailyUsage(userId);
+    const assistantMsg: ChatMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: this.getFormattedTime(),
+      metadata: { toolsUsed }
+    };
 
-          const assistantMsg: ChatMessage = {
-            id: res.data.id || (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: res.data.content,
-            timestamp: this.getFormattedTime(),
-            suggestions: res.data.suggestions || res.data.suggestedActions,
-            suggestedActions: res.data.suggestedActions || res.data.suggestions,
-            contextInfo: res.data.contextInfo,
-          };
+    let msgAdded = false;
 
+    this.aiService.streamChat(
+      query,
+      (word: string) => {
+        if (!msgAdded) {
+          this.isLoading = false;
           this.messages.push(assistantMsg);
-
-          // Manejar acciones del modelo si aplica
-          if (res.data.action) {
-            this.executeModelAction(res.data.action);
-          }
-
-          this.scrollToBottom('smooth');
-        } else {
-          this.handleErrorMessage(res.error || 'No se pudo procesar la respuesta');
+          msgAdded = true;
         }
+        streamedContent += word;
+        assistantMsg.content = streamedContent;
+        this.scrollToBottom('smooth');
       },
-      error: (err) => {
-        this.isLoading = false;
-        const msg = err?.error?.message || err?.message || 'Error de conexión con el copiloto';
-        this.handleErrorMessage(msg);
+      (toolName: string) => {
+        if (!toolsUsed.includes(toolName)) {
+          toolsUsed.push(toolName);
+          assistantMsg.metadata = { ...assistantMsg.metadata, toolsUsed: [...toolsUsed] };
+        }
+        if (!msgAdded) {
+          this.isLoading = false;
+          this.messages.push(assistantMsg);
+          msgAdded = true;
+        }
+        this.scrollToBottom('smooth');
       }
+    ).then(() => {
+      this.isLoading = false;
+      this.quota = incrementClientDailyUsage(userId);
+      this.scrollToBottom('smooth');
+    }).catch((err) => {
+      console.warn('[AiAssistantModal] Stream SSE no disponible, ejecutando fallback estándar:', err);
+      // Fallback a sendMessage si SSE fallara por red
+      const schedule = this.scheduleService.currentSchedule() || this.interval;
+      const syllabi = this.syllabusService.syllabiMap();
+
+      this.aiService.sendMessage(query, userId, student, schedule, syllabi).subscribe({
+        next: (res) => {
+          this.isLoading = false;
+          if (res.success && res.data) {
+            this.quota = incrementClientDailyUsage(userId);
+            if (msgAdded) {
+              assistantMsg.content = res.data.content;
+              assistantMsg.suggestions = res.data.suggestions || res.data.suggestedActions;
+              assistantMsg.contextInfo = res.data.contextInfo;
+            } else {
+              this.messages.push({
+                id: res.data.id || (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: res.data.content,
+                timestamp: this.getFormattedTime(),
+                suggestions: res.data.suggestions || res.data.suggestedActions,
+                suggestedActions: res.data.suggestedActions || res.data.suggestions,
+                contextInfo: res.data.contextInfo,
+              });
+            }
+            this.scrollToBottom('smooth');
+          } else {
+            this.handleErrorMessage(res.error || 'No se pudo procesar la respuesta');
+          }
+        },
+        error: (fallbackErr) => {
+          this.isLoading = false;
+          const msg = fallbackErr?.error?.message || fallbackErr?.message || 'Error de conexión con el copiloto';
+          this.handleErrorMessage(msg);
+        }
+      });
     });
   }
 

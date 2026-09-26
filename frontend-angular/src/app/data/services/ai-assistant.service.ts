@@ -83,5 +83,71 @@ export class AiAssistantService {
       })
     );
   }
+
+  /**
+   * Consumo en tiempo real vía Server-Sent Events (SSE).
+   * Decodifica 'event: tool' y 'event: delta' palabra por palabra.
+   */
+  async streamChat(
+    message: string,
+    onDelta: (word: string) => void,
+    onTool: (toolName: string) => void
+  ): Promise<void> {
+    this.isThinkingSignal.set(true);
+    try {
+      const url = `${this.baseUrl}/chat/stream?message=${encodeURIComponent(message)}`;
+      const headers: Record<string, string> = {
+        'Accept': 'text/event-stream'
+      };
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}: Error al abrir stream SSE`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        let currentEvent = 'message';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            currentEvent = 'message';
+            continue;
+          }
+
+          if (trimmed.startsWith('event:')) {
+            currentEvent = trimmed.slice(6).trim();
+          } else if (trimmed.startsWith('data:')) {
+            const data = trimmed.slice(5).trim();
+            if (data === '[DONE]') {
+              return;
+            }
+
+            if (currentEvent === 'tool') {
+              onTool(data);
+            } else if (currentEvent === 'delta') {
+              onDelta(trimmed.slice(5)); // Preserva espacios si vienen
+            }
+          }
+        }
+      }
+    } finally {
+      this.isThinkingSignal.set(false);
+    }
+  }
 }
 
