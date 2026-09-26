@@ -8,6 +8,9 @@ import com.utp.horario.domain.model.ClassSession;
 import com.utp.horario.domain.model.ScheduleInterval;
 import com.utp.horario.domain.model.StudentProfile;
 import com.utp.horario.domain.model.TaskSyncItem;
+import com.utp.horario.domain.model.tool.AcademicToolDto.CourseEvaluationDetailDto;
+import com.utp.horario.domain.model.tool.AcademicToolDto.CourseSummaryDto;
+import com.utp.horario.domain.model.tool.AcademicToolDto.UpcomingEvaluationDto;
 import com.utp.horario.domain.port.out.UtpPortalGatewayPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Cliente HTTP para consumir la API Externa Institucional (Heroku).
@@ -36,6 +40,7 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final String gatewayBaseUrl;
+    private final ConcurrentHashMap<String, String> tokenCache = new ConcurrentHashMap<>();
 
     public UtpPortalGatewayAdapter(
             @Value("${academic.gateway.url:https://utp-academic-gateway-c0da87808dcb.herokuapp.com/api/v1}") String gatewayBaseUrl) {
@@ -48,6 +53,26 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .registerModule(new JavaTimeModule());
         log.info("[UtpPortalGatewayAdapter] Inicializado consumiendo API Externa en: {}", this.gatewayBaseUrl);
+    }
+
+    @Override
+    public void registerStudentToken(String studentCode, String token) {
+        if (studentCode != null && !studentCode.isBlank() && token != null && !token.isBlank()) {
+            String cleanToken = token.startsWith("Bearer ") ? token.substring(7).trim() : token.trim();
+            tokenCache.put(studentCode.trim().toUpperCase(), cleanToken);
+        }
+    }
+
+    @Override
+    public String getStudentToken(String studentCode) {
+        if (studentCode == null || studentCode.isBlank()) {
+            return tokenCache.values().stream().findFirst().orElse(null);
+        }
+        String found = tokenCache.get(studentCode.trim().toUpperCase());
+        if (found != null && !found.isBlank()) {
+            return found;
+        }
+        return tokenCache.values().stream().findFirst().orElse(null);
     }
 
     @Override
@@ -73,6 +98,9 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                     StudentProfile profile = objectMapper.treeToValue(data, StudentProfile.class);
                     log.info("[UtpPortalGatewayAdapter] ✅ Autenticación exitosa en API Externa para [{}] - Nombre: '{}', Carrera: '{}', Ciclo: {}",
                             username, profile.getFullName(), profile.getCareer(), profile.getCurrentCycle());
+                    if (profile.getToken() != null && !profile.getToken().isBlank()) {
+                        registerStudentToken(profile.getStudentCode(), profile.getToken());
+                    }
                     return profile;
                 }
             }
@@ -179,6 +207,173 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
             log.error("[UtpPortalGatewayAdapter] Error consultando tareas de API Externa: {}", e.getMessage());
         }
         return new ArrayList<>();
+    }
+
+    @Override
+    public List<CourseSummaryDto> fetchCoursesSummary(String token) {
+        if (token == null || token.isBlank()) {
+            return List.of();
+        }
+        log.info("[UtpPortalGatewayAdapter] Consultando resumen oficial de cursos a API Externa (/courses/summary)...");
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(gatewayBaseUrl + "/courses/summary"))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Accept", "application/json")
+                    .header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode dataNode = root.path("data");
+                JsonNode coursesNode = (dataNode.has("courses") && dataNode.path("courses").isArray())
+                        ? dataNode.path("courses")
+                        : (dataNode.isArray() ? dataNode : null);
+                if (coursesNode != null && coursesNode.isArray()) {
+                    List<CourseSummaryDto> list = new ArrayList<>();
+                    for (JsonNode c : coursesNode) {
+                        List<CourseEvaluationDetailDto> evals = new ArrayList<>();
+                        JsonNode evalsNode = c.path("evaluations");
+                        if (evalsNode.isArray()) {
+                            for (JsonNode ev : evalsNode) {
+                                evals.add(new CourseEvaluationDetailDto(
+                                        ev.path("shortName").asText(""),
+                                        ev.path("name").asText(""),
+                                        ev.path("value").asText(""),
+                                        ev.path("isGraded").asBoolean(false)
+                                ));
+                            }
+                        }
+
+                        Integer credits = null;
+                        if (c.hasNonNull("credits")) {
+                            try {
+                                credits = (int) Math.round(Double.parseDouble(c.path("credits").asText().trim()));
+                            } catch (Exception ignored) {}
+                        }
+
+                        list.add(new CourseSummaryDto(
+                                c.path("courseId").asText(""),
+                                c.path("courseCode").asText(""),
+                                c.path("courseName").asText(""),
+                                c.path("formula").asText(""),
+                                c.path("teacher").asText(""),
+                                credits,
+                                evals
+                        ));
+                    }
+                    log.info("[UtpPortalGatewayAdapter] ✅ {} cursos oficiales obtenidos de /courses/summary", list.size());
+                    return list;
+                }
+            }
+        } catch (Exception e) {
+            log.error("[UtpPortalGatewayAdapter] Error consultando /courses/summary: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    @Override
+    public List<UpcomingEvaluationDto> fetchUpcomingEvaluations(String token, int limit) {
+        if (token == null || token.isBlank()) {
+            return List.of();
+        }
+        int effectiveLimit = limit > 0 ? limit : 5;
+        log.info("[UtpPortalGatewayAdapter] Consultando evaluaciones próximas oficiales a API Externa (/tasks/upcoming?limit={})...", effectiveLimit);
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(gatewayBaseUrl + "/tasks/upcoming?limit=" + effectiveLimit))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Accept", "application/json")
+                    .header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode dataNode = root.path("data");
+                if (dataNode.isArray()) {
+                    List<UpcomingEvaluationDto> list = new ArrayList<>();
+                    for (JsonNode n : dataNode) {
+                        list.add(new UpcomingEvaluationDto(
+                                n.path("id").asText(""),
+                                n.path("title").asText(""),
+                                n.path("activityType").asText(""),
+                                n.path("weekNumber").asInt(1),
+                                n.path("startAt").asText(""),
+                                n.path("finishAt").asText(""),
+                                n.path("courseName").asText(""),
+                                n.path("courseId").asText(""),
+                                n.path("sectionId").asText(""),
+                                n.path("activityId").asText(""),
+                                n.path("evaluationSystem").asText(null),
+                                n.path("studentStatus").asText(""),
+                                n.path("isQualified").asBoolean(false),
+                                n.path("classificationCategory").asText(""),
+                                n.path("urgency").asText(""),
+                                n.path("daysRemaining").asInt(0)
+                        ));
+                    }
+                    log.info("[UtpPortalGatewayAdapter] ✅ {} evaluaciones próximas obtenidas de /tasks/upcoming", list.size());
+                    return list;
+                }
+            }
+        } catch (Exception e) {
+            log.error("[UtpPortalGatewayAdapter] Error consultando /tasks/upcoming: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    @Override
+    public String fetchSyllabusMarkdown(String token, String courseCode) {
+        log.info("[UtpPortalGatewayAdapter] Consultando sílabo Markdown a API Externa para curso: {}", courseCode);
+        try {
+            String encodedCode = URLEncoder.encode(courseCode != null ? courseCode : "", StandardCharsets.UTF_8);
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(gatewayBaseUrl + "/syllabus/" + encodedCode + "/markdown"))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Accept", "text/markdown")
+                    .GET();
+
+            if (token != null && !token.isBlank()) {
+                reqBuilder.header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token);
+            }
+
+            HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            }
+        } catch (Exception e) {
+            log.error("[UtpPortalGatewayAdapter] Error consultando sílabo Markdown para {}: {}", courseCode, e.getMessage());
+        }
+        return "";
+    }
+
+    @Override
+    public String exportCalendarIcs(String token, String period) {
+        log.info("[UtpPortalGatewayAdapter] Exportando calendario iCalendar (.ics) desde API Externa...");
+        try {
+            String encodedPeriod = URLEncoder.encode(period != null ? period : "2026 - Ciclo 2 Agosto", StandardCharsets.UTF_8);
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(gatewayBaseUrl + "/schedule/export.ics?period=" + encodedPeriod))
+                    .timeout(Duration.ofSeconds(20))
+                    .header("Accept", "text/calendar, text/plain, */*")
+                    .GET();
+
+            if (token != null && !token.isBlank()) {
+                reqBuilder.header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token);
+            }
+
+            HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() == 200) {
+                return response.body();
+            }
+        } catch (Exception e) {
+            log.error("[UtpPortalGatewayAdapter] Error exportando calendario .ics: {}", e.getMessage());
+        }
+        return "";
     }
 
     @Override

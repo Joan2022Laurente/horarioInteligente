@@ -432,4 +432,24 @@ export class ScheduleService {
       })
     );
   }
+
+  /**
+   * Exporta el horario oficial del estudiante a formato RFC 5545 iCalendar (.ics)
+   * listo para importar en Google Calendar, Apple Calendar o Microsoft Outlook.
+   */
+  exportCalendarIcs(period: string = '2026 - Ciclo 2 Agosto'): Observable<Blob> {
+    const profile = getCachedStudentProfile();
+    const token = profile?.token || '';
+    const headers: Record<string, string> = {
+      'Accept': 'text/calendar, text/plain, */*'
+    };
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+    const query = period ? `?period=${encodeURIComponent(period)}` : '';
+    return this.http.get(`${environment.academicApiUrl}/schedule/export.ics${query}`, {
+      headers,
+      responseType: 'blob'
+    });
+  }
 }

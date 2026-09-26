@@ -48,14 +48,25 @@ import { ClassSession } from '@domain/models/utp.model';
           </p>
         </div>
 
-        <button class="btn-sync" (click)="refreshSchedule()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          <span>Sincronizar</span>
-        </button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn-sync" (click)="refreshSchedule()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            <span>Sincronizar</span>
+          </button>
+          <button class="btn-sync" (click)="exportToGoogleCalendar()" [disabled]="isExporting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+            <span>{{ isExporting ? 'Exportando...' : 'Exportar a Google Calendar (.ics)' }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Classes Grid -->
@@ -300,6 +311,8 @@ import { ClassSession } from '@domain/models/utp.model';
   `]
 })
 export class ScheduleViewComponent implements OnInit {
+  isExporting = false;
+
   constructor(public scheduleService: ScheduleService) {}
 
   ngOnInit(): void {
@@ -308,5 +321,28 @@ export class ScheduleViewComponent implements OnInit {
 
   refreshSchedule(): void {
     this.scheduleService.syncSchedule().subscribe();
+  }
+
+  exportToGoogleCalendar(): void {
+    if (this.isExporting) return;
+    this.isExporting = true;
+    const period = this.scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto';
+    this.scheduleService.exportCalendarIcs(period).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `horario_utp_${period.replace(/\s+/g, '_')}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.isExporting = false;
+      },
+      error: (err) => {
+        console.error('Error exportando horario a .ics:', err);
+        this.isExporting = false;
+      }
+    });
   }
 }

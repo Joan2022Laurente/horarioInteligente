@@ -23,6 +23,21 @@ export class UiFeedbackService {
     }, durationMs);
   }
 
+  success(titleOrMessage: string, detail?: string): void {
+    const text = detail ? `${titleOrMessage}: ${detail}` : titleOrMessage;
+    this.show(text, 'success');
+  }
+
+  error(titleOrMessage: string, detail?: string): void {
+    const text = detail ? `${titleOrMessage}: ${detail}` : titleOrMessage;
+    this.show(text, 'error');
+  }
+
+  info(titleOrMessage: string, detail?: string): void {
+    const text = detail ? `${titleOrMessage}: ${detail}` : titleOrMessage;
+    this.show(text, 'info');
+  }
+
   dismiss(id: string): void {
     this.toastsSignal.update((list) => list.filter((t) => t.id !== id));
   }

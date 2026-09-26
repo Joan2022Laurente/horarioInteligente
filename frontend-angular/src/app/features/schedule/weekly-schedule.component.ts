@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UTPEvent, UTPCurrentInterval, ProcessedCourse } from '@domain/models/utp.model';
@@ -18,6 +18,7 @@ import { getCachedCalendarData } from '@data/syllabus/client-storage';
 import { getAuroraStyle } from '@data/aurora.helper';
 import { ScheduleService } from '@data/services/schedule.service';
 import { normalizeKey } from '../../core/utils/string.utils';
+import { UiFeedbackService } from '../../core/services/ui-feedback.service';
 
 @Component({
   selector: 'app-weekly-schedule',
@@ -77,35 +78,62 @@ import { normalizeKey } from '../../core/utils/string.utils';
           }
         </div>
 
-        <!-- Filtros de Modalidad con Segmented Pills -->
-        <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-2xl overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
+        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <!-- Filtros de Modalidad con Segmented Pills -->
+          <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-2xl overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
+            <button
+              (click)="selectedModality = 'ALL'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              [ngClass]="selectedModality === 'ALL' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+            >
+              Todas
+            </button>
+            <button
+              (click)="selectedModality = 'P'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              [ngClass]="selectedModality === 'P' ? 'bg-[var(--accent-emerald)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+            >
+              Presenciales
+            </button>
+            <button
+              (click)="selectedModality = 'R'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              [ngClass]="selectedModality === 'R' ? 'bg-[var(--accent-orange)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+            >
+              Zoom
+            </button>
+            <button
+              (click)="selectedModality = 'VT'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              [ngClass]="selectedModality === 'VT' ? 'bg-[var(--accent-purple)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+            >
+              Virtuales
+            </button>
+          </div>
+
+          <!-- Botón Exportar a Google Calendar (.ics) -->
           <button
-            (click)="selectedModality = 'ALL'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="selectedModality === 'ALL' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+            (click)="exportToGoogleCalendar()"
+            [disabled]="isExporting()"
+            title="Exportar horario oficial a Google Calendar o Outlook (.ics)"
+            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-2 rounded-2xl font-bold border border-[var(--border-subtle)] bg-[var(--surface-card)] hover:bg-[var(--surface-subtle)] text-xs text-white disabled:opacity-50"
           >
-            Todas
-          </button>
-          <button
-            (click)="selectedModality = 'P'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="selectedModality === 'P' ? 'bg-[var(--accent-emerald)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-          >
-            Presenciales
-          </button>
-          <button
-            (click)="selectedModality = 'R'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="selectedModality === 'R' ? 'bg-[var(--accent-orange)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-          >
-            Zoom
-          </button>
-          <button
-            (click)="selectedModality = 'VT'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="selectedModality === 'VT' ? 'bg-[var(--accent-purple)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-          >
-            Virtuales
+            @if (isExporting()) {
+              <svg class="h-3.5 w-3.5 animate-spin text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+              </svg>
+              <span>Exportando...</span>
+            } @else {
+              <svg class="h-3.5 w-3.5 text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" x2="16" y1="2" y2="6"/>
+                <line x1="8" x2="8" y1="2" y2="6"/>
+                <line x1="3" x2="21" y1="10" y2="10"/>
+                <path d="M12 14v4M10 16l2-2 2 2"/>
+              </svg>
+              <span>Exportar a Google Calendar (.ics)</span>
+            }
           </button>
         </div>
 
@@ -310,8 +338,36 @@ export class WeeklyScheduleComponent implements OnInit {
   currentInterval: UTPCurrentInterval | null = null;
 
   selectedEventForModal: UTPEvent | null = null;
+  private readonly feedback = inject(UiFeedbackService);
+  readonly isExporting = signal<boolean>(false);
 
   constructor(public scheduleService: ScheduleService) {}
+
+  exportToGoogleCalendar(): void {
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    const period = this.scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto';
+
+    this.scheduleService.exportCalendarIcs(period).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `horario_utp_${period.replace(/\s+/g, '_')}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.isExporting.set(false);
+        this.feedback.success('Horario exportado', 'Archivo .ics descargado exitosamente para Google Calendar.');
+      },
+      error: (err) => {
+        console.error('[WeeklySchedule] Error exportando horario a .ics:', err);
+        this.isExporting.set(false);
+        this.feedback.error('Error al exportar', 'No se pudo generar el archivo .ics de tu horario.');
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.hydrateFromCacheOrInterval();

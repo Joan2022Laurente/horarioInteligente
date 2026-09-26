@@ -54,13 +54,22 @@ public class AcademicToolDto {
             String formula,
             String learningGoal,
             List<EvaluationSummaryDto> evaluations,
-            List<WeeklySessionDto> weeklySchedule
+            List<WeeklySessionDto> weeklySchedule,
+            String markdown
     ) {
-        /** Constructor de compatibilidad (sin weeklySchedule) */
+        /** Constructor de compatibilidad (sin weeklySchedule ni markdown) */
         public SyllabusDetailsResult(String courseCode, String courseName, int credits,
                                      String formula, String learningGoal,
                                      List<EvaluationSummaryDto> evaluations) {
-            this(courseCode, courseName, credits, formula, learningGoal, evaluations, List.of());
+            this(courseCode, courseName, credits, formula, learningGoal, evaluations, List.of(), null);
+        }
+
+        /** Constructor de compatibilidad (con weeklySchedule, sin markdown) */
+        public SyllabusDetailsResult(String courseCode, String courseName, int credits,
+                                     String formula, String learningGoal,
+                                     List<EvaluationSummaryDto> evaluations,
+                                     List<WeeklySessionDto> weeklySchedule) {
+            this(courseCode, courseName, credits, formula, learningGoal, evaluations, weeklySchedule, null);
         }
     }
 
@@ -73,5 +82,41 @@ public class AcademicToolDto {
             String studentCode,
             int totalCourses,
             List<EnrolledCourseDto> courses
+    ) {}
+
+    public record CourseEvaluationDetailDto(
+            String shortName,
+            String name,
+            String value,
+            boolean isGraded
+    ) {}
+
+    public record CourseSummaryDto(
+            String courseId,
+            String courseCode,
+            String courseName,
+            String formula,
+            String teacher,
+            Integer credits,
+            List<CourseEvaluationDetailDto> evaluations
+    ) {}
+
+    public record UpcomingEvaluationDto(
+            String id,
+            String title,
+            String activityType,
+            int weekNumber,
+            String startAt,
+            String finishAt,
+            String courseName,
+            String courseId,
+            String sectionId,
+            String activityId,
+            String evaluationSystem,
+            String studentStatus,
+            boolean isQualified,
+            String classificationCategory,
+            String urgency,
+            int daysRemaining
     ) {}
 }

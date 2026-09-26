@@ -85,6 +85,7 @@ public class AuthenticateStudentUseCaseImpl implements AuthenticateStudentUseCas
                             .token(token)
                             .enrolledCourseCodes(List.of())
                             .build();
+                    utpPortalGatewayPort.registerStudentToken(profile.getStudentCode(), token);
                     return studentRepositoryPort.save(profile);
                 }
             } catch (Exception e) {

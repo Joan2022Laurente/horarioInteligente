@@ -31,6 +31,7 @@ public class McpServerController {
     private final AcademicToolService toolService;
     private final ObjectMapper objectMapper;
     private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
+    private final com.utp.horario.domain.port.out.UtpPortalGatewayPort utpPortalGatewayPort;
 
     public record McpSession(
             String sessionId,
@@ -79,6 +80,9 @@ public class McpServerController {
         String authenticatedStudentCode;
         try {
             authenticatedStudentCode = identityResolver.resolveStudentCode(effectiveAuthHeader, effectiveStudentParam);
+            if (effectiveAuthHeader != null && !effectiveAuthHeader.isBlank()) {
+                utpPortalGatewayPort.registerStudentToken(authenticatedStudentCode, effectiveAuthHeader);
+            }
         } catch (Exception ex) {
             log.warn("[MCP-SSE] ⛔ Conexión rechazada por falta de credenciales válidas: {}", ex.getMessage());
             throw new org.springframework.web.server.ResponseStatusException(

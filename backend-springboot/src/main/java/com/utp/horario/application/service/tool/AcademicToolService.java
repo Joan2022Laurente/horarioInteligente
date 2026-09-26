@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.domain.model.ClassSession;
 import com.utp.horario.domain.model.ScheduleInterval;
+import com.utp.horario.domain.model.StudentProfile;
 import com.utp.horario.domain.model.Syllabus;
 import com.utp.horario.domain.model.tool.AcademicToolDto.*;
 import com.utp.horario.domain.port.out.ScheduleRepositoryPort;
+import com.utp.horario.domain.port.out.StudentRepositoryPort;
 import com.utp.horario.domain.port.out.SyllabusRepositoryPort;
+import com.utp.horario.domain.port.out.UtpPortalGatewayPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +35,8 @@ public class AcademicToolService {
 
     private final ScheduleRepositoryPort scheduleRepositoryPort;
     private final SyllabusRepositoryPort syllabusRepositoryPort;
+    private final StudentRepositoryPort studentRepositoryPort;
+    private final UtpPortalGatewayPort utpPortalGatewayPort;
     private final ObjectMapper objectMapper;
 
     @Value("${supabase.url:https://hvunobsbasdksiajmfjf.supabase.co}")
@@ -104,11 +109,49 @@ public class AcademicToolService {
         return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message);
     }
 
+    private String resolveStudentToken(String studentCode) {
+        String token = utpPortalGatewayPort.getStudentToken(studentCode);
+        if (token != null && !token.isBlank()) {
+            return token;
+        }
+        if (studentCode != null && !studentCode.isBlank()) {
+            return studentRepositoryPort.findByStudentCode(studentCode)
+                    .map(StudentProfile::getToken)
+                    .filter(t -> t != null && !t.isBlank())
+                    .orElse(null);
+        }
+        return null;
+    }
+
     /**
      * Tool 0: Obtiene la lista de cursos en los que el estudiante está matriculado.
+     * Consulta fetchCoursesSummary(token) de la API Externa como fuente primaria institucional.
      */
     public EnrolledCoursesResult getEnrolledCourses(String studentCode) {
         log.info("[AcademicTool] 🎓 Consultando cursos matriculados para alumno {}", studentCode);
+
+        // 1. Fuente Primaria Institucional: API Externa Gateway /courses/summary
+        String token = resolveStudentToken(studentCode);
+        if (token != null && !token.isBlank()) {
+            try {
+                List<CourseSummaryDto> summaries = utpPortalGatewayPort.fetchCoursesSummary(token);
+                if (summaries != null && !summaries.isEmpty()) {
+                    List<EnrolledCourseDto> courses = summaries.stream()
+                            .map(s -> new EnrolledCourseDto(
+                                    (s.courseCode() != null && !s.courseCode().isBlank()) ? s.courseCode() : s.courseId(),
+                                    s.courseName()
+                            ))
+                            .distinct()
+                            .toList();
+                    log.info("[AcademicTool] 🏛️ {} cursos oficiales obtenidos desde API Externa Gateway para [{}]", courses.size(), studentCode);
+                    return new EnrolledCoursesResult(studentCode, courses.size(), courses);
+                }
+            } catch (Exception e) {
+                log.warn("[AcademicTool] ⚠️ Error consultando API Externa /courses/summary para [{}]: {}", studentCode, e.getMessage());
+            }
+        }
+
+        // 2. Fallback: Base de datos local (H2) y Supabase
         Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
         if (scheduleOpt.isEmpty()
                 || (scheduleOpt.get().getCourses() == null || scheduleOpt.get().getCourses().isEmpty())
@@ -138,37 +181,63 @@ public class AcademicToolService {
                 seen.forEach((code, name) -> courses.add(new EnrolledCourseDto(code, name)));
             }
         }
-        log.info("[AcademicTool] 📚 Cursos matriculados encontrados: {}", courses.size());
+        log.info("[AcademicTool] 📚 Cursos matriculados encontrados (fallback): {}", courses.size());
         return new EnrolledCoursesResult(studentCode, courses.size(), courses);
     }
 
     /**
-     * Tool 2: Obtiene los detalles de un sílabo (fórmula, logro y ponderaciones).
+     * Tool 2: Obtiene los detalles de un sílabo (fórmula, logro, ponderaciones y temario).
      * Soporta búsqueda por código exacto o nombre en lenguaje natural (ej. 'desarrollo web').
+     * Aprovecha fetchSyllabusMarkdown de la API Externa para obtener el contenido completo en Markdown listo para LLM.
      */
     public SyllabusDetailsResult getSyllabusDetails(String courseQuery) {
         log.info("[AcademicTool] 📚 Consultando sílabo de curso: {}", courseQuery);
         String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
 
+        // 1. Intentar resolver código o consulta
         Optional<Syllabus> syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanQuery.toUpperCase());
-
         if (syllabusOpt.isEmpty()) {
             log.info("[AcademicTool] ☁️ Sílabo no hallado en BD local para [{}]. Consultando Supabase 'official_syllabi'...", cleanQuery);
             syllabusOpt = fetchSyllabusFromSupabase(cleanQuery);
         }
 
-        if (syllabusOpt.isEmpty()) {
+        String courseCode = syllabusOpt.map(Syllabus::getCourseCode).orElse(cleanQuery);
+
+        // 2. Consultar versión Markdown de la API Externa para contexto enriquecido sin fricción de parsing
+        String markdown = "";
+        try {
+            String token = utpPortalGatewayPort.getStudentToken(null);
+            markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(token, courseCode);
+            if (markdown != null && !markdown.isBlank()) {
+                log.info("[AcademicTool] 📝 Sílabo en Markdown obtenido de API Externa para [{}] ({} caracteres)", courseCode, markdown.length());
+            }
+        } catch (Exception e) {
+            log.warn("[AcademicTool] ℹ️ No se pudo obtener Markdown de API Externa para [{}]: {}", courseCode, e.getMessage());
+        }
+
+        if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
             return new SyllabusDetailsResult(
                     cleanQuery,
                     "Curso no encontrado",
                     0,
                     "",
                     "No se encontró el sílabo para '" + cleanQuery + "'. Puedes consultar tus cursos matriculados con get_enrolled_courses.",
-                    List.of()
+                    List.of(),
+                    List.of(),
+                    null
             );
         }
 
-        Syllabus s = syllabusOpt.get();
+        Syllabus s = syllabusOpt.orElseGet(() -> {
+            Syllabus fallback = new Syllabus();
+            fallback.setCourseCode(courseCode);
+            fallback.setCourseName(cleanQuery.toUpperCase());
+            fallback.setCredits(3);
+            fallback.setFormula("");
+            fallback.setLearningGoal("Obtenido directamente desde el Sílabo Oficial UTP");
+            return fallback;
+        });
+
         List<EvaluationSummaryDto> evals = s.getEvaluations() != null ? s.getEvaluations().stream()
                 .map(e -> new EvaluationSummaryDto(
                         s.getCourseCode(),
@@ -195,19 +264,56 @@ public class AcademicToolService {
                 s.getFormula() != null ? s.getFormula() : "",
                 s.getLearningGoal() != null ? s.getLearningGoal() : "No especificado",
                 evals,
-                weekly
+                weekly,
+                (markdown != null && !markdown.isBlank()) ? markdown : null
         );
     }
 
     /**
-     * Tool 3: Obtiene las evaluaciones próximas del alumno a partir de los sílabos de sus cursos activos.
-     * Soporta fallback a Supabase tanto para el horario del alumno como para los sílabos oficiales.
+     * Tool 3: Obtiene las evaluaciones próximas del alumno.
+     * Usa fetchUpcomingEvaluations(token, 5) de la API Externa como fuente prioritaria de tareas y exámenes calificados.
      */
     public List<EvaluationSummaryDto> getUpcomingEvaluations(String studentCode, int currentWeek) {
         log.info("[AcademicTool] 🎯 Consultando evaluaciones próximas para alumno {} desde semana {}", studentCode, currentWeek);
-        List<EvaluationSummaryDto> upcoming = new ArrayList<>();
 
-        // Reusar lógica de getEnrolledCourses para obtener la lista real de cursos
+        // 1. Fuente Prioritaria Institucional: API Externa Gateway /tasks/upcoming?limit=5
+        String token = resolveStudentToken(studentCode);
+        if (token != null && !token.isBlank()) {
+            try {
+                List<UpcomingEvaluationDto> externalUpcoming = utpPortalGatewayPort.fetchUpcomingEvaluations(token, 5);
+                if (externalUpcoming != null && !externalUpcoming.isEmpty()) {
+                    List<EvaluationSummaryDto> mapped = new ArrayList<>();
+                    for (UpcomingEvaluationDto u : externalUpcoming) {
+                        String code = (u.courseId() != null && !u.courseId().isBlank()) ? u.courseId() : "";
+                        String type = (u.evaluationSystem() != null && !u.evaluationSystem().isBlank()) 
+                                ? u.evaluationSystem() 
+                                : ((u.activityType() != null && !u.activityType().isBlank()) ? u.activityType() : "EVALUACION");
+                        
+                        String urgencyNote = (u.urgency() != null && !u.urgency().isBlank()) ? " (" + u.urgency() + ")" : "";
+                        String desc = (u.title() != null ? u.title() : "Evaluación UTP") + urgencyNote;
+                        
+                        int week = u.weekNumber() > 0 ? u.weekNumber() : currentWeek;
+                        
+                        mapped.add(new EvaluationSummaryDto(
+                                code,
+                                u.courseName() != null ? u.courseName() : "Curso UTP",
+                                type,
+                                desc,
+                                0,
+                                week
+                        ));
+                    }
+                    log.info("[AcademicTool] 🏛️ {} evaluaciones próximas obtenidas de API Externa Gateway para [{}]", mapped.size(), studentCode);
+                    return mapped;
+                }
+            } catch (Exception e) {
+                log.warn("[AcademicTool] ⚠️ Error consultando API Externa /tasks/upcoming para [{}]: {}", studentCode, e.getMessage());
+            }
+        }
+
+        // 2. Fallback: Cálculo local y Supabase a partir de sílabos
+        log.info("[AcademicTool] ℹ️ Usando fallback de sílabos para evaluaciones próximas de [{}]...", studentCode);
+        List<EvaluationSummaryDto> upcoming = new ArrayList<>();
         EnrolledCoursesResult enrolled = getEnrolledCourses(studentCode);
         List<EnrolledCourseDto> courseList = enrolled.courses();
 
@@ -231,7 +337,7 @@ public class AcademicToolService {
                         )));
             }
         }
-        log.info("[AcademicTool] 🎯 Evaluaciones próximas encontradas: {}", upcoming.size());
+        log.info("[AcademicTool] 🎯 Evaluaciones próximas encontradas en fallback: {}", upcoming.size());
         return upcoming;
     }
 
