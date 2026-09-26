@@ -530,9 +530,9 @@ export class MarketplaceViewComponent implements OnInit {
       description: this.newOffer.description.trim() || 'Publicación en el marketplace estudiantil UTP.',
       imageUrl: this.newOffer.imageUrl || defaultImg,
       contactMethod: `Punto de entrega: ${this.newOffer.location} • Teams: ${contactEmail}`,
-      tutorName: student?.fullName || student?.name || 'Estudiante UTP',
-      tutorCareer: student?.career || 'Ingeniería',
-      tutorCycle: student?.currentCycle || 6
+      tutorName: student?.fullName || student?.name || student?.studentCode || 'Estudiante UTP',
+      tutorCareer: student?.career || '',
+      tutorCycle: student?.currentCycle ?? 1
     };
 
     this.marketplaceService.publishItem(payload).subscribe(savedItem => {

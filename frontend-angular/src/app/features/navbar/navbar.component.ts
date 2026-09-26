@@ -48,7 +48,7 @@ export type NavigationTab = 'today' | 'weekly' | 'courses';
           <!-- Account Code Indicator -->
           <div class="account-pill" (click)="openSettings.emit()" title="Ajustes de cuenta">
             <span class="account-dot"></span>
-            <span class="account-code mono">{{ authService.currentStudent()?.studentCode || 'U22204567' }}</span>
+            <span class="account-code mono">{{ authService.currentStudent()?.studentCode || authService.currentStudent()?.username || 'ESTUDIANTE' }}</span>
           </div>
         </div>
 

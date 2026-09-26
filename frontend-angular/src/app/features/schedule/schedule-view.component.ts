@@ -44,7 +44,7 @@ import { ClassSession } from '@domain/models/utp.model';
         <div>
           <h3 class="title-text">Horario Semanal & Sesiones</h3>
           <p class="subtitle-text">
-            {{ scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto' }} • Semana {{ scheduleService.currentSchedule()?.weekNumber || 6 }} de 18
+            {{ scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto' }} • Semana {{ scheduleService.currentSchedule()?.weekNumber || 1 }} de 18
           </p>
         </div>
 

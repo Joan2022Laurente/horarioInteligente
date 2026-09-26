@@ -211,17 +211,19 @@ export class CommunityService {
    */
   createPost(dto: CreatePostDto): Observable<CommunityPost> {
     const student = getCachedStudentProfile();
+    const studentCode = (student?.studentCode || student?.username || '').toUpperCase();
+    const fullName = student?.fullName || student?.name || studentCode || 'Estudiante';
     const newPost: CommunityPost = {
       id: `post-${Date.now()}`,
       author: {
-        id: student?.id || student?.username || 'me',
-        student_code: student?.studentCode || student?.username || 'U20210001',
-        full_name: student?.fullName || student?.name || 'Estudiante UTP',
-        avatar_letter: (student?.name || 'J').charAt(0).toUpperCase(),
-        career: student?.career || 'Ingeniería de Sistemas e Informática',
-        campus: student?.campus || 'Lima Centro',
-        cycle: student?.currentCycle || 6,
-        reputation_score: 110
+        id: student?.id || student?.userId || studentCode || 'me',
+        student_code: studentCode,
+        full_name: fullName,
+        avatar_letter: (fullName.charAt(0) || 'U').toUpperCase(),
+        career: student?.career || '',
+        campus: student?.campus || '',
+        cycle: student?.currentCycle ?? 1,
+        reputation_score: 100
       },
       course_name: dto.course_name || undefined,
       category: dto.category,
@@ -346,15 +348,17 @@ export class CommunityService {
   addComment(postId: string, content: string): void {
     if (!content.trim()) return;
     const student = getCachedStudentProfile();
+    const studentCode = (student?.studentCode || student?.username || '').toUpperCase();
+    const fullName = student?.fullName || student?.name || studentCode || 'Estudiante';
     const newComment: CommunityComment = {
       id: `comm-${Date.now()}`,
       post_id: postId,
       author: {
-        id: student?.id || student?.username || 'me',
-        student_code: student?.studentCode || student?.username || 'U20210001',
-        full_name: student?.fullName || student?.name || 'Estudiante UTP',
-        avatar_letter: (student?.name || 'J').charAt(0).toUpperCase(),
-        career: student?.career || 'Ingeniería de Sistemas e Informática'
+        id: student?.id || student?.userId || studentCode || 'me',
+        student_code: studentCode,
+        full_name: fullName,
+        avatar_letter: (fullName.charAt(0) || 'U').toUpperCase(),
+        career: student?.career || ''
       },
       content: content.trim(),
       upvotes_count: 0,

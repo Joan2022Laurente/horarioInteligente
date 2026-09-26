@@ -386,7 +386,7 @@ export class SyllabusViewComponent implements OnInit {
   }
 
   get currentWeek(): number {
-    return this.scheduleService.currentInterval()?.week_number || 6;
+    return this.scheduleService.currentSchedule()?.weekNumber || this.scheduleService.currentInterval()?.week_number || 1;
   }
 
   get courses(): ProcessedCourse[] {

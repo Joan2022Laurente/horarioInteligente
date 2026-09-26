@@ -672,7 +672,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
         ...interval,
         events: regularEvents
       };
-      this.currentWeek = this.currentInterval.week_number || 6;
+      this.currentWeek = this.currentInterval.week_number || 1;
       this.totalWeeks = this.currentInterval.total_weeks || 18;
       this.periodName = this.currentInterval.period_name || '2026 - Ciclo 2 Agosto';
       this.calculateCurrentBanner();
@@ -716,7 +716,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isLoading = false;
         if (res.success && res.data) {
-          this.currentWeek = res.data.weekNumber || 6;
+          this.currentWeek = res.data.weekNumber || 1;
           this.totalWeeks = res.data.totalWeeks || 18;
           this.periodName = res.data.periodName || '2026 - Ciclo 2 Agosto';
           if (res.data.classes && res.data.classes.length > 0) {

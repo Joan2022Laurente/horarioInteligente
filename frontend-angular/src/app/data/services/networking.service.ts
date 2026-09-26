@@ -90,31 +90,27 @@ export class NetworkingService {
       events.map(e => e.metadata?.courseName || e.title)
     ));
 
-    const freeWindows = calculateStudentFreeWindows(events, student?.campus || 'Lima Centro');
+    const freeWindows = calculateStudentFreeWindows(events, student?.campus || '');
+
+    const studentCode = (student?.studentCode || student?.username || '').toUpperCase();
+    const fullName = student?.fullName || student?.name || studentCode || 'Estudiante UTP';
 
     const profile: StudentNetworkingProfile = {
-      student_code: student?.username || student?.studentCode || 'U20210001',
-      full_name: student?.fullName || student?.name || 'Estudiante UTP',
-      avatar_letter: (student?.name || 'E').charAt(0).toUpperCase(),
-      career: student?.career || 'Ingeniería de Sistemas e Informática',
-      campus: student?.campus || 'Lima Centro',
-      cycle: student?.currentCycle || 6,
-      program: 'PST50',
-      enrolled_courses: enrolledCourses.length > 0 ? enrolledCourses : [
-        'DESARROLLO WEB INTEGRADO',
-        'SERVICIOS CLOUD',
-        'GESTIÓN DEL SERVICIO TI',
-        'FORMACIÓN PARA LA INVESTIGACIÓN - SISTEMAS',
-        'HERRAMIENTAS PARA LA COMUNICACIÓN EFECTIVA',
-        'LENGUAJES DE PROGRAMACIÓN'
-      ],
+      student_code: studentCode,
+      full_name: fullName,
+      avatar_letter: (fullName.charAt(0) || 'U').toUpperCase(),
+      career: student?.career || '',
+      campus: student?.campus || '',
+      cycle: student?.currentCycle ?? 1,
+      program: 'Pregrado',
+      enrolled_courses: enrolledCourses,
       free_windows: freeWindows,
-      skills: cached?.skills || ['Angular', 'Spring Boot', 'AWS Cloud', 'PostgreSQL', 'Microservicios'],
+      skills: cached?.skills || ['Estudio', 'Colaboración'],
       match_intent: cached?.match_intent || 'PROJECT_TEAM',
       contact_channels: cached?.contact_channels || {
-        whatsapp: 'https://wa.me/51987654321',
-        discord: 'estudiante_utp',
-        email: student?.email || 'estudiante@utp.edu.pe'
+        whatsapp: '',
+        discord: '',
+        email: student?.email || ''
       },
       ghost_mode: cached?.ghost_mode || false,
       updated_at: new Date().toISOString()

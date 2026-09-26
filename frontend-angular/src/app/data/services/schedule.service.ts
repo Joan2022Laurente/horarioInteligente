@@ -44,10 +44,19 @@ export class ScheduleService {
   }
 
   private mapToScheduleInterval(interval: UTPCurrentInterval): ScheduleInterval {
+    let computedWeek = interval.week_number;
+    if (!computedWeek && interval.start_of_interval) {
+      try {
+        const start = new Date(interval.start_of_interval).getTime();
+        const diff = Math.floor((Date.now() - start) / (7 * 24 * 3600 * 1000)) + 1;
+        if (diff >= 1 && diff <= 18) computedWeek = diff;
+      } catch {}
+    }
+
     return {
       id: interval.period_name || 'period-2026',
       periodName: interval.period_name || '2026 - Ciclo 2 Agosto',
-      weekNumber: interval.week_number || 6,
+      weekNumber: computedWeek || 1,
       totalWeeks: interval.total_weeks || 18,
       startDate: interval.start_of_interval || new Date().toISOString(),
       endDate: interval.end_of_interval || new Date().toISOString(),

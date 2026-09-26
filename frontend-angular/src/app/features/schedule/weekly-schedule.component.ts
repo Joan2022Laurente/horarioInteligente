@@ -344,7 +344,7 @@ export class WeeklyScheduleComponent implements OnInit {
   }
 
   private applyIntervalData(interval: UTPCurrentInterval): void {
-    this.currentWeek = interval.week_number || 6;
+    this.currentWeek = interval.week_number || 1;
     this.totalWeeks = interval.total_weeks || 18;
     this.selectedWeek = this.currentWeek;
     this.startOfInterval = interval.start_of_interval || '';
@@ -354,7 +354,7 @@ export class WeeklyScheduleComponent implements OnInit {
   }
 
   private applyScheduleData(scheduleData: any): void {
-    this.currentWeek = scheduleData.weekNumber || 6;
+    this.currentWeek = scheduleData.weekNumber || 1;
     this.totalWeeks = scheduleData.totalWeeks || 18;
     this.selectedWeek = this.currentWeek;
 
