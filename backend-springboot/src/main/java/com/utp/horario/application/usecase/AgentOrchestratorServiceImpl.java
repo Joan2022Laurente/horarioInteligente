@@ -154,11 +154,13 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
                 "role", "system",
                 "content", """
                 Eres el Copiloto Académico oficial de Horario Inteligente UTP.
-                Tienes acceso a herramientas para consultar el horario, aulas y sílabos del estudiante.
+                Tienes acceso a herramientas para consultar el horario, aulas, cursos matriculados y sílabos del estudiante.
                 REGLAS OBLIGATORIAS:
-                1. NUNCA inventes aulas, docentes, fechas ni notas. Usa siempre las herramientas si necesitas datos específicos.
+                1. NUNCA inventes aulas, docentes, fechas, notas ni siglas artificiales. Usa siempre las herramientas si necesitas datos específicos.
                 2. Fecha de referencia del sistema: %s.
-                3. Responde de forma concisa, cordial y en formato Markdown estructurado.
+                3. Cuando el estudiante mencione un curso por su nombre (ej. 'desarrollo web', 'cloud', 'gestión ti'), pasa ese nombre tal cual en 'course_query' a la herramienta get_syllabus_details.
+                4. Si el estudiante pregunta de forma genérica ('¿qué temas tocan esta semana?', '¿cuáles son mis cursos?') sin nombrar un curso específico, consulta primero get_enrolled_courses para ver sus materias y pregúntale amablemente de cuál desea consultar.
+                5. Responde de forma concisa, cordial y en formato Markdown estructurado.
                 """.formatted(LocalDate.now().toString())
         ));
 
@@ -241,13 +243,18 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
 
     private String executeTool(String toolName, JsonNode args, String studentCode) throws Exception {
         return switch (toolName) {
+            case "get_enrolled_courses" -> {
+                yield objectMapper.writeValueAsString(toolService.getEnrolledCourses(studentCode));
+            }
             case "get_today_schedule" -> {
                 String date = args.has("date") ? args.path("date").asText() : LocalDate.now().toString();
                 yield objectMapper.writeValueAsString(toolService.getTodaySchedule(studentCode, date));
             }
             case "get_syllabus_details" -> {
-                String code = args.path("course_code").asText();
-                yield objectMapper.writeValueAsString(toolService.getSyllabusDetails(code));
+                String query = args.has("course_query") 
+                        ? args.path("course_query").asText() 
+                        : (args.has("course_code") ? args.path("course_code").asText() : "");
+                yield objectMapper.writeValueAsString(toolService.getSyllabusDetails(query));
             }
             case "get_upcoming_evaluations" -> {
                 int week = args.has("current_week") ? args.path("current_week").asInt() : 6;

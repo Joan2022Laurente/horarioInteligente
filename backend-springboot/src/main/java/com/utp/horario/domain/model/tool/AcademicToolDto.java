@@ -43,4 +43,15 @@ public class AcademicToolDto {
             String learningGoal,
             List<EvaluationSummaryDto> evaluations
     ) {}
+
+    public record EnrolledCourseDto(
+            String courseCode,
+            String courseName
+    ) {}
+
+    public record EnrolledCoursesResult(
+            String studentCode,
+            int totalCourses,
+            List<EnrolledCourseDto> courses
+    ) {}
 }

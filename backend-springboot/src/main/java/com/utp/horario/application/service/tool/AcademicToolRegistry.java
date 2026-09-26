@@ -23,14 +23,25 @@ public class AcademicToolRegistry {
                 Map.of(
                         "type", "function",
                         "function", Map.of(
+                                "name", "get_enrolled_courses",
+                                "description", "Lista todos los cursos matriculados del estudiante con su código oficial y nombre completo.",
+                                "parameters", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of()
+                                )
+                        )
+                ),
+                Map.of(
+                        "type", "function",
+                        "function", Map.of(
                                 "name", "get_syllabus_details",
-                                "description", "Devuelve los detalles académicos oficiales de un curso: fórmula de nota final, ponderaciones de evaluación y logro de aprendizaje.",
+                                "description", "Obtiene el sílabo oficial (evaluaciones, fórmula, temas). Acepta el código oficial (ej. 100000ST61) O el nombre del curso en lenguaje natural (ej. 'desarrollo web', 'cloud', 'gestión ti').",
                                 "parameters", Map.of(
                                         "type", "object",
                                         "properties", Map.of(
-                                                "course_code", Map.of("type", "string", "description", "Código o sigla del curso (ej. 100000I04N o ST61).")
+                                                "course_query", Map.of("type", "string", "description", "Nombre del curso o código exacto. NO inventes abreviaturas de 2 letras.")
                                         ),
-                                        "required", List.of("course_code")
+                                        "required", List.of("course_query")
                                 )
                         )
                 ),

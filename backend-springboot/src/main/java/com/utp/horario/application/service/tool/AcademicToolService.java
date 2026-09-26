@@ -100,21 +100,60 @@ public class AcademicToolService {
     }
 
     /**
-     * Tool 2: Obtiene los detalles de un sílabo (fórmula, logro y ponderaciones).
-     * Soporta fallback automático a Supabase si no se encuentra en el repositorio local.
+     * Tool 0: Obtiene la lista de cursos en los que el estudiante está matriculado.
      */
-    public SyllabusDetailsResult getSyllabusDetails(String courseCode) {
-        log.info("[AcademicTool] 📚 Consultando sílabo de curso: {}", courseCode);
-        String cleanCode = courseCode.trim().toUpperCase();
-        Optional<Syllabus> syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanCode);
+    public EnrolledCoursesResult getEnrolledCourses(String studentCode) {
+        log.info("[AcademicTool] 🎓 Consultando cursos matriculados para alumno {}", studentCode);
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
+        if (scheduleOpt.isEmpty() || scheduleOpt.get().getCourses() == null || scheduleOpt.get().getCourses().isEmpty()) {
+            scheduleOpt = fetchScheduleFromSupabase(studentCode);
+        }
+
+        List<EnrolledCourseDto> courses = new ArrayList<>();
+        if (scheduleOpt.isPresent()) {
+            ScheduleInterval schedule = scheduleOpt.get();
+            if (schedule.getCourses() != null && !schedule.getCourses().isEmpty()) {
+                for (var c : schedule.getCourses()) {
+                    courses.add(new EnrolledCourseDto(c.getCode(), c.getName()));
+                }
+            } else if (schedule.getClasses() != null) {
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                for (var cl : schedule.getClasses()) {
+                    String code = cl.getCourseCode() != null ? cl.getCourseCode() : "";
+                    if (!code.isBlank() && seen.add(code)) {
+                        courses.add(new EnrolledCourseDto(code, cl.getCourseName() != null ? cl.getCourseName() : code));
+                    }
+                }
+            }
+        }
+        log.info("[AcademicTool] 📚 Cursos matriculados encontrados: {}", courses.size());
+        return new EnrolledCoursesResult(studentCode, courses.size(), courses);
+    }
+
+    /**
+     * Tool 2: Obtiene los detalles de un sílabo (fórmula, logro y ponderaciones).
+     * Soporta búsqueda por código exacto o nombre en lenguaje natural (ej. 'desarrollo web').
+     */
+    public SyllabusDetailsResult getSyllabusDetails(String courseQuery) {
+        log.info("[AcademicTool] 📚 Consultando sílabo de curso: {}", courseQuery);
+        String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
+
+        Optional<Syllabus> syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanQuery.toUpperCase());
 
         if (syllabusOpt.isEmpty()) {
-            log.info("[AcademicTool] ☁️ Sílabo no hallado en BD local para [{}]. Consultando Supabase 'official_syllabi'...", cleanCode);
-            syllabusOpt = fetchSyllabusFromSupabase(cleanCode);
+            log.info("[AcademicTool] ☁️ Sílabo no hallado en BD local para [{}]. Consultando Supabase 'official_syllabi'...", cleanQuery);
+            syllabusOpt = fetchSyllabusFromSupabase(cleanQuery);
         }
 
         if (syllabusOpt.isEmpty()) {
-            return new SyllabusDetailsResult(cleanCode, "Curso no encontrado", 0, "", "No disponible", List.of());
+            return new SyllabusDetailsResult(
+                    cleanQuery,
+                    "Curso no encontrado",
+                    0,
+                    "",
+                    "No se encontró el sílabo para '" + cleanQuery + "'. Puedes consultar tus cursos matriculados con get_enrolled_courses.",
+                    List.of()
+            );
         }
 
         Syllabus s = syllabusOpt.get();
@@ -213,14 +252,49 @@ public class AcademicToolService {
     }
 
     /**
-     * Consulta Supabase REST para obtener el sílabo si no está en BD local.
+     * Consulta Supabase REST para obtener el sílabo por código o nombre aproximado (fuzzy match).
      */
-    private Optional<Syllabus> fetchSyllabusFromSupabase(String courseCode) {
+    private Optional<Syllabus> fetchSyllabusFromSupabase(String courseQuery) {
+        if (courseQuery == null || courseQuery.isBlank()) {
+            return Optional.empty();
+        }
+
+        String term = courseQuery.trim();
+        String normalized = normalizeTerm(term);
+
+        // 1. Intento con término original o normalizado
+        Optional<Syllabus> match = querySupabaseSyllabus(term);
+        if (match.isEmpty() && !normalized.equalsIgnoreCase(term)) {
+            match = querySupabaseSyllabus(normalized);
+        }
+
+        if (match.isPresent()) {
+            return match;
+        }
+
+        // 2. Si no encuentra resultado directo y contiene varias palabras (ej. "desarrollo web"), buscar por palabra clave principal
+        String[] words = normalized.split("\\s+");
+        if (words.length > 1) {
+            java.util.Arrays.sort(words, (a, b) -> Integer.compare(b.length(), a.length()));
+            for (String w : words) {
+                if (w.length() >= 4) {
+                    log.info("[AcademicTool] 🔎 Reintentando búsqueda de sílabo por palabra clave: [{}]", w);
+                    Optional<Syllabus> keywordMatch = querySupabaseSyllabus(w);
+                    if (keywordMatch.isPresent()) {
+                        return keywordMatch;
+                    }
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<Syllabus> querySupabaseSyllabus(String searchTerm) {
         try {
-            String url = String.format("%s/rest/v1/official_syllabi?or=(course_code.eq.%s,course_name.ilike.*%s*)&select=*",
-                    supabaseUrl,
-                    java.net.URLEncoder.encode(courseCode, java.nio.charset.StandardCharsets.UTF_8),
-                    java.net.URLEncoder.encode(courseCode, java.nio.charset.StandardCharsets.UTF_8));
+            String encoded = java.net.URLEncoder.encode(searchTerm, java.nio.charset.StandardCharsets.UTF_8);
+            String url = String.format("%s/rest/v1/official_syllabi?or=(course_code.ilike.*%s*,course_name.ilike.*%s*)&select=*&limit=1",
+                    supabaseUrl, encoded, encoded);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -238,13 +312,20 @@ public class AcademicToolService {
                     JsonNode row = arrayNode.get(0);
                     Syllabus s = objectMapper.readValue(row.toString(), Syllabus.class);
                     if (s != null) {
+                        log.info("[AcademicTool] ✅ Sílabo hallado en Supabase: {} ({}) para término [{}]", s.getCourseName(), s.getCourseCode(), searchTerm);
                         return Optional.of(s);
                     }
                 }
             }
         } catch (Exception e) {
-            log.warn("[AcademicTool] ℹ️ Error en fallback a Supabase official_syllabi para [{}]: {}", courseCode, e.getMessage());
+            log.warn("[AcademicTool] ℹ️ Error en consulta a Supabase official_syllabi para [{}]: {}", searchTerm, e.getMessage());
         }
         return Optional.empty();
+    }
+
+    private String normalizeTerm(String text) {
+        if (text == null) return "";
+        String nfd = java.text.Normalizer.normalize(text.trim().toLowerCase(), java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").replaceAll("\\s+", " ").trim();
     }
 }
