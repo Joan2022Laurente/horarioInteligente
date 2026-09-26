@@ -42,6 +42,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        // NO servir index.html para endpoints de sistema como .well-known, mcp o api (debe devolver 404 real)
+                        if (resourcePath.startsWith(".well-known") || resourcePath.startsWith("mcp") || resourcePath.startsWith("api")) {
+                            return null;
+                        }
                         Resource requestedResource = location.createRelative(resourcePath);
                         return (requestedResource.exists() && requestedResource.isReadable())
                                 ? requestedResource

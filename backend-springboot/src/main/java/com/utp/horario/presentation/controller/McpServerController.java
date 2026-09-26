@@ -119,25 +119,49 @@ public class McpServerController {
     }
 
     /**
-     * 2. Recepción de mensajes JSON-RPC 2.0 desde el cliente MCP (Gemini Spark).
+     * 2. Recepción de mensajes JSON-RPC 2.0 desde el cliente MCP (Gemini Spark / Claude / Cursor).
+     * Soporta tanto el transporte SSE tradicional (/mcp/message?sessionId=...)
+     * como el transporte Streamable HTTP moderno (POST /mcp/sse?studentCode=...).
      */
-    @PostMapping("/message")
+    @PostMapping(value = {"/message", "/sse", ""}, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> handleJsonRpcMessage(
-            @RequestParam String sessionId,
+            @RequestParam(required = false) String sessionId,
+            @RequestParam(required = false) String token,
+            @RequestParam(required = false) String studentId,
+            @RequestParam(value = "studentCode", required = false) String queryStudentCode,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody JsonNode request) {
 
-        McpSession session = activeSessions.get(sessionId);
-        if (session == null) {
-            log.warn("[MCP-JSONRPC] Petición para sesión inexistente o finalizada: {}", sessionId);
-            return ResponseEntity.status(404).body(Map.of(
-                    "jsonrpc", "2.0",
-                    "error", Map.of("code", -32000, "message", "Sesión SSE no encontrada o expirada")
-            ));
+        SseEmitter emitter = null;
+        String resolvedStudentCode = null;
+
+        if (sessionId != null && !sessionId.isBlank()) {
+            McpSession session = activeSessions.get(sessionId);
+            if (session != null) {
+                emitter = session.emitter();
+                resolvedStudentCode = session.studentCode();
+            }
         }
 
-        SseEmitter emitter = session.emitter();
-        String studentCode = session.studentCode(); // IDENTIDAD INMUTABLE DE LA SESIÓN
+        if (resolvedStudentCode == null || resolvedStudentCode.isBlank()) {
+            String effectiveAuthHeader = authHeader;
+            if ((effectiveAuthHeader == null || effectiveAuthHeader.isBlank()) && token != null && !token.isBlank()) {
+                effectiveAuthHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+            }
+            String effectiveStudentParam = (queryStudentCode != null && !queryStudentCode.isBlank()) ? queryStudentCode : studentId;
 
+            try {
+                resolvedStudentCode = identityResolver.resolveStudentCode(effectiveAuthHeader, effectiveStudentParam);
+            } catch (Exception ex) {
+                log.warn("[MCP-JSONRPC] ⛔ Petición rechazada por falta de credenciales válidas: {}", ex.getMessage());
+                return ResponseEntity.status(401).body(Map.of(
+                        "jsonrpc", "2.0",
+                        "error", Map.of("code", -32000, "message", "Acceso no autorizado: Se requiere un token o código de estudiante legítimo.")
+                ));
+            }
+        }
+
+        final String studentCode = resolvedStudentCode;
         String method = request.path("method").asText("");
         JsonNode idNode = request.get("id");
         log.info("[MCP-JSONRPC] 📩 Método recibido: {} (ID: {}) para estudiante [{}]", method, idNode, studentCode);
@@ -233,18 +257,20 @@ public class McpServerController {
             }
         }
 
-        // Enviar la respuesta vía SSE al cliente conectado
-        try {
-            String jsonPayload = objectMapper.writeValueAsString(rpcResponse);
-            emitter.send(SseEmitter.event()
-                    .name("message")
-                    .data(jsonPayload));
-            log.info("[MCP-SSE] 📤 Respuesta enviada por canal SSE (ID: {})", idNode);
-        } catch (IOException e) {
-            log.error("[MCP-SSE] Error enviando respuesta JSON-RPC a través de SSE: {}", e.getMessage());
+        // Enviar la respuesta vía SSE al cliente conectado si existe stream abierto
+        if (emitter != null) {
+            try {
+                String jsonPayload = objectMapper.writeValueAsString(rpcResponse);
+                emitter.send(SseEmitter.event()
+                        .name("message")
+                        .data(jsonPayload));
+                log.info("[MCP-SSE] 📤 Respuesta enviada por canal SSE (ID: {})", idNode);
+            } catch (IOException e) {
+                log.error("[MCP-SSE] Error enviando respuesta JSON-RPC a través de SSE: {}", e.getMessage());
+            }
         }
 
-        // Retornar 200 OK
+        // Retornar 200 OK con el cuerpo JSON-RPC
         return ResponseEntity.ok(rpcResponse);
     }
 }
