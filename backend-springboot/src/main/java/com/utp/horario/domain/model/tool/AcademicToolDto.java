@@ -35,14 +35,34 @@ public class AcademicToolDto {
             int weekScheduled
     ) {}
 
+    /**
+     * Temario de una semana específica del sílabo.
+     * topics: temas del día concatenados; activities: actividad prevista; evaluation: evaluación si aplica.
+     */
+    public record WeeklySessionDto(
+            int week,
+            String unit,
+            String topics,
+            String activities,
+            String evaluation
+    ) {}
+
     public record SyllabusDetailsResult(
             String courseCode,
             String courseName,
             int credits,
             String formula,
             String learningGoal,
-            List<EvaluationSummaryDto> evaluations
-    ) {}
+            List<EvaluationSummaryDto> evaluations,
+            List<WeeklySessionDto> weeklySchedule
+    ) {
+        /** Constructor de compatibilidad (sin weeklySchedule) */
+        public SyllabusDetailsResult(String courseCode, String courseName, int credits,
+                                     String formula, String learningGoal,
+                                     List<EvaluationSummaryDto> evaluations) {
+            this(courseCode, courseName, credits, formula, learningGoal, evaluations, List.of());
+        }
+    }
 
     public record EnrolledCourseDto(
             String courseCode,

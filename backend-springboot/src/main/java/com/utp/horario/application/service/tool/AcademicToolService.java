@@ -72,8 +72,8 @@ public class AcademicToolService {
             for (ClassSession c : scheduleOpt.get().getClasses()) {
                 boolean matchesDay = false;
                 if (c.getStartAt() != null) {
-                    // Comparar día de semana (recurrente semanal) O fecha exacta
-                    if (c.getStartAt().toLocalDate().equals(today) || c.getStartAt().getDayOfWeek() == dayOfWeek) {
+                    // SOLO fecha exacta — no por dayOfWeek (causaría duplicar todos los sábados del ciclo)
+                    if (c.getStartAt().toLocalDate().equals(today)) {
                         matchesDay = true;
                     }
                 }
@@ -179,13 +179,23 @@ public class AcademicToolService {
                         e.getWeek() != null ? e.getWeek() : 1
                 )).toList() : List.of();
 
+        List<WeeklySessionDto> weekly = s.getWeeklySchedule() != null ? s.getWeeklySchedule().stream()
+                .map(w -> new WeeklySessionDto(
+                        w.getWeek() != null ? w.getWeek() : 0,
+                        w.getUnit() != null ? w.getUnit() : "",
+                        w.getTopic() != null ? w.getTopic() : "",
+                        w.getActivities() != null ? w.getActivities() : "",
+                        w.getEvaluation()
+                )).toList() : List.of();
+
         return new SyllabusDetailsResult(
                 s.getCourseCode(),
                 s.getCourseName(),
                 s.getCredits() != null ? s.getCredits() : 3,
                 s.getFormula() != null ? s.getFormula() : "",
                 s.getLearningGoal() != null ? s.getLearningGoal() : "No especificado",
-                evals
+                evals,
+                weekly
         );
     }
 
@@ -398,7 +408,19 @@ public class AcademicToolService {
                         if ((s.getLearningGoal() == null || s.getLearningGoal().isBlank()) && row.has("learning_goal")) {
                             s.setLearningGoal(row.get("learning_goal").asText(null));
                         }
-                        log.info("[AcademicTool] ✅ Sílabo hallado en Supabase: {} ({}) para término [{}]", s.getCourseName(), s.getCourseCode(), searchTerm);
+                        // Mapear weekly_schedule (snake_case de Supabase)
+                        if ((s.getWeeklySchedule() == null || s.getWeeklySchedule().isEmpty()) && row.has("weekly_schedule")) {
+                            try {
+                                var weeklyType = objectMapper.getTypeFactory()
+                                        .constructCollectionType(java.util.List.class, com.utp.horario.domain.model.SyllabusWeeklySession.class);
+                                s.setWeeklySchedule(objectMapper.readValue(row.get("weekly_schedule").toString(), weeklyType));
+                            } catch (Exception we) {
+                                log.warn("[AcademicTool] ℹ️ No se pudo parsear weekly_schedule para [{}]: {}", searchTerm, we.getMessage());
+                            }
+                        }
+                        log.info("[AcademicTool] ✅ Sílabo hallado en Supabase: {} ({}) - {} semanas de temario, para término [{}]",
+                                s.getCourseName(), s.getCourseCode(),
+                                s.getWeeklySchedule() != null ? s.getWeeklySchedule().size() : 0, searchTerm);
                         return Optional.of(s);
                     }
                 }
