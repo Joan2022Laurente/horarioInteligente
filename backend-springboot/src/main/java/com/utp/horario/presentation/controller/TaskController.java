@@ -62,6 +62,20 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponse.ok(tasks));
     }
 
+    @GetMapping("/activities")
+    public ResponseEntity<ApiResponse<List<TaskSyncItem>>> getActivities(
+            @CurrentStudent(required = false) String studentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String token,
+            @RequestParam(required = false) Integer week) {
+        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
+            effectiveToken = utpPortalGatewayPort.getStudentToken(studentId);
+        }
+        List<TaskSyncItem> activities = utpPortalGatewayPort.fetchActivitiesByWeek(effectiveToken, week);
+        return ResponseEntity.ok(ApiResponse.ok(activities));
+    }
+
     @GetMapping("/upcoming")
     public ResponseEntity<ApiResponse<List<UpcomingEvaluationDto>>> getUpcoming(
             @CurrentStudent(required = false) String studentId,

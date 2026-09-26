@@ -158,13 +158,19 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
 
     @Override
     public List<TaskSyncItem> fetchTasks(String token, String sectionId) {
+        return fetchActivitiesByWeek(token, null);
+    }
+
+    @Override
+    public List<TaskSyncItem> fetchActivitiesByWeek(String token, Integer week) {
         if (token == null || token.isBlank()) {
             return new ArrayList<>();
         }
-        log.info("[UtpPortalGatewayAdapter] Consultando actividades/tareas a API Externa...");
+        String query = (week != null && week > 0) ? "?week=" + week : "";
+        log.info("[UtpPortalGatewayAdapter] Consultando actividades a API Externa (/tasks/activities{})...", query);
         try {
             HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(gatewayBaseUrl + "/tasks/activities"))
+                    .uri(URI.create(gatewayBaseUrl + "/tasks/activities" + query))
                     .timeout(Duration.ofSeconds(15))
                     .header("Accept", "application/json")
                     .header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token)
@@ -180,16 +186,16 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                         String rawFinishAt = n.path("finishAt").asText(null);
                         LocalDateTime due = ClassSession.parseDateTimeSafely(rawFinishAt);
                         String status = n.path("studentStatus").asText("PENDING");
-                        boolean isDelivered = "DELIVERED".equalsIgnoreCase(status) || "DELIVERED_ON_TIME".equalsIgnoreCase(status);
+                        boolean isDelivered = "DELIVERED".equalsIgnoreCase(status) || "DELIVERED_ON_TIME".equalsIgnoreCase(status) || "SUBMITTED".equalsIgnoreCase(status);
 
                         items.add(TaskSyncItem.builder()
                                 .id(n.path("id").asText(n.path("activityId").asText()))
                                 .courseName(n.path("courseName").asText(""))
-                                .sectionId(n.path("sectionId").asText(sectionId != null ? sectionId : ""))
+                                .sectionId(n.path("sectionId").asText(""))
                                 .homeworkId(n.path("activityId").asText())
                                 .title(n.path("title").asText())
                                 .type(n.path("activityType").asText(n.path("classificationCategory").asText("HOMEWORK")))
-                                .week(n.path("weekNumber").asInt(1))
+                                .week(n.path("weekNumber").asInt(week != null ? week : 1))
                                 .homeworkStatus(status)
                                 .assignmentProgress(isDelivered ? "FINISHED" : "NOT_STARTED")
                                 .dueDate(due)
@@ -199,12 +205,14 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                                 .isDelivered(isDelivered)
                                 .build());
                     }
-                    log.info("[UtpPortalGatewayAdapter] ✅ {} tareas/actividades obtenidas de API Externa", items.size());
+                    log.info("[UtpPortalGatewayAdapter] ✅ {} tareas/actividades de semana {} obtenidas de API Externa", items.size(), week);
                     return items;
                 }
+            } else {
+                log.warn("[UtpPortalGatewayAdapter] ⚠️ /tasks/activities{} respondió HTTP {}", query, response.statusCode());
             }
         } catch (Exception e) {
-            log.error("[UtpPortalGatewayAdapter] Error consultando tareas de API Externa: {}", e.getMessage());
+            log.error("[UtpPortalGatewayAdapter] Error consultando /tasks/activities: {}", e.getMessage());
         }
         return new ArrayList<>();
     }

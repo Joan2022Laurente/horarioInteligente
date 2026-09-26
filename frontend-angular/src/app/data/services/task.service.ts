@@ -52,6 +52,22 @@ export class TaskService {
     );
   }
 
+  getActivitiesByWeek(week?: number): Observable<ApiResponse<TaskSyncItem[]>> {
+    const profile = getCachedStudentProfile();
+    const token = profile?.token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+    const query = (week !== undefined && week !== null) ? `?week=${week}` : '';
+    return this.http.get<ApiResponse<TaskSyncItem[]>>(`${this.baseUrl}/activities${query}`, { headers }).pipe(
+      catchError((err) => {
+        console.warn('[TaskService] ℹ️ Error en /tasks/activities:', err.message);
+        return of({ success: false, message: 'Error consultando actividades semanales', data: [] });
+      })
+    );
+  }
+
   syncTasks(sectionId?: string): Observable<ApiResponse<TaskSyncItem[]>> {
     const profile = getCachedStudentProfile();
     const token = profile?.token;

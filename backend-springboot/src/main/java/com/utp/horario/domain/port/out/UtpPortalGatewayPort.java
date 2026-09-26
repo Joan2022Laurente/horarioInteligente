@@ -16,6 +16,7 @@ public interface UtpPortalGatewayPort {
 
     List<CourseSummaryDto> fetchCoursesSummary(String token);
     List<UpcomingEvaluationDto> fetchUpcomingEvaluations(String token, int limit);
+    List<TaskSyncItem> fetchActivitiesByWeek(String token, Integer week);
     String fetchSyllabusMarkdown(String token, String courseCode);
     String exportCalendarIcs(String token, String period);
 

@@ -707,30 +707,31 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   }
 
   private loadTasksFromBackend(enrolledKeys: Set<string>): void {
-    this.taskService.getUpcomingTasks(25).subscribe({
+    const targetWeek = this.currentWeek || 1;
+    this.taskService.getActivitiesByWeek(targetWeek).subscribe({
       next: (res) => {
         if (res.success && res.data && res.data.length > 0) {
           const dynamicTasks: TaskWithSyllabusContext[] = res.data.map((u: any) => {
-            const isGraded = u.isQualified !== false;
-            const isDelivered = u.studentStatus === 'DELIVERED' || u.studentStatus === 'SUBMITTED';
+            const isGraded = u.isQualified !== false && u.type !== 'PRACTICE';
+            const isDelivered = u.isDelivered || u.studentStatus === 'DELIVERED' || u.studentStatus === 'SUBMITTED' || u.homeworkStatus === 'DELIVERED';
             const courseTitle = u.courseName || '';
-            const week = u.weekNumber || this.currentWeek || 1;
+            const week = u.week || u.weekNumber || targetWeek;
             const syllabusContext = getSyllabusWeekContext(courseTitle, week);
 
             const task: CourseAssignment = {
-              id: u.id || u.activityId || `task-${Math.random()}`,
-              courseId: u.courseId || '',
+              id: u.id || u.homeworkId || u.activityId || `task-${Math.random()}`,
+              courseId: u.courseId || u.sectionId || '',
               courseName: courseTitle,
               sectionCode: u.sectionId || '',
-              title: u.title || 'Evaluación Oficial',
+              title: u.title || 'Actividad Oficial',
               week: week,
               type: isGraded ? 'evaluation' : 'practice',
-              dueDate: u.finishAt || u.startAt || '',
+              dueDate: u.dueDate || u.finishAt || u.startAt || '',
               isGraded: isGraded,
               status: isDelivered ? 'submitted' : 'pending',
-              homeworkStatus: u.studentStatus || 'PENDING',
-              availableUntil: u.finishAt,
-              activityId: u.activityId,
+              homeworkStatus: u.homeworkStatus || u.studentStatus || 'PENDING',
+              availableUntil: u.dueDate || u.finishAt,
+              activityId: u.homeworkId || u.activityId,
               sectionId: u.sectionId
             };
 
