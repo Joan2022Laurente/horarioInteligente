@@ -29,7 +29,7 @@ export class AppDiagnosticLogger {
   }
 
   static logScheduleSource(data: {
-    origin: 'LOCAL_CACHE_0MS' | 'SUPABASE_DAILY_GATE' | 'HEROKU_ACADEMIC_GATEWAY';
+    origin: 'LOCAL_CACHE_0MS' | 'SUPABASE_DAILY_GATE' | 'SUPABASE_CACHED' | 'HEROKU_ACADEMIC_GATEWAY';
     studentCode: string;
     period: string;
     weekNumber?: number;

@@ -182,7 +182,9 @@ export class ScheduleService {
             const row = sbRows[0];
             const isFreshToday = row.last_synced_date === todayDateStr;
 
-            if (isFreshToday && row.schedule_data) {
+            // Usar datos de Supabase si existen, independientemente de si son del día.
+            // Solo fallar al gateway UTP si Supabase no tiene ningún dato.
+            if (row.schedule_data) {
               const rawData = typeof row.schedule_data === 'string' ? JSON.parse(row.schedule_data) : row.schedule_data;
               const interval: UTPCurrentInterval = rawData.events ? rawData : (rawData.current_interval || rawData);
               const scheduleData = this.mapToScheduleInterval(interval);
@@ -190,8 +192,12 @@ export class ScheduleService {
               this.activeStudentCode = studentCode;
               this.intervalSignal.set(interval);
               this.scheduleSignal.set(scheduleData);
-              localStorage.setItem(`utp_schedule_last_sync_${studentCode}`, todayDateStr);
-              localStorage.setItem(DAILY_SYNC_KEY, todayDateStr);
+
+              if (isFreshToday) {
+                localStorage.setItem(`utp_schedule_last_sync_${studentCode}`, todayDateStr);
+                localStorage.setItem(DAILY_SYNC_KEY, todayDateStr);
+              }
+
               saveCachedCalendarData({
                 success: true,
                 code: 200,
@@ -199,18 +205,20 @@ export class ScheduleService {
                 idTransaction: '',
                 data: { current_interval: interval },
               }, studentCode);
-              console.log(`[ScheduleService] 🛡️ Daily Gate Supabase: Horario del día recuperado (<20ms, 0 llamadas a API UTP) para ${studentCode}.`);
+
+              const origin = isFreshToday ? 'SUPABASE_DAILY_GATE' : 'SUPABASE_CACHED';
+              console.log(`[ScheduleService] 🛡️ ${origin}: Horario recuperado de Supabase (<20ms) para ${studentCode}. Fresco hoy: ${isFreshToday}.`);
 
               const courses = getProcessedCourses(interval.events);
               AppDiagnosticLogger.logScheduleSource({
-                origin: 'SUPABASE_DAILY_GATE',
-                studentCode: studentCode,
+                origin,
+                studentCode,
                 period: interval.period_name,
                 weekNumber: interval.week_number,
                 sessionsCount: interval.events.length,
                 coursesCount: courses.length,
                 courseList: courses.map(c => c.name),
-                isFreshToday: true
+                isFreshToday
               });
 
               return scheduleData;

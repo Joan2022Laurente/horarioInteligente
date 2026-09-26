@@ -248,12 +248,72 @@ public class AcademicToolService {
                 if (arrayNode.isArray() && !arrayNode.isEmpty()) {
                     JsonNode row = arrayNode.get(0);
                     JsonNode scheduleDataNode = row.get("schedule_data");
-                    if (scheduleDataNode != null && !scheduleDataNode.isNull()) {
-                        String rawJson = scheduleDataNode.isTextual() ? scheduleDataNode.asText() : scheduleDataNode.toString();
-                        ScheduleInterval parsed = objectMapper.readValue(rawJson, ScheduleInterval.class);
-                        return Optional.ofNullable(parsed);
+                    if (scheduleDataNode == null || scheduleDataNode.isNull()) {
+                        log.warn("[AcademicTool] ⚠️ schedule_data es null en Supabase para [{}]", studentCode);
+                        return Optional.empty();
                     }
+
+                    String rawJson = scheduleDataNode.isTextual() ? scheduleDataNode.asText() : scheduleDataNode.toString();
+                    JsonNode scheduleJson = objectMapper.readTree(rawJson);
+
+                    // Estructura real de Supabase: { "events": [...], "period_name": "...", "week_number": N }
+                    JsonNode eventsNode = scheduleJson.get("events");
+                    if (eventsNode == null || !eventsNode.isArray() || eventsNode.isEmpty()) {
+                        log.warn("[AcademicTool] ⚠️ No se encontró el campo 'events' en schedule_data para [{}]. Keys: {}", studentCode, scheduleJson.fieldNames());
+                        return Optional.empty();
+                    }
+
+                    List<ClassSession> sessions = new ArrayList<>();
+                    for (JsonNode event : eventsNode) {
+                        if (!"SESSION".equals(event.path("type").asText(""))) continue;
+
+                        JsonNode meta = event.path("metadata");
+                        ClassSession cs = new ClassSession();
+                        // courseCode viene de meta.courseId (ej. "100000ST61") o meta.sectionCode
+                        String courseId = meta.path("courseId").asText(null);
+                        String sectionCode = meta.path("sectionCode").asText(null);
+                        cs.setCourseCode(
+                            (courseId != null && !courseId.isBlank()) ? courseId :
+                            (sectionCode != null && !sectionCode.isBlank()) ? sectionCode : ""
+                        );
+                        cs.setCourseName(meta.path("courseName").asText(event.path("title").asText("")));
+                        cs.setBuilding(meta.path("building").asText(""));
+                        cs.setClassroom(meta.path("classroom").asText(""));
+                        cs.setTeacher(meta.path("teacher").asText(""));
+                        cs.setFloor(meta.path("floor").asText(null));
+                        cs.setEnvironmentType(meta.path("environmentType").asText(null));
+                        cs.setZoomLink(meta.path("zoomLink").asText(null));
+                        cs.setClassLink(meta.path("classLink").asText(null));
+                        cs.setModality(event.path("modality").asText("P"));
+                        cs.setStartAt(ClassSession.parseDateTimeSafely(event.path("startAt").asText(null)));
+                        cs.setFinishAt(ClassSession.parseDateTimeSafely(event.path("finishAt").asText(null)));
+                        sessions.add(cs);
+                    }
+
+                    String periodName = scheduleJson.path("period_name").asText("2026 - Ciclo 2 Agosto");
+                    Integer weekNumber = scheduleJson.path("week_number").asInt(1);
+                    Integer totalWeeks = scheduleJson.path("total_weeks").asInt(18);
+
+                    // Leer también de los campos de nivel raíz de la fila (period_name, week_number, total_weeks)
+                    if (periodName.isBlank() || "2026 - Ciclo 2 Agosto".equals(periodName)) {
+                        periodName = row.path("period_name").asText("2026 - Ciclo 2 Agosto");
+                    }
+                    if (weekNumber <= 1) weekNumber = row.path("week_number").asInt(1);
+                    if (totalWeeks <= 1) totalWeeks = row.path("total_weeks").asInt(18);
+
+                    ScheduleInterval interval = ScheduleInterval.builder()
+                            .periodName(periodName)
+                            .weekNumber(weekNumber)
+                            .totalWeeks(totalWeeks)
+                            .classes(sessions)
+                            .build();
+
+                    log.info("[AcademicTool] ☁️ Supabase student_schedules: {} sesiones cargadas para [{}] (período: {})",
+                            sessions.size(), studentCode, periodName);
+                    return Optional.of(interval);
                 }
+            } else {
+                log.warn("[AcademicTool] ⚠️ Supabase respondió HTTP {} al consultar student_schedules para [{}]", response.statusCode(), studentCode);
             }
         } catch (Exception e) {
             log.warn("[AcademicTool] ℹ️ Error en fallback a Supabase student_schedules para [{}]: {}", studentCode, e.getMessage());
