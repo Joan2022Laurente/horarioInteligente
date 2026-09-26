@@ -51,7 +51,6 @@ Thumbs.db
 logs/
 *.pid
 
-# Frontend build outputs in backend resources
-backend-springboot/src/main/resources/static/*.js
-backend-springboot/src/main/resources/static/*.css
-backend-springboot/src/main/resources/static/*.map
+# Frontend build outputs in backend resources (incluidos para despliegue monolítico en Heroku)
+# backend-springboot/src/main/resources/static/
+

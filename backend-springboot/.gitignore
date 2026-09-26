@@ -16,7 +16,5 @@ target/
 .env
 *.env
 
-# Frontend build outputs in backend resources
-src/main/resources/static/*.js
-src/main/resources/static/*.css
-src/main/resources/static/*.map
+# Frontend build outputs in backend resources (permitidos para empaquetado en fat jar)
+
