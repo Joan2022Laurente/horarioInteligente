@@ -196,6 +196,11 @@ export interface CourseAssignment {
   deliveredDate?: string;
   attemptNumber?: number;
   score?: number;
+  activityType?: 'HOMEWORK' | 'FORUM' | string;
+  classificationCategory?: string;
+  evaluationSystem?: string | null;
+  urgency?: string;
+  daysRemaining?: number;
 }
 
 export interface SyllabusWeekSyncContext {

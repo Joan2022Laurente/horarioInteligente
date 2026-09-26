@@ -30,4 +30,11 @@ public class TaskSyncItem {
     private Double maxScore;
     private Double score;
     private Boolean isDelivered;
+    private String courseId;
+    private String contentId;
+    private String evaluationSystem;
+    private Boolean isQualified;
+    private String classificationCategory;
+    private String urgency;
+    private Integer daysRemaining;
 }

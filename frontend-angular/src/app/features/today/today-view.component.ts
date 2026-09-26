@@ -19,7 +19,7 @@ import {
   getDynamicStudentEvaluations,
   getCanonicalCourseKey 
 } from '@data/schedule-parser';
-import { getSynchronizedStudentTasks, calculateActivityUrgency } from '@data/activity-adapter';
+import { getSynchronizedStudentTasks, calculateActivityUrgency, ActivityUrgency } from '@data/activity-adapter';
 import { getSyllabusWeekContext } from '@data/syllabus-engine';
 import { resolveEventLocation, getClassroomLocation } from '@data/classroom-helper';
 import { getCachedCalendarData, saveCachedCalendarData, getCachedSyllabus, getAllCachedSyllabi } from '@data/syllabus/client-storage';
@@ -321,18 +321,25 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 Todas ({{ synchronizedTasks.length }})
               </button>
               <button
+                (click)="taskFilter = 'homework'"
+                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
+                [ngClass]="taskFilter === 'homework' ? 'bg-blue-500/20 text-blue-400 font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+              >
+                Tareas ({{ homeworkTasksCount }})
+              </button>
+              <button
+                (click)="taskFilter = 'forum'"
+                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
+                [ngClass]="taskFilter === 'forum' ? 'bg-purple-500/20 text-purple-400 font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
+              >
+                Foros ({{ forumTasksCount }})
+              </button>
+              <button
                 (click)="taskFilter = 'graded'"
                 class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
                 [ngClass]="taskFilter === 'graded' ? 'bg-[rgba(255,87,34,0.15)] text-[#ff7043] font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
               >
                 Calificadas ({{ gradedTasksCount }})
-              </button>
-              <button
-                (click)="taskFilter = 'practice'"
-                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
-                [ngClass]="taskFilter === 'practice' ? 'bg-white text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-              >
-                Prácticas ({{ practiceTasksCount }})
               </button>
             </div>
           </div>
@@ -352,6 +359,23 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                         <span class="text-neutral-600">•</span>
                         <span class="text-neutral-400">Semana {{ item.task.week }}</span>
 
+                        <!-- Badge: Tipo de Actividad (FORUM / TAREA) -->
+                        @if (item.task.activityType === 'FORUM') {
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold text-[10.5px]">
+                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span>Foro</span>
+                          </span>
+                        } @else {
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 font-bold text-[10.5px]">
+                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <span>Tarea</span>
+                          </span>
+                        }
+
                         @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
                           <span class="text-neutral-600">•</span>
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 font-bold text-[11px]">
@@ -362,7 +386,15 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                           </span>
                         }
 
-                        @if (item.syllabusContext.officialEvaluation) {
+                        @if (item.task.evaluationSystem) {
+                          <span class="text-neutral-600">•</span>
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
+                            {{ item.task.evaluationSystem }}
+                            @if (item.syllabusContext.formulaWeight) {
+                              ({{ item.syllabusContext.formulaWeight }}%)
+                            }
+                          </span>
+                        } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
                           <span class="text-neutral-600">•</span>
                           <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
                             {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
@@ -596,7 +628,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   activeSection: TodayTabSection = 'todayClasses';
-  taskFilter: 'all' | 'graded' | 'practice' = 'all';
+  taskFilter: 'all' | 'homework' | 'forum' | 'graded' = 'all';
 
   readonly todayStore = inject(TodayStore);
 
@@ -712,11 +744,14 @@ export class TodayViewComponent implements OnInit, OnDestroy {
       next: (res) => {
         if (res.success && res.data && res.data.length > 0) {
           const dynamicTasks: TaskWithSyllabusContext[] = res.data.map((u: any) => {
-            const isGraded = u.isQualified !== false && u.type !== 'PRACTICE';
             const isDelivered = u.isDelivered || u.studentStatus === 'DELIVERED' || u.studentStatus === 'SUBMITTED' || u.homeworkStatus === 'DELIVERED';
             const courseTitle = u.courseName || '';
             const week = u.week || u.weekNumber || targetWeek;
             const syllabusContext = getSyllabusWeekContext(courseTitle, week);
+
+            const actType = (u.type || u.activityType || '').toUpperCase().includes('FORUM') ? 'FORUM' : 'HOMEWORK';
+            const evalSys = u.evaluationSystem || null;
+            const isGraded = Boolean(u.isQualified || evalSys || (u.classificationCategory && u.classificationCategory.includes('WEIGHTED')));
 
             const task: CourseAssignment = {
               id: u.id || u.homeworkId || u.activityId || `task-${Math.random()}`,
@@ -725,14 +760,19 @@ export class TodayViewComponent implements OnInit, OnDestroy {
               sectionCode: u.sectionId || '',
               title: u.title || 'Actividad Oficial',
               week: week,
-              type: isGraded ? 'evaluation' : 'practice',
+              type: isGraded ? 'evaluation' : (actType === 'FORUM' ? 'practice' : 'homework'),
               dueDate: u.dueDate || u.finishAt || u.startAt || '',
               isGraded: isGraded,
               status: isDelivered ? 'submitted' : 'pending',
               homeworkStatus: u.homeworkStatus || u.studentStatus || 'PENDING',
               availableUntil: u.dueDate || u.finishAt,
               activityId: u.homeworkId || u.activityId,
-              sectionId: u.sectionId
+              sectionId: u.sectionId,
+              activityType: actType,
+              evaluationSystem: evalSys,
+              classificationCategory: u.classificationCategory,
+              urgency: u.urgency,
+              daysRemaining: u.daysRemaining
             };
 
             return { task, syllabusContext };
@@ -874,18 +914,29 @@ export class TodayViewComponent implements OnInit, OnDestroy {
 
   get filteredTasks(): TaskWithSyllabusContext[] {
     return this.synchronizedTasks.filter(item => {
-      if (this.taskFilter === 'graded') return item.task.isGraded || !!item.syllabusContext.officialEvaluation;
-      if (this.taskFilter === 'practice') return !item.task.isGraded && !item.syllabusContext.officialEvaluation;
+      if (this.taskFilter === 'homework') {
+        return item.task.activityType === 'HOMEWORK';
+      }
+      if (this.taskFilter === 'forum') {
+        return item.task.activityType === 'FORUM';
+      }
+      if (this.taskFilter === 'graded') {
+        return item.task.isGraded || Boolean(item.task.evaluationSystem);
+      }
       return true;
     });
   }
 
-  get gradedTasksCount(): number {
-    return this.synchronizedTasks.filter(item => item.task.isGraded || !!item.syllabusContext.officialEvaluation).length;
+  get homeworkTasksCount(): number {
+    return this.synchronizedTasks.filter(item => item.task.activityType === 'HOMEWORK').length;
   }
 
-  get practiceTasksCount(): number {
-    return this.synchronizedTasks.length - this.gradedTasksCount;
+  get forumTasksCount(): number {
+    return this.synchronizedTasks.filter(item => item.task.activityType === 'FORUM').length;
+  }
+
+  get gradedTasksCount(): number {
+    return this.synchronizedTasks.filter(item => item.task.isGraded || Boolean(item.task.evaluationSystem)).length;
   }
 
   formatTime(dateStr: string): string {
@@ -914,8 +965,27 @@ export class TodayViewComponent implements OnInit, OnDestroy {
     if (link) window.open(link, '_blank');
   }
 
-  getTaskUrgency(task: CourseAssignment) {
-    return calculateActivityUrgency(task.dueDate);
+  getTaskUrgency(task: CourseAssignment): ActivityUrgency | null {
+    if (task.urgency) {
+      if (task.urgency === 'DUE_THIS_WEEK' || task.urgency === 'URGENT') {
+        const days = task.daysRemaining ?? 1;
+        return {
+          status: days <= 1 ? 'today' : 'upcoming',
+          label: days <= 1 ? 'Vence pronto (esta semana)' : `Vence en ${days} días`,
+          badgeVariant: days <= 1 ? 'orange' : 'neutral'
+        };
+      }
+      if (task.urgency === 'UPCOMING') {
+        const days = task.daysRemaining;
+        return {
+          status: 'upcoming',
+          label: days ? `Vence en ${days} días` : 'Programado',
+          badgeVariant: 'neutral'
+        };
+      }
+    }
+    const cleanDate = task.dueDate ? task.dueDate.replace(' ', 'T') : undefined;
+    return calculateActivityUrgency(cleanDate);
   }
 
   openRubric(rubric: AssignmentRubric, taskTitle: string, courseName: string): void {
@@ -924,5 +994,12 @@ export class TodayViewComponent implements OnInit, OnDestroy {
 
   onAskAiClick(prompt: string): void {
     this.askAi.emit(prompt);
+  }
+
+  isTaskTitleMatchingEval(title: string, evalCode?: string): boolean {
+    if (!evalCode || !title) return false;
+    const cleanTitle = title.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanCode = evalCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return cleanTitle.includes(cleanCode) || cleanCode.includes(cleanTitle);
   }
 }

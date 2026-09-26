@@ -188,13 +188,22 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                         String status = n.path("studentStatus").asText("PENDING");
                         boolean isDelivered = "DELIVERED".equalsIgnoreCase(status) || "DELIVERED_ON_TIME".equalsIgnoreCase(status) || "SUBMITTED".equalsIgnoreCase(status);
 
+                        String evalSystem = n.hasNonNull("evaluationSystem") ? n.path("evaluationSystem").asText() : null;
+                        boolean isQualified = n.path("isQualified").asBoolean(false);
+                        String category = n.path("classificationCategory").asText("");
+                        String urgency = n.path("urgency").asText("");
+                        Integer daysRem = n.hasNonNull("daysRemaining") ? n.path("daysRemaining").asInt() : null;
+                        String actType = n.path("activityType").asText("HOMEWORK");
+
                         items.add(TaskSyncItem.builder()
                                 .id(n.path("id").asText(n.path("activityId").asText()))
                                 .courseName(n.path("courseName").asText(""))
+                                .courseId(n.path("courseId").asText(""))
                                 .sectionId(n.path("sectionId").asText(""))
+                                .contentId(n.path("contentId").asText(""))
                                 .homeworkId(n.path("activityId").asText())
                                 .title(n.path("title").asText())
-                                .type(n.path("activityType").asText(n.path("classificationCategory").asText("HOMEWORK")))
+                                .type(actType)
                                 .week(n.path("weekNumber").asInt(week != null ? week : 1))
                                 .homeworkStatus(status)
                                 .assignmentProgress(isDelivered ? "FINISHED" : "NOT_STARTED")
@@ -203,6 +212,11 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                                 .maxScore(20.0)
                                 .score(null)
                                 .isDelivered(isDelivered)
+                                .evaluationSystem(evalSystem)
+                                .isQualified(isQualified)
+                                .classificationCategory(category)
+                                .urgency(urgency)
+                                .daysRemaining(daysRem)
                                 .build());
                     }
                     log.info("[UtpPortalGatewayAdapter] ✅ {} tareas/actividades de semana {} obtenidas de API Externa", items.size(), week);
