@@ -8,6 +8,7 @@ import com.utp.horario.infrastructure.security.CurrentStudent;
 import com.utp.horario.presentation.dto.AiChatRequest;
 import com.utp.horario.presentation.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/ai")
 @RequiredArgsConstructor
@@ -49,7 +51,15 @@ public class AiChatController {
         String effectiveStudentCode = (studentId != null && !studentId.isBlank()) 
                 ? studentId 
                 : (studentCode != null && !studentCode.isBlank() ? studentCode : "current-student");
-        var emitter = new org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter(60000L);
+        var emitter = new org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter(120000L);
+
+        emitter.onTimeout(() -> {
+            log.warn("[AiChatController] ⏱️ Timeout en stream SSE");
+            emitter.complete();
+        });
+        emitter.onError(e -> {
+            log.info("[AiChatController] ℹ️ Conexión SSE cerrada o resuelta por cliente");
+        });
 
         // Ejecutar de forma asíncrona: emitir eventos SSE
         java.util.concurrent.CompletableFuture.runAsync(() -> {
@@ -79,7 +89,7 @@ public class AiChatController {
                 for (int i = 0; i < words.length; i++) {
                     String space = (i < words.length - 1) ? " " : "";
                     emitter.send("event: delta\ndata: " + words[i] + space + "\n\n");
-                    Thread.sleep(25); // Simulación de fluidez natural
+                    Thread.sleep(8); // Simulación de fluidez rápida y natural
                 }
 
                 emitter.send("event: done\ndata: [DONE]\n\n");

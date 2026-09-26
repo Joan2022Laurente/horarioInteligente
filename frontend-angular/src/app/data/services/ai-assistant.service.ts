@@ -100,6 +100,8 @@ export class AiAssistantService {
       const token = profile?.token || '';
 
       const url = `${this.baseUrl}/chat/stream?message=${encodeURIComponent(message)}&studentCode=${encodeURIComponent(studentCode)}`;
+      console.log("[AiChat] 🚀 Iniciando solicitud de streaming a:", url);
+
       const headers: Record<string, string> = {
         'Accept': 'text/event-stream'
       };
@@ -112,10 +114,14 @@ export class AiAssistantService {
         headers
       });
 
+      console.log("[AiChat] 📥 Respuesta recibida. Status:", response.status, response.statusText);
       if (!response.ok || !response.body) {
-        throw new Error(`HTTP ${response.status}: Error al abrir stream SSE`);
+        const errorText = await response.text().catch(() => "");
+        console.error("[AiChat] ❌ Error en respuesta del servidor:", response.status, errorText);
+        throw new Error(`Error en el servidor (${response.status}): ${errorText || response.statusText}`);
       }
 
+      console.log("[AiChat] 🔄 Abriendo lector de flujo (reader)...");
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
@@ -124,36 +130,47 @@ export class AiAssistantService {
         const { value, done } = await reader.read();
         if (done) break;
 
+        // console.debug("[AiChat] 📦 Chunk recibido:", value); // para depuración fina
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         let currentEvent = 'message';
         for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) {
+          if (!line.trim()) {
             currentEvent = 'message';
             continue;
           }
 
-          if (trimmed.startsWith('event:')) {
-            currentEvent = trimmed.slice(6).trim();
-          } else if (trimmed.startsWith('data:')) {
-            const data = trimmed.slice(5).trim();
-            if (data === '[DONE]') {
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            let data = line.slice(5);
+            if (data.startsWith(' ')) {
+              data = data.slice(1);
+            }
+
+            if (data.trim() === '[DONE]') {
+              console.log("[AiChat] 🏁 Evento [DONE] recibido del servidor.");
               return;
             }
 
             if (currentEvent === 'tool') {
-              onTool(data);
+              const toolName = data.trim();
+              console.log("[AiChat] 🛠️ Herramienta detectada:", toolName);
+              onTool(toolName);
             } else if (currentEvent === 'delta') {
-              onDelta(trimmed.slice(5)); // Preserva espacios si vienen
+              onDelta(data);
             }
           }
         }
       }
+    } catch (error) {
+      console.error("[AiChat] 🚨 Excepción durante el streaming:", error);
+      throw error;
     } finally {
       this.isThinkingSignal.set(false);
+      console.log("[AiChat] 🏁 Flujo de streaming finalizado.");
     }
   }
 }
