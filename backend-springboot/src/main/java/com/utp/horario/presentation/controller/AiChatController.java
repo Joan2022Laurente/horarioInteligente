@@ -44,8 +44,11 @@ public class AiChatController {
     @GetMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter streamChat(
             @CurrentStudent(required = false) String studentId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String studentCode,
             @org.springframework.web.bind.annotation.RequestParam String message) {
-        String effectiveStudentCode = (studentId != null && !studentId.isBlank()) ? studentId : "current-student";
+        String effectiveStudentCode = (studentId != null && !studentId.isBlank()) 
+                ? studentId 
+                : (studentCode != null && !studentCode.isBlank() ? studentCode : "current-student");
         var emitter = new org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter(60000L);
 
         // Ejecutar de forma asíncrona: emitir eventos SSE

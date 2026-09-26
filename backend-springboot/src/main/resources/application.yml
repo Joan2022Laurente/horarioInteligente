@@ -26,6 +26,10 @@ academic:
   gateway:
     url: ${ACADEMIC_GATEWAY_URL:https://utp-academic-gateway-c0da87808dcb.herokuapp.com/api/v1}
 
+supabase:
+  url: ${SUPABASE_URL:https://hvunobsbasdksiajmfjf.supabase.co}
+  anon-key: ${SUPABASE_ANON_KEY:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2dW5vYnNiYXNka3NpYWptZmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Njg0NzAsImV4cCI6MjEwNTE0NDQ3MH0.ZP2J4bJ8V55Y7fggZKfFIzp9p-TxwsRp01UQultfpxc}
+
 app:
   jwt:
     secret: ${JWT_SECRET:}

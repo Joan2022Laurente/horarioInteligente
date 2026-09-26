@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of, tap } from 'rxjs';
 import { ChatMessage, DailyQuotaStatus, AiChatRequest } from '@domain/models/ai.model';
 import { ApiResponse } from '@domain/models/utp.model';
-
+import { getCachedStudentProfile } from '@data/syllabus/client-storage';
 import { environment } from '@env/environment';
 
 @Injectable({
@@ -95,10 +95,17 @@ export class AiAssistantService {
   ): Promise<void> {
     this.isThinkingSignal.set(true);
     try {
-      const url = `${this.baseUrl}/chat/stream?message=${encodeURIComponent(message)}`;
+      const profile = getCachedStudentProfile();
+      const studentCode = profile?.studentCode || profile?.username || '';
+      const token = profile?.token || '';
+
+      const url = `${this.baseUrl}/chat/stream?message=${encodeURIComponent(message)}&studentCode=${encodeURIComponent(studentCode)}`;
       const headers: Record<string, string> = {
         'Accept': 'text/event-stream'
       };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const response = await fetch(url, {
         method: 'GET',
