@@ -15,7 +15,6 @@ public class AcademicToolRegistry {
                                 "parameters", Map.of(
                                         "type", "object",
                                         "properties", Map.of(
-                                                "student_code", Map.of("type", "string", "description", "Código de estudiante UTP (ej. U19204085). Opcional."),
                                                 "date", Map.of("type", "string", "description", "Fecha en formato ISO YYYY-MM-DD. Opcional, por defecto hoy.")
                                         )
                                 )
@@ -28,9 +27,7 @@ public class AcademicToolRegistry {
                                 "description", "Lista todos los cursos matriculados del estudiante con su código oficial y nombre completo.",
                                 "parameters", Map.of(
                                         "type", "object",
-                                        "properties", Map.of(
-                                                "student_code", Map.of("type", "string", "description", "Código de estudiante UTP (ej. U19204085). Opcional.")
-                                        )
+                                        "properties", Map.of()
                                 )
                         )
                 ),
@@ -56,7 +53,6 @@ public class AcademicToolRegistry {
                                 "parameters", Map.of(
                                         "type", "object",
                                         "properties", Map.of(
-                                                "student_code", Map.of("type", "string", "description", "Código de estudiante UTP (ej. U19204085). Opcional."),
                                                 "current_week", Map.of("type", "integer", "description", "Número de semana académica actual del ciclo (1 a 18).")
                                         ),
                                         "required", List.of("current_week")

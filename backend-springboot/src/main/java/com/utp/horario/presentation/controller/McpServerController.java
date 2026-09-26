@@ -30,7 +30,15 @@ public class McpServerController {
 
     private final AcademicToolService toolService;
     private final ObjectMapper objectMapper;
-    private final Map<String, SseEmitter> activeSessions = new ConcurrentHashMap<>();
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
+
+    public record McpSession(
+            String sessionId,
+            String studentCode,
+            SseEmitter emitter
+    ) {}
+
+    private final Map<String, McpSession> activeSessions = new ConcurrentHashMap<>();
 
     /**
      * Endpoint informativo para verificación rápida desde el navegador o tests HTTP.
@@ -42,6 +50,8 @@ public class McpServerController {
                 "version", "1.0.0",
                 "protocolVersion", "2024-11-05",
                 "transport", "sse",
+                "authRequired", true,
+                "authParam", "token | studentCode",
                 "sseEndpoint", "/mcp/sse",
                 "messageEndpoint", "/mcp/message",
                 "activeSessions", activeSessions.size()
@@ -50,34 +60,56 @@ public class McpServerController {
 
     /**
      * 1. Handshake SSE: Gemini o cualquier cliente MCP remoto se conecta a esta URL.
+     * Requiere autenticación mediante Token JWT en Header Authorization o Query Param 'token' / 'studentCode'.
+     * La identidad del estudiante queda blindada e inmutable para toda la duración de la sesión.
      */
     @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter handleSseConnection(HttpServletRequest request) {
+    public SseEmitter handleSseConnection(
+            @RequestParam(required = false) String token,
+            @RequestParam(required = false) String studentId,
+            @RequestParam(required = false) String studentCode,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        String effectiveAuthHeader = authHeader;
+        if ((effectiveAuthHeader == null || effectiveAuthHeader.isBlank()) && token != null && !token.isBlank()) {
+            effectiveAuthHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+        }
+        String effectiveStudentParam = (studentCode != null && !studentCode.isBlank()) ? studentCode : studentId;
+
+        String authenticatedStudentCode;
+        try {
+            authenticatedStudentCode = identityResolver.resolveStudentCode(effectiveAuthHeader, effectiveStudentParam);
+        } catch (Exception ex) {
+            log.warn("[MCP-SSE] ⛔ Conexión rechazada por falta de credenciales válidas: {}", ex.getMessage());
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED,
+                    "Acceso no autorizado: Se requiere un token de sesión o un código de estudiante legítimo."
+            );
+        }
+
         String sessionId = UUID.randomUUID().toString();
-        // Timeout 0L indica stream persistente sin desconexión prematura
         SseEmitter emitter = new SseEmitter(0L);
 
-        activeSessions.put(sessionId, emitter);
+        activeSessions.put(sessionId, new McpSession(sessionId, authenticatedStudentCode, emitter));
         emitter.onCompletion(() -> {
             activeSessions.remove(sessionId);
-            log.info("[MCP-SSE] Sesión completada: {}", sessionId);
+            log.info("[MCP-SSE] Sesión completada: {} (Estudiante: {})", sessionId, authenticatedStudentCode);
         });
         emitter.onTimeout(() -> {
             activeSessions.remove(sessionId);
-            log.warn("[MCP-SSE] Sesión expiró por timeout: {}", sessionId);
+            log.warn("[MCP-SSE] Sesión expiró por timeout: {} (Estudiante: {})", sessionId, authenticatedStudentCode);
         });
         emitter.onError(e -> {
             activeSessions.remove(sessionId);
-            log.info("[MCP-SSE] Sesión cerrada con incidencia: {} ({})", sessionId, e.getMessage());
+            log.info("[MCP-SSE] Sesión cerrada: {} ({})", sessionId, e.getMessage());
         });
 
         try {
-            // El estándar MCP SSE exige enviar un evento 'endpoint' con la ruta de mensajería POST
             String messageEndpoint = "/mcp/message?sessionId=" + sessionId;
             emitter.send(SseEmitter.event()
                     .name("endpoint")
                     .data(messageEndpoint));
-            log.info("[MCP-SSE] 🚀 Cliente MCP conectado. Session ID: {} -> Endpoint: {}", sessionId, messageEndpoint);
+            log.info("[MCP-SSE] 🚀 Sesión MCP autenticada para [{}] -> Session: {}", authenticatedStudentCode, sessionId);
         } catch (IOException e) {
             log.error("[MCP-SSE] Error emitiendo evento inicial 'endpoint': {}", e.getMessage());
             emitter.completeWithError(e);
@@ -94,8 +126,8 @@ public class McpServerController {
             @RequestParam String sessionId,
             @RequestBody JsonNode request) {
 
-        SseEmitter emitter = activeSessions.get(sessionId);
-        if (emitter == null) {
+        McpSession session = activeSessions.get(sessionId);
+        if (session == null) {
             log.warn("[MCP-JSONRPC] Petición para sesión inexistente o finalizada: {}", sessionId);
             return ResponseEntity.status(404).body(Map.of(
                     "jsonrpc", "2.0",
@@ -103,9 +135,12 @@ public class McpServerController {
             ));
         }
 
+        SseEmitter emitter = session.emitter();
+        String studentCode = session.studentCode(); // IDENTIDAD INMUTABLE DE LA SESIÓN
+
         String method = request.path("method").asText("");
         JsonNode idNode = request.get("id");
-        log.info("[MCP-JSONRPC] 📩 Método recibido: {} (ID: {}) para sesión {}", method, idNode, sessionId);
+        log.info("[MCP-JSONRPC] 📩 Método recibido: {} (ID: {}) para estudiante [{}]", method, idNode, studentCode);
 
         Map<String, Object> rpcResponse = new LinkedHashMap<>();
         rpcResponse.put("jsonrpc", "2.0");
@@ -154,11 +189,7 @@ public class McpServerController {
             case "tools/call" -> {
                 String toolName = request.at("/params/name").asText();
                 JsonNode arguments = request.at("/params/arguments");
-                log.info("[MCP-JSONRPC] 🛠️ Invocación de tool: {} con argumentos: {}", toolName, arguments);
-
-                String studentCode = (arguments.has("student_code") && !arguments.path("student_code").asText().isBlank())
-                        ? arguments.path("student_code").asText()
-                        : "U19204085"; // Código predeterminado o demostración
+                log.info("[MCP-JSONRPC] 🛠️ Invocación de tool: {} con argumentos: {} para estudiante [{}]", toolName, arguments, studentCode);
 
                 try {
                     String resultJson = switch (toolName) {
