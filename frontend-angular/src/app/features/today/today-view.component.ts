@@ -778,7 +778,17 @@ export class TodayViewComponent implements OnInit, OnDestroy {
             return { task, syllabusContext };
           });
 
-          this.synchronizedTasks = dynamicTasks;
+          // Deduplicar por id Y por title+courseName para cubrir casos donde la API
+          // retorna el mismo ítem con diferentes IDs (contentId vs activityId vs id)
+          const seenIds = new Set<string>();
+          const seenTitleKeys = new Set<string>();
+          this.synchronizedTasks = dynamicTasks.filter(item => {
+            const titleKey = `${item.task.courseName}||${item.task.title}`;
+            if (seenIds.has(item.task.id) || seenTitleKeys.has(titleKey)) return false;
+            seenIds.add(item.task.id);
+            seenTitleKeys.add(titleKey);
+            return true;
+          });
         } else {
           // Fallback a /tasks
           this.taskService.getTasks().subscribe({
