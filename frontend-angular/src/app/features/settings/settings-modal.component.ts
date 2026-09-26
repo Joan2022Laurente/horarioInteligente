@@ -50,6 +50,10 @@ import { ApiResponse } from '@domain/models/utp.model';
                 <span class="text-neutral-400">Campus:</span>
                 <span class="text-neutral-200">{{ authService.currentStudent()?.campus || 'Campus UTP' }}</span>
               </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-neutral-400">Ciclo:</span>
+                <span class="font-mono text-neutral-200 font-semibold">Ciclo {{ authService.currentStudent()?.currentCycle || 7 }}</span>
+              </div>
             </div>
 
             <!-- Botón Sincronizar Horario en Vivo -->

@@ -18,8 +18,12 @@ public class StudentRepositoryAdapter implements StudentRepositoryPort {
 
     @Override
     public StudentProfile save(StudentProfile student) {
+        String entityId = (student.getId() != null && !student.getId().isBlank()) 
+                ? student.getId() 
+                : student.getStudentCode();
+
         StudentEntity entity = StudentEntity.builder()
-                .id(student.getId())
+                .id(entityId)
                 .studentCode(student.getStudentCode())
                 .fullName(student.getFullName())
                 .email(student.getEmail())
@@ -29,7 +33,19 @@ public class StudentRepositoryAdapter implements StudentRepositoryPort {
                 .build();
 
         StudentEntity saved = repository.save(entity);
-        return toDomain(saved, student.getToken(), student.getEnrolledCourseCodes());
+        return StudentProfile.builder()
+                .id(saved.getId())
+                .studentCode(saved.getStudentCode())
+                .fullName(saved.getFullName())
+                .email(saved.getEmail())
+                .career(saved.getCareer())
+                .campus(saved.getCampus())
+                .currentCycle(saved.getCurrentCycle())
+                .token(student.getToken())
+                .refreshToken(student.getRefreshToken())
+                .expiresIn(student.getExpiresIn())
+                .enrolledCourseCodes(student.getEnrolledCourseCodes())
+                .build();
     }
 
     @Override

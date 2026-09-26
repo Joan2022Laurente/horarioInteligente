@@ -39,6 +39,7 @@ export class AuthService {
             studentName: res.data.fullName,
             studentCode: res.data.studentCode,
             hasToken: !!res.data.token,
+            cycle: res.data.currentCycle
           });
 
           // Diagnóstico de origen de datos
@@ -82,6 +83,13 @@ export class AuthService {
     const studentCode = (profile.studentCode || profile.username || '').toUpperCase();
     if (!studentCode) return;
 
+    // Si los datos locales son incompletos o dummy (ej. nombre igual al código), enriquecer desde Supabase
+    const isDummyName = !profile.fullName || profile.fullName.trim().toUpperCase() === studentCode;
+    if (isDummyName) {
+      this.refreshProfileFromSupabase(studentCode);
+      return;
+    }
+
     const headers = {
       'apikey': environment.supabaseAnonKey,
       'Authorization': `Bearer ${environment.supabaseAnonKey}`,
@@ -116,6 +124,58 @@ export class AuthService {
         }
       },
       error: (err) => console.warn('[AuthService] ℹ️ Consulta Supabase students en espera:', err.message)
+    });
+  }
+
+  /**
+   * Refresca y auto-sana los datos del estudiante desde Supabase si el almacenamiento local contiene datos desactualizados
+   */
+  public refreshProfileFromSupabase(studentCode: string): void {
+    if (!studentCode) return;
+    const headers = {
+      'apikey': environment.supabaseAnonKey,
+      'Authorization': `Bearer ${environment.supabaseAnonKey}`
+    };
+    const url = `${environment.supabaseUrl}/rest/v1/students?student_code=eq.${encodeURIComponent(studentCode)}&select=*`;
+    this.http.get<any[]>(url, { headers }).subscribe({
+      next: (rows) => {
+        if (rows && rows.length > 0) {
+          const row = rows[0];
+          const current = this.currentStudentSignal();
+          if (current) {
+            const updated: StudentProfile = {
+              ...current,
+              fullName: row.full_name || current.fullName,
+              name: row.full_name || current.name,
+              career: row.career || current.career,
+              campus: row.campus || current.campus,
+              currentCycle: row.cycle != null ? Number(row.cycle) : current.currentCycle,
+            };
+            this.currentStudentSignal.set(updated);
+            localStorage.setItem('utp_auth_profile', JSON.stringify(updated));
+            saveCachedStudentProfile({
+              id: updated.id || '',
+              name: updated.fullName || '',
+              fullName: updated.fullName || '',
+              studentCode: updated.studentCode || '',
+              username: updated.username || '',
+              email: updated.email || '',
+              userId: updated.id || '',
+              career: updated.career || '',
+              campus: updated.campus || '',
+              currentCycle: updated.currentCycle || 1,
+              role: updated.role || 'STUDENT',
+              token: updated.token || ''
+            });
+            console.log('[AuthService] ⚡ Perfil de estudiante enriquecido desde Supabase:', {
+              studentName: updated.fullName,
+              career: updated.career,
+              cycle: updated.currentCycle
+            });
+          }
+        }
+      },
+      error: (err) => console.warn('[AuthService] ℹ️ No se pudo enriquecer perfil desde Supabase:', err.message)
     });
   }
 
@@ -156,6 +216,7 @@ export class AuthService {
         hasToken: !!profileData.token,
       });
       this.syncStudentProfileToSupabase(profileData);
+      this.refreshProfileFromSupabase(profileData.studentCode || profileData.username);
       this.runLegacyStorageMigration();
       return;
     }
@@ -170,6 +231,7 @@ export class AuthService {
         });
         this.currentStudentSignal.set(parsed);
         this.syncStudentProfileToSupabase(parsed);
+        this.refreshProfileFromSupabase(parsed.studentCode || parsed.username);
         this.runLegacyStorageMigration();
       } catch {
         localStorage.removeItem('utp_auth_profile');
