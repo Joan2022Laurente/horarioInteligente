@@ -47,10 +47,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         if (resourcePath.startsWith(".well-known") || resourcePath.startsWith("mcp") || resourcePath.startsWith("api")) {
                             return null;
                         }
-                        Resource requestedResource = location.createRelative(resourcePath);
-                        return (requestedResource.exists() && requestedResource.isReadable())
-                                ? requestedResource
-                                : new ClassPathResource("/static/index.html");
+                        
+                        Resource requestedResource = super.getResource(resourcePath, location);
+                        if (requestedResource != null && requestedResource.isReadable()) {
+                            return requestedResource;
+                        }
+
+                        // Si la petición tiene extensión (.js, .css, .ico, .png, etc.) y no se encontró, NO devolver index.html
+                        if (resourcePath.contains(".")) {
+                            return null;
+                        }
+
+                        // Para rutas de navegación SPA del frontend (ej. /horario, /login), devolver index.html
+                        return super.getResource("index.html", location);
                     }
                 });
     }
