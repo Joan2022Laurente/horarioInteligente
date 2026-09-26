@@ -20,10 +20,12 @@ import {
   getCanonicalCourseKey 
 } from '@data/schedule-parser';
 import { getSynchronizedStudentTasks, calculateActivityUrgency } from '@data/activity-adapter';
+import { getSyllabusWeekContext } from '@data/syllabus-engine';
 import { resolveEventLocation, getClassroomLocation } from '@data/classroom-helper';
 import { getCachedCalendarData, saveCachedCalendarData, getCachedSyllabus, getAllCachedSyllabi } from '@data/syllabus/client-storage';
 import { getAuroraStyle } from '@data/aurora.helper';
 import { ScheduleService } from '@data/services/schedule.service';
+import { TaskService } from '@data/services/task.service';
 import { ClassDetailModalComponent } from '@features/schedule/class-detail-modal.component';
 import { TodayStore } from './today.store';
 
@@ -651,6 +653,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   isSyllabusModalOpen = false;
 
   auroraStyle = getAuroraStyle(42);
+  private readonly taskService = inject(TaskService);
 
   constructor(public scheduleService: ScheduleService) {}
 
@@ -696,19 +699,96 @@ export class TodayViewComponent implements OnInit, OnDestroy {
       if (parsed.cleanTitle) enrolledKeys.add(getCanonicalCourseKey(parsed.cleanTitle));
     }
 
-    // Filtrar tareas estrictamente por los cursos matriculados del estudiante autenticado
-    const allTasks = getSynchronizedStudentTasks();
-    this.synchronizedTasks = enrolledKeys.size > 0
-      ? allTasks.filter(t => {
-          const cName = getCanonicalCourseKey(t.task.courseName || '');
-          const sCode = getCanonicalCourseKey(t.task.sectionCode || '');
-          return enrolledKeys.has(cName) || enrolledKeys.has(sCode) ||
-                 Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
-        })
-      : [];
+    // 1. Cargar tareas oficiales en vivo desde el Backend / UTP Academic Gateway API
+    this.loadTasksFromBackend(enrolledKeys);
 
-    // Filtrar evaluaciones estrictamente por los cursos matriculados del estudiante autenticado
+    // 2. Filtrar evaluaciones estrictamente por los cursos matriculados del estudiante autenticado
     this.sortedEvaluations = getDynamicStudentEvaluations(enrolledKeys);
+  }
+
+  private loadTasksFromBackend(enrolledKeys: Set<string>): void {
+    this.taskService.getUpcomingTasks(25).subscribe({
+      next: (res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          const dynamicTasks: TaskWithSyllabusContext[] = res.data.map((u: any) => {
+            const isGraded = u.isQualified !== false;
+            const isDelivered = u.studentStatus === 'DELIVERED' || u.studentStatus === 'SUBMITTED';
+            const courseTitle = u.courseName || '';
+            const week = u.weekNumber || this.currentWeek || 1;
+            const syllabusContext = getSyllabusWeekContext(courseTitle, week);
+
+            const task: CourseAssignment = {
+              id: u.id || u.activityId || `task-${Math.random()}`,
+              courseId: u.courseId || '',
+              courseName: courseTitle,
+              sectionCode: u.sectionId || '',
+              title: u.title || 'Evaluación Oficial',
+              week: week,
+              type: isGraded ? 'evaluation' : 'practice',
+              dueDate: u.finishAt || u.startAt || '',
+              isGraded: isGraded,
+              status: isDelivered ? 'submitted' : 'pending',
+              homeworkStatus: u.studentStatus || 'PENDING',
+              availableUntil: u.finishAt,
+              activityId: u.activityId,
+              sectionId: u.sectionId
+            };
+
+            return { task, syllabusContext };
+          });
+
+          this.synchronizedTasks = dynamicTasks;
+        } else {
+          // Fallback a /tasks
+          this.taskService.getTasks().subscribe({
+            next: (taskRes) => {
+              if (taskRes.success && taskRes.data && taskRes.data.length > 0) {
+                this.synchronizedTasks = taskRes.data.map((t: any) => {
+                  const week = t.week || this.currentWeek || 1;
+                  const syllabusContext = getSyllabusWeekContext(t.courseName, week);
+                  const isDelivered = t.isDelivered || t.homeworkStatus === 'DELIVERED';
+                  const task: CourseAssignment = {
+                    id: t.id || `task-${Math.random()}`,
+                    courseId: t.sectionId || '',
+                    courseName: t.courseName || '',
+                    sectionCode: t.sectionId || '',
+                    title: t.title || 'Tarea UTP',
+                    week: week,
+                    type: 'evaluation',
+                    dueDate: t.dueDate,
+                    isGraded: true,
+                    status: isDelivered ? 'submitted' : 'pending',
+                    homeworkStatus: t.homeworkStatus || 'PENDING'
+                  };
+                  return { task, syllabusContext };
+                });
+              } else {
+                const fallback = getSynchronizedStudentTasks();
+                this.synchronizedTasks = enrolledKeys.size > 0
+                  ? fallback.filter(t => {
+                      const cName = getCanonicalCourseKey(t.task.courseName || '');
+                      const sCode = getCanonicalCourseKey(t.task.sectionCode || '');
+                      return enrolledKeys.has(cName) || enrolledKeys.has(sCode) ||
+                             Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
+                    })
+                  : [];
+              }
+            }
+          });
+        }
+      },
+      error: () => {
+        const fallback = getSynchronizedStudentTasks();
+        this.synchronizedTasks = enrolledKeys.size > 0
+          ? fallback.filter(t => {
+              const cName = getCanonicalCourseKey(t.task.courseName || '');
+              const sCode = getCanonicalCourseKey(t.task.sectionCode || '');
+              return enrolledKeys.has(cName) || enrolledKeys.has(sCode) ||
+                     Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
+            })
+          : [];
+      }
+    });
   }
 
   loadScheduleFromBackend(): void {

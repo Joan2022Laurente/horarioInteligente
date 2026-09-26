@@ -18,7 +18,13 @@ export class TaskService {
   constructor(private http: HttpClient) {}
 
   getTasks(): Observable<ApiResponse<TaskSyncItem[]>> {
-    return this.http.get<ApiResponse<TaskSyncItem[]>>(this.baseUrl).pipe(
+    const profile = getCachedStudentProfile();
+    const token = profile?.token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+    return this.http.get<ApiResponse<TaskSyncItem[]>>(this.baseUrl, { headers }).pipe(
       tap((res) => {
         if (res.success && res.data) {
           this.tasksSignal.set(res.data);
@@ -27,6 +33,21 @@ export class TaskService {
       catchError((err) => {
         console.warn('[TaskService] ℹ️ Consulta de tareas:', err.message);
         return of({ success: false, message: 'No se pudieron cargar tareas del servidor', data: [] });
+      })
+    );
+  }
+
+  getUpcomingTasks(limit = 15): Observable<ApiResponse<any[]>> {
+    const profile = getCachedStudentProfile();
+    const token = profile?.token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/upcoming?limit=${limit}`, { headers }).pipe(
+      catchError((err) => {
+        console.warn('[TaskService] ℹ️ Error en /tasks/upcoming:', err.message);
+        return of({ success: false, message: 'Error consultando tareas próximas', data: [] });
       })
     );
   }
