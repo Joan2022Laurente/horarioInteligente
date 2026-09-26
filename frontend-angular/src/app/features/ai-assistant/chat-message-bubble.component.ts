@@ -49,14 +49,16 @@ import { getStickerById, MemeSticker } from '@data/constants/stickers.config';
         </div>
 
         @if (toolsUsedList.length > 0) {
-          <div class="flex items-center gap-1.5 mb-1 text-[10px] text-cyan-400 font-mono bg-cyan-950/40 px-2 py-1 rounded-md border border-cyan-800/30 w-fit">
-            <span>🛠️ Herramienta ejecutada:</span>
-            <span class="font-bold">{{ toolsUsedList.join(', ') }}</span>
+          <div class="flex items-center gap-2 mb-2 text-[10px] text-cyan-400 font-mono bg-cyan-950/40 px-2.5 py-1 rounded-lg border border-cyan-800/40 w-fit select-none">
+            <span class="opacity-80">🛠️ Herramienta ejecutada:</span>
+            <span class="font-bold tracking-wide">{{ toolsUsedList.join(', ') }}</span>
           </div>
         }
 
-        <!-- Contenido sin card envolvente con Markdown y Stickers -->
-        <app-markdown-renderer [content]="msg.content"></app-markdown-renderer>
+        <!-- Contenido conversacional del Asistente sin interferencias -->
+        <div class="w-full text-neutral-200 block pt-0.5">
+          <app-markdown-renderer [content]="msg.content"></app-markdown-renderer>
+        </div>
 
         <!-- Enlace a Zoom si aplica -->
         @if (msg.contextInfo?.zoomLink) {

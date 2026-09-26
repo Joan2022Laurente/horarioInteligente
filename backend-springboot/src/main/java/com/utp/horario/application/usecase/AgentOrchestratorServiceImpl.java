@@ -165,10 +165,15 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
         messages.add(Map.of("role", "user", "content", message));
 
         List<String> toolsExecuted = new ArrayList<>();
+        List<Map<String, Object>> toolDetails = new ArrayList<>();
 
         // 3. Loop ReAct con límite de iteraciones (Guarda anti-bucle)
         try {
             for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+                if (iteration > 0 && !toolsExecuted.isEmpty()) {
+                    log.info("[AgentOrchestrator] 🔄 Enviando resultado de herramienta a OpenRouter para síntesis final...");
+                }
+
                 Map<String, Object> requestPayload = new LinkedHashMap<>();
                 requestPayload.put("model", effectiveModel);
                 requestPayload.put("messages", messages);
@@ -184,12 +189,17 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
                 // Caso A: El modelo generó respuesta de texto final (sin herramientas)
                 if (toolCalls == null || !toolCalls.isArray() || toolCalls.isEmpty()) {
                     String finalContent = choiceMessage.path("content").asText();
+                    log.info("[AgentOrchestrator] ✅ Síntesis final generada por OpenRouter ({} caracteres)", finalContent.length());
                     return AiChatMessage.builder()
                             .id(UUID.randomUUID().toString())
                             .role("assistant")
                             .content(finalContent)
                             .timestamp(LocalDateTime.now())
-                            .metadata(Map.of("toolsUsed", toolsExecuted, "iterations", iteration + 1))
+                            .metadata(Map.of(
+                                    "toolsUsed", toolsExecuted,
+                                    "toolDetails", toolDetails,
+                                    "iterations", iteration + 1
+                            ))
                             .build();
                 }
 
@@ -205,6 +215,12 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
 
                     toolsExecuted.add(functionName);
                     String toolResultJson = executeTool(functionName, argsNode, studentCode);
+
+                    Map<String, Object> detail = new LinkedHashMap<>();
+                    detail.put("name", functionName);
+                    detail.put("arguments", argsNode);
+                    detail.put("result", toolResultJson);
+                    toolDetails.add(detail);
 
                     // Devolver resultado de la tool al LLM
                     messages.add(Map.of(

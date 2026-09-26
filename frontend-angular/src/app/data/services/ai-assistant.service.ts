@@ -91,7 +91,8 @@ export class AiAssistantService {
   async streamChat(
     message: string,
     onDelta: (word: string) => void,
-    onTool: (toolName: string) => void
+    onTool: (toolName: string) => void,
+    onToolResult?: (toolResult: any) => void
   ): Promise<void> {
     this.isThinkingSignal.set(true);
     try {
@@ -142,6 +143,10 @@ export class AiAssistantService {
             continue;
           }
 
+          if (line.startsWith('data:')) {
+            console.log('[AiChat] 📩 Evento SSE recibido:', line);
+          }
+
           if (line.startsWith('event:')) {
             currentEvent = line.slice(6).trim();
           } else if (line.startsWith('data:')) {
@@ -156,9 +161,30 @@ export class AiAssistantService {
             }
 
             if (currentEvent === 'tool') {
-              const toolName = data.trim();
-              console.log("[AiChat] 🛠️ Herramienta detectada:", toolName);
+              let toolName = data.trim();
+              let toolArgs: Record<string, any> = {};
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed && typeof parsed === 'object') {
+                  toolName = parsed.name || toolName;
+                  toolArgs = parsed.args || {};
+                }
+              } catch {
+                // Nombre en texto plano
+              }
+              console.log('[AiChat] 🛠️ Herramienta detectada:', toolName, 'Parámetros:', toolArgs);
               onTool(toolName);
+            } else if (currentEvent === 'tool_result') {
+              let toolResult: any = data;
+              try {
+                toolResult = JSON.parse(data);
+              } catch {
+                // Formato texto plano
+              }
+              console.log('[AiChat] 📋 Resultado de herramienta:', toolResult);
+              if (onToolResult) {
+                onToolResult(toolResult);
+              }
             } else if (currentEvent === 'delta') {
               onDelta(data);
             }

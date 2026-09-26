@@ -49,9 +49,9 @@ public class AcademicToolService {
      * Soporta fallback automático a Supabase si no se encuentra en el repositorio local.
      */
     public DayScheduleResult getTodaySchedule(String studentCode, String dateIso) {
-        log.info("[AcademicTool] 🕒 Consultando horario para alumno {} en fecha {}", studentCode, dateIso);
-        LocalDate targetDate = (dateIso != null && !dateIso.isBlank()) ? LocalDate.parse(dateIso) : LocalDate.now();
-        DayOfWeek targetDayOfWeek = targetDate.getDayOfWeek();
+        LocalDate today = (dateIso != null && !dateIso.isBlank()) ? LocalDate.parse(dateIso) : LocalDate.now();
+        DayOfWeek dayOfWeek = today.getDayOfWeek();
+        log.info("[AcademicTool] 📅 Consultando horario de hoy: fecha={}, día={}, studentCode={}", today, dayOfWeek, studentCode);
 
         List<ClassSessionDto> dayClasses = new ArrayList<>();
 
@@ -68,7 +68,7 @@ public class AcademicToolService {
             for (ClassSession c : scheduleOpt.get().getClasses()) {
                 boolean matchesDay = false;
                 if (c.getStartAt() != null) {
-                    if (c.getStartAt().toLocalDate().equals(targetDate) || c.getStartAt().getDayOfWeek() == targetDayOfWeek) {
+                    if (c.getStartAt().toLocalDate().equals(today) || c.getStartAt().getDayOfWeek() == dayOfWeek) {
                         matchesDay = true;
                     }
                 }
@@ -90,7 +90,13 @@ public class AcademicToolService {
             }
         }
 
-        return new DayScheduleResult(studentCode, targetDate.toString(), dayClasses.size(), dayClasses);
+        log.info("[AcademicTool] 🔎 Clases encontradas para hoy: {}", dayClasses.size());
+
+        String message = dayClasses.isEmpty()
+                ? "No tienes clases programadas para el día de hoy (" + dayOfWeek + ")."
+                : null;
+
+        return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message);
     }
 
     /**

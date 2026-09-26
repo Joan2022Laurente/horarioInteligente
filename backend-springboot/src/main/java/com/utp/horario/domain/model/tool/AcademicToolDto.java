@@ -18,8 +18,13 @@ public class AcademicToolDto {
             String studentCode,
             String date,
             int totalClasses,
-            List<ClassSessionDto> classes
-    ) {}
+            List<ClassSessionDto> classes,
+            String message
+    ) {
+        public DayScheduleResult(String studentCode, String date, int totalClasses, List<ClassSessionDto> classes) {
+            this(studentCode, date, totalClasses, classes, null);
+        }
+    }
 
     public record EvaluationSummaryDto(
             String courseCode,

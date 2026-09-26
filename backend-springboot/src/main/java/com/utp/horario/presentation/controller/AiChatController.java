@@ -24,6 +24,7 @@ public class AiChatController {
 
     private final AiAssistantServicePort aiAssistantServicePort;
     private final DailyQuotaServicePort dailyQuotaServicePort;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<AiChatMessage>> chat(
@@ -64,7 +65,7 @@ public class AiChatController {
         // Ejecutar de forma asíncrona: emitir eventos SSE
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
-                // 1. Invocar al orquestador de agente
+                // 1. Invocar al orquestador de agente (Paso 1: tools -> Paso 2: síntesis final conversacional)
                 AiChatMessage response = aiAssistantServicePort.processUserQuery(
                         effectiveStudentCode,
                         message,
@@ -72,29 +73,49 @@ public class AiChatController {
                         null
                 );
 
-                // 2. Si se usaron herramientas, emitir evento con las tools
+                // 2. Si se ejecutaron herramientas, emitir evento 'tool' (nombre + parámetros) y 'tool_result'
                 if (response.getMetadata() != null) {
                     @SuppressWarnings("unchecked")
-                    java.util.List<String> tools = (java.util.List<String>) response.getMetadata().get("toolsUsed");
-                    if (tools != null && !tools.isEmpty()) {
-                        for (String t : tools) {
-                            emitter.send("event: tool\ndata: " + t + "\n\n");
+                    java.util.List<java.util.Map<String, Object>> toolDetails = 
+                            (java.util.List<java.util.Map<String, Object>>) response.getMetadata().get("toolDetails");
+                    if (toolDetails != null && !toolDetails.isEmpty()) {
+                        for (java.util.Map<String, Object> td : toolDetails) {
+                            String toolName = (String) td.get("name");
+                            Object toolArgs = td.get("arguments");
+                            String toolResult = (String) td.get("result");
+
+                            emitter.send("event: tool\ndata: " + objectMapper.writeValueAsString(
+                                    java.util.Map.of("name", toolName, "args", toolArgs != null ? toolArgs : java.util.Map.of())
+                            ) + "\n\n");
+
+                            if (toolResult != null && !toolResult.isBlank()) {
+                                emitter.send("event: tool_result\ndata: " + toolResult + "\n\n");
+                            }
+                        }
+                    } else {
+                        @SuppressWarnings("unchecked")
+                        java.util.List<String> tools = (java.util.List<String>) response.getMetadata().get("toolsUsed");
+                        if (tools != null && !tools.isEmpty()) {
+                            for (String t : tools) {
+                                emitter.send("event: tool\ndata: " + t + "\n\n");
+                            }
                         }
                     }
                 }
 
-                // 3. Emitir el contenido palabra por palabra para streaming ultra fluido
+                // 3. Emitir los tokens de la síntesis conversacional palabra por palabra antes de complete()
                 String content = response.getContent() != null ? response.getContent() : "";
                 String[] words = content.split(" ");
                 for (int i = 0; i < words.length; i++) {
                     String space = (i < words.length - 1) ? " " : "";
                     emitter.send("event: delta\ndata: " + words[i] + space + "\n\n");
-                    Thread.sleep(8); // Simulación de fluidez rápida y natural
+                    Thread.sleep(8);
                 }
 
                 emitter.send("event: done\ndata: [DONE]\n\n");
                 emitter.complete();
             } catch (Exception e) {
+                log.error("[AiChatController] Error durante emisión SSE: {}", e.getMessage(), e);
                 emitter.completeWithError(e);
             }
         });
