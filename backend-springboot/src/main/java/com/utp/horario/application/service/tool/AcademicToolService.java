@@ -49,7 +49,11 @@ public class AcademicToolService {
      * Soporta fallback automático a Supabase si no se encuentra en el repositorio local.
      */
     public DayScheduleResult getTodaySchedule(String studentCode, String dateIso) {
-        LocalDate today = (dateIso != null && !dateIso.isBlank()) ? LocalDate.parse(dateIso) : LocalDate.now();
+        // Fijar zona horaria de Perú para evitar inconsistencias en Heroku (que corre en UTC)
+        java.time.ZoneId LIMA = java.time.ZoneId.of("America/Lima");
+        LocalDate today = (dateIso != null && !dateIso.isBlank())
+                ? LocalDate.parse(dateIso)
+                : LocalDate.now(LIMA);
         DayOfWeek dayOfWeek = today.getDayOfWeek();
         log.info("[AcademicTool] 📅 Consultando horario de hoy: fecha={}, día={}, studentCode={}", today, dayOfWeek, studentCode);
 
@@ -68,6 +72,7 @@ public class AcademicToolService {
             for (ClassSession c : scheduleOpt.get().getClasses()) {
                 boolean matchesDay = false;
                 if (c.getStartAt() != null) {
+                    // Comparar día de semana (recurrente semanal) O fecha exacta
                     if (c.getStartAt().toLocalDate().equals(today) || c.getStartAt().getDayOfWeek() == dayOfWeek) {
                         matchesDay = true;
                     }
@@ -90,10 +95,10 @@ public class AcademicToolService {
             }
         }
 
-        log.info("[AcademicTool] 🔎 Clases encontradas para hoy: {}", dayClasses.size());
+        log.info("[AcademicTool] 🔎 Clases encontradas para hoy ({}): {}", dayOfWeek, dayClasses.size());
 
         String message = dayClasses.isEmpty()
-                ? "No tienes clases programadas para el día de hoy (" + dayOfWeek + ")."
+                ? "No tienes clases programadas para el día de hoy (" + dayOfWeek + " " + today + ")."
                 : null;
 
         return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message);
@@ -105,25 +110,32 @@ public class AcademicToolService {
     public EnrolledCoursesResult getEnrolledCourses(String studentCode) {
         log.info("[AcademicTool] 🎓 Consultando cursos matriculados para alumno {}", studentCode);
         Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
-        if (scheduleOpt.isEmpty() || scheduleOpt.get().getCourses() == null || scheduleOpt.get().getCourses().isEmpty()) {
+        if (scheduleOpt.isEmpty()
+                || (scheduleOpt.get().getCourses() == null || scheduleOpt.get().getCourses().isEmpty())
+                && (scheduleOpt.get().getClasses() == null || scheduleOpt.get().getClasses().isEmpty())) {
             scheduleOpt = fetchScheduleFromSupabase(studentCode);
         }
 
         List<EnrolledCourseDto> courses = new ArrayList<>();
         if (scheduleOpt.isPresent()) {
             ScheduleInterval schedule = scheduleOpt.get();
+            // Prioridad 1: campo courses explícito
             if (schedule.getCourses() != null && !schedule.getCourses().isEmpty()) {
                 for (var c : schedule.getCourses()) {
                     courses.add(new EnrolledCourseDto(c.getCode(), c.getName()));
                 }
-            } else if (schedule.getClasses() != null) {
-                java.util.Set<String> seen = new java.util.HashSet<>();
+            }
+            // Prioridad 2: derivar cursos únicos desde las sesiones (estructura real de Supabase)
+            if (courses.isEmpty() && schedule.getClasses() != null) {
+                java.util.LinkedHashMap<String, String> seen = new java.util.LinkedHashMap<>();
                 for (var cl : schedule.getClasses()) {
-                    String code = cl.getCourseCode() != null ? cl.getCourseCode() : "";
-                    if (!code.isBlank() && seen.add(code)) {
-                        courses.add(new EnrolledCourseDto(code, cl.getCourseName() != null ? cl.getCourseName() : code));
+                    String code = cl.getCourseCode() != null ? cl.getCourseCode().trim() : "";
+                    String name = cl.getCourseName() != null ? cl.getCourseName().trim() : code;
+                    if (!code.isBlank()) {
+                        seen.putIfAbsent(code, name);
                     }
                 }
+                seen.forEach((code, name) -> courses.add(new EnrolledCourseDto(code, name)));
             }
         }
         log.info("[AcademicTool] 📚 Cursos matriculados encontrados: {}", courses.size());
@@ -185,33 +197,31 @@ public class AcademicToolService {
         log.info("[AcademicTool] 🎯 Consultando evaluaciones próximas para alumno {} desde semana {}", studentCode, currentWeek);
         List<EvaluationSummaryDto> upcoming = new ArrayList<>();
 
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
-        if (scheduleOpt.isEmpty() || scheduleOpt.get().getCourses() == null || scheduleOpt.get().getCourses().isEmpty()) {
-            scheduleOpt = fetchScheduleFromSupabase(studentCode);
-        }
+        // Reusar lógica de getEnrolledCourses para obtener la lista real de cursos
+        EnrolledCoursesResult enrolled = getEnrolledCourses(studentCode);
+        List<EnrolledCourseDto> courseList = enrolled.courses();
 
-        if (scheduleOpt.isPresent() && scheduleOpt.get().getCourses() != null) {
-            for (var course : scheduleOpt.get().getCourses()) {
-                String code = course.getCode();
-                Optional<Syllabus> sylOpt = syllabusRepositoryPort.findByCourseCode(code);
-                if (sylOpt.isEmpty()) {
-                    sylOpt = fetchSyllabusFromSupabase(code);
-                }
+        for (EnrolledCourseDto course : courseList) {
+            String code = course.courseCode();
+            Optional<Syllabus> sylOpt = syllabusRepositoryPort.findByCourseCode(code);
+            if (sylOpt.isEmpty()) {
+                sylOpt = fetchSyllabusFromSupabase(code);
+            }
 
-                if (sylOpt.isPresent() && sylOpt.get().getEvaluations() != null) {
-                    sylOpt.get().getEvaluations().stream()
-                            .filter(e -> e.getWeek() != null && e.getWeek() >= currentWeek && e.getWeek() <= currentWeek + 3)
-                            .forEach(e -> upcoming.add(new EvaluationSummaryDto(
-                                    course.getCode(),
-                                    course.getName(),
-                                    e.getType(),
-                                    e.getDescription(),
-                                    e.getWeightPercent() != null ? e.getWeightPercent() : 0,
-                                    e.getWeek() != null ? e.getWeek() : 1
-                            )));
-                }
+            if (sylOpt.isPresent() && sylOpt.get().getEvaluations() != null) {
+                sylOpt.get().getEvaluations().stream()
+                        .filter(e -> e.getWeek() != null && e.getWeek() >= currentWeek && e.getWeek() <= currentWeek + 3)
+                        .forEach(e -> upcoming.add(new EvaluationSummaryDto(
+                                code,
+                                course.courseName(),
+                                e.getType(),
+                                e.getDescription(),
+                                e.getWeightPercent() != null ? e.getWeightPercent() : 0,
+                                e.getWeek() != null ? e.getWeek() : 1
+                        )));
             }
         }
+        log.info("[AcademicTool] 🎯 Evaluaciones próximas encontradas: {}", upcoming.size());
         return upcoming;
     }
 
@@ -312,6 +322,22 @@ public class AcademicToolService {
                     JsonNode row = arrayNode.get(0);
                     Syllabus s = objectMapper.readValue(row.toString(), Syllabus.class);
                     if (s != null) {
+                        // Supabase devuelve snake_case: mapear manualmente si Jackson no lo resuelve
+                        if ((s.getCourseCode() == null || s.getCourseCode().isBlank()) && row.has("course_code")) {
+                            s.setCourseCode(row.get("course_code").asText(null));
+                        }
+                        if ((s.getCourseName() == null || s.getCourseName().isBlank()) && row.has("course_name")) {
+                            s.setCourseName(row.get("course_name").asText(null));
+                        }
+                        if (s.getCredits() == null && row.has("credits")) {
+                            s.setCredits(row.get("credits").asInt(3));
+                        }
+                        if ((s.getFormula() == null || s.getFormula().isBlank()) && row.has("formula")) {
+                            s.setFormula(row.get("formula").asText(null));
+                        }
+                        if ((s.getLearningGoal() == null || s.getLearningGoal().isBlank()) && row.has("learning_goal")) {
+                            s.setLearningGoal(row.get("learning_goal").asText(null));
+                        }
                         log.info("[AcademicTool] ✅ Sílabo hallado en Supabase: {} ({}) para término [{}]", s.getCourseName(), s.getCourseCode(), searchTerm);
                         return Optional.of(s);
                     }

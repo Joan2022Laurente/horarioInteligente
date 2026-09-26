@@ -40,12 +40,13 @@ if (openRouterKeys.length === 0 && (process.env.OPENROUTER_API_KEY || envVars.OP
 
 function generateEnvFile(isProd) {
   const activeBusinessUrl = isProd ? '/api/v1' : (process.env.BUSINESS_API_URL || envVars.BUSINESS_API_URL || 'http://localhost:8080/api/v1');
+  const activeAcademicUrl = isProd ? '/api/v1' : (process.env.ACADEMIC_API_URL || envVars.ACADEMIC_API_URL || 'http://localhost:8080/api/v1');
   const activeKeys = isProd ? [] : openRouterKeys;
   return `// Autogenerado automáticamente por scripts/set-env.js - NO MODIFICAR MANUALMENTE
 export const environment = {
   production: ${isProd},
   businessApiUrl: '${activeBusinessUrl}',
-  academicApiUrl: '${academicApiUrl}',
+  academicApiUrl: '${activeAcademicUrl}',
   supabaseUrl: '${supabaseUrl}',
   supabaseAnonKey: '${supabaseAnonKey}',
   openRouterApiKeys: ${JSON.stringify(activeKeys)}
