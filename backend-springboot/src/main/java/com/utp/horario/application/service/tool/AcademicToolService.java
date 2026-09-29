@@ -110,16 +110,24 @@ public class AcademicToolService {
     }
 
     private String resolveStudentToken(String studentCode) {
+        // 1. Caché en memoria del gateway (registrado en cada request SSE)
         String token = utpPortalGatewayPort.getStudentToken(studentCode);
         if (token != null && !token.isBlank()) {
+            log.debug("[AcademicTool] 🔑 Token resuelto desde caché gateway para [{}] (len={})", studentCode, token.length());
             return token;
         }
+        // 2. BD local (H2/Supabase via StudentRepository)
         if (studentCode != null && !studentCode.isBlank()) {
-            return studentRepositoryPort.findByStudentCode(studentCode)
+            String dbToken = studentRepositoryPort.findByStudentCode(studentCode)
                     .map(StudentProfile::getToken)
                     .filter(t -> t != null && !t.isBlank())
                     .orElse(null);
+            if (dbToken != null) {
+                log.debug("[AcademicTool] 🔑 Token resuelto desde BD local para [{}] (len={})", studentCode, dbToken.length());
+                return dbToken;
+            }
         }
+        log.warn("[AcademicTool] ⚠️ TOKEN NULO para [{}] — los fallbacks a API externa serán saltados", studentCode);
         return null;
     }
 
@@ -249,41 +257,61 @@ public class AcademicToolService {
         String courseCode = syllabusOpt.map(Syllabus::getCourseCode)
                 .orElse(resolvedCourseCode != null ? resolvedCourseCode : cleanQuery);
 
-        // 3. Consultar versión Markdown de la API Externa para contexto enriquecido sin fricción de parsing
+        if (syllabusOpt.isPresent()) {
+            log.info("[AcademicTool] 📚 [PASO 2/3 HIT] Sílabo '{}' hallado en Supabase/BD local. Semanas: {}, Evaluaciones: {}",
+                    courseCode,
+                    syllabusOpt.get().getWeeklySchedule() != null ? syllabusOpt.get().getWeeklySchedule().size() : 0,
+                    syllabusOpt.get().getEvaluations() != null ? syllabusOpt.get().getEvaluations().size() : 0);
+        } else {
+            log.info("[AcademicTool] ❌ [PASO 2/3 MISS] Sílabo '{}' no encontrado en Supabase/BD. Pasando a fallback API Externa...", courseCode);
+        }
+
+        // PASO 4: Markdown de la API Externa
         String markdown = "";
+        String tokenForExternalApi = resolveStudentToken(studentCode);
         try {
-            String token = resolveStudentToken(studentCode);
-            if (token != null && !token.isBlank() && courseCode != null && !courseCode.isBlank()) {
-                markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(token, courseCode);
+            if (tokenForExternalApi != null && !tokenForExternalApi.isBlank() && courseCode != null && !courseCode.isBlank()) {
+                log.info("[AcademicTool] 📶 [PASO 4a] Intentando Markdown desde API Externa para [{}]...", courseCode);
+                markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(tokenForExternalApi, courseCode);
                 if (markdown != null && !markdown.isBlank()) {
-                    log.info("[AcademicTool] 📝 Sílabo en Markdown obtenido de API Externa para [{}] ({} caracteres)", courseCode, markdown.length());
+                    log.info("[AcademicTool] ✅ [PASO 4a HIT] Markdown obtenido para [{}] ({} caracteres)", courseCode, markdown.length());
+                } else {
+                    log.info("[AcademicTool] ❌ [PASO 4a MISS] Markdown vacío para [{}] — endpoint /markdown puede no soportar este código", courseCode);
                 }
+            } else {
+                log.warn("[AcademicTool] ⏭️ [PASO 4a SKIP] Markdown saltado — token={}", tokenForExternalApi != null ? "presente" : "NULO");
             }
         } catch (Exception e) {
-            log.warn("[AcademicTool] ℹ️ No se pudo obtener Markdown de API Externa para [{}]: {}", courseCode, e.getMessage());
+            log.warn("[AcademicTool] ⚠️ [PASO 4a ERROR] fetchSyllabusMarkdown falló para [{}]: {}", courseCode, e.getMessage());
         }
 
-        // 4. Último recurso: fetchSyllabus() estructurado desde API Externa (NO solo markdown)
+        // PASO 4b: fetchSyllabus() JSON estructurado — último recurso antes de "not found"
         if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
             try {
-                String tokenForApi = resolveStudentToken(studentCode);
-                if (tokenForApi != null && !tokenForApi.isBlank()) {
+                if (tokenForExternalApi != null && !tokenForExternalApi.isBlank()) {
                     String codeToTry = resolvedCourseCode != null ? resolvedCourseCode : cleanQuery;
-                    log.info("[AcademicTool] 🔄 Intentando fetchSyllabus() estructurado para [{}]", codeToTry);
-                    Syllabus apiSyllabus = utpPortalGatewayPort.fetchSyllabus(tokenForApi, codeToTry, null, null);
+                    log.info("[AcademicTool] 🔄 [PASO 4b] fetchSyllabus() JSON para [{}]...", codeToTry);
+                    Syllabus apiSyllabus = utpPortalGatewayPort.fetchSyllabus(tokenForExternalApi, codeToTry, null, null);
                     if (apiSyllabus != null) {
                         syllabusOpt = Optional.of(apiSyllabus);
-                        // Persistir en Supabase para futuros cache hits
+                        log.info("[AcademicTool] ✅ [PASO 4b HIT] fetchSyllabus() exitoso para [{}]. Semanas={}, Evals={}",
+                                codeToTry,
+                                apiSyllabus.getWeeklySchedule() != null ? apiSyllabus.getWeeklySchedule().size() : 0,
+                                apiSyllabus.getEvaluations() != null ? apiSyllabus.getEvaluations().size() : 0);
                         persistSyllabusToSupabase(apiSyllabus, codeToTry);
-                        log.info("[AcademicTool] ✅ Sílabo obtenido de API Externa y cacheado en Supabase para [{}]", codeToTry);
+                    } else {
+                        log.warn("[AcademicTool] ❌ [PASO 4b MISS] fetchSyllabus() devolvió null para [{}] — API Externa no tiene este sílabo", codeToTry);
                     }
+                } else {
+                    log.warn("[AcademicTool] ⏭️ [PASO 4b SKIP] fetchSyllabus() saltado — TOKEN NULO. El alumno debe iniciar sesión.");
                 }
             } catch (Exception apiEx) {
-                log.warn("[AcademicTool] ⚠️ fetchSyllabus() estructurado también falló para [{}]: {}", cleanQuery, apiEx.getMessage());
+                log.warn("[AcademicTool] ⚠️ [PASO 4b ERROR] fetchSyllabus() lanzó excepción para [{}]: {}", cleanQuery, apiEx.getMessage());
             }
         }
 
         if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
+            log.warn("[AcademicTool] 🚫 [RESULTADO FINAL] Sílabo NO encontrado para '{}' tras agotar todos los pasos (Supabase + Markdown + fetchSyllabus)", cleanQuery);
             String suggestion = "";
             if (enrolled != null && enrolled.courses() != null && !enrolled.courses().isEmpty()) {
                 suggestion = " Cursos disponibles: " + enrolled.courses().stream().map(EnrolledCourseDto::courseName).toList();
@@ -299,6 +327,10 @@ public class AcademicToolService {
                     null
             );
         }
+
+        // Fuente ganadora del sílabo
+        String source = syllabusOpt.isPresent() ? "fetchSyllabus/Supabase" : "Markdown-API";
+        log.info("[AcademicTool] ✅ [RESULTADO FINAL] Sílabo '{}' servido desde [{}]", cleanQuery, source);
 
         Syllabus s = syllabusOpt.orElseGet(() -> {
             Syllabus fallback = new Syllabus();
