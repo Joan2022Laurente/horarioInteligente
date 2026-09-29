@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatMessage, ScheduleInterval, UTPCurrentInterval } from '@domain/models/utp.model';
@@ -331,10 +331,11 @@ export class AiAssistantModalComponent implements OnChanges {
     return '2026 - Ciclo 1 Marzo';
   }
 
+  private syllabusService = inject(SyllabusService);
+
   constructor(
     private authService: AuthService,
     private scheduleService: ScheduleService,
-    private syllabusService: SyllabusService,
     private aiService: AiAssistantService
   ) {
     this.refreshQuota();

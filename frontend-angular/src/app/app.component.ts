@@ -11,7 +11,6 @@ import { AiAssistantModalComponent } from './features/ai-assistant/ai-assistant-
 import { LoginPageComponent } from './features/auth/login-page.component';
 import { PrivacyPageComponent } from './features/privacy/privacy-page.component';
 
-import { SyllabusService } from '@data/services/syllabus.service';
 import { UiFeedbackService } from './core/services/ui-feedback.service';
 
 @Component({
@@ -98,8 +97,7 @@ export class AppComponent implements OnInit {
   constructor(
     public authService: AuthService,
     public scheduleService: ScheduleService,
-    public feedbackService: UiFeedbackService,
-    private syllabusService: SyllabusService
+    public feedbackService: UiFeedbackService
   ) {}
 
   ngOnInit(): void {

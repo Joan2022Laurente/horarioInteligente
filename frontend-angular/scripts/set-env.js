@@ -40,8 +40,7 @@ export const environment = {
   businessApiUrl: '${activeBusinessUrl}',
   academicApiUrl: '${activeAcademicUrl}',
   supabaseUrl: '${supabaseUrl}',
-  supabaseAnonKey: '${supabaseAnonKey}',
-  openRouterApiKeys: []
+  supabaseAnonKey: '${supabaseAnonKey}'
 };
 `;
 }

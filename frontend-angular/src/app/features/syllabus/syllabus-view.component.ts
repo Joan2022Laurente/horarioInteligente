@@ -430,7 +430,7 @@ export class SyllabusViewComponent implements OnInit {
 
     this.syllabusService.getSyllabus(
       courseName,
-      course?.sectionCode,
+      course?.sectionId || course?.sectionCode,
       course?.syllabusUrl
     ).subscribe({
       next: (res) => {

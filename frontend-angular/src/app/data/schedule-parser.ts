@@ -1,6 +1,7 @@
 import { ProcessedCourse, UTPEvent, CourseSessionSchedule, CourseEvaluation, AcademicMilestone } from '@domain/models/utp.model';
 import { normalizeKey, parseNormalizedDate } from '@core/utils/string.utils';
 import { KNOWN_SYLLABUS_MAP, getAllEvaluationsFromRegistry } from './syllabus/official-registry';
+import { getAllCachedSyllabi } from './syllabus/client-storage';
 
 export interface ParsedEventInfo {
   cleanTitle: string;
@@ -383,8 +384,6 @@ export function getEventsByWeek(events: UTPEvent[], weekNum: number): UTPEvent[]
     })
     .sort((a, b) => parseDate(a.startAt).getTime() - parseDate(b.startAt).getTime());
 }
-
-import { getAllCachedSyllabi } from './syllabus/client-storage';
 
 export function getDynamicStudentEvaluations(enrolledCourseKeys?: Set<string>): CourseEvaluation[] {
   const syllabi = getAllCachedSyllabi();
