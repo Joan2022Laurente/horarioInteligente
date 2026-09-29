@@ -34,6 +34,18 @@ public class ClassSession {
     private String floor;
     private String environmentType;
     private String classLink;
+    private String sectionId;
+
+    @JsonProperty("classLink")
+    public void setClassLinkRaw(String link) {
+        this.classLink = link;
+        if (this.sectionId == null && link != null) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("/section/([a-f0-9\\-]+)").matcher(link);
+            if (m.find()) {
+                this.sectionId = m.group(1);
+            }
+        }
+    }
 
     @JsonProperty("startAt")
     public void setStartAtRaw(Object raw) {

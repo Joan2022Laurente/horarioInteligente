@@ -66,7 +66,7 @@ export class AuthService {
             campus: res.data.campus || '',
             currentCycle: res.data.currentCycle || 1,
             role: res.data.role || 'STUDENT',
-            token: res.data.token || ''
+            token: res.data.token || res.data.accessToken || ''
           });
 
           // Sincronizar perfil persistente en Supabase

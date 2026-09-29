@@ -270,6 +270,7 @@ export class ScheduleService {
               courseId: c.courseCode,
               courseName: c.courseName,
               sectionCode: c.section,
+              sectionId: c.sectionId || (c.classLink ? c.classLink.match(/\/section\/([a-f0-9\-]+)/i)?.[1] : undefined),
               classroom: c.classroom,
               building: c.building,
               floor: c.floor,

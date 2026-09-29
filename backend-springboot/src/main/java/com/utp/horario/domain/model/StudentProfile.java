@@ -32,6 +32,7 @@ public class StudentProfile {
     private String campus;
 
     private Integer currentCycle;
+    @JsonAlias({"token", "accessToken", "access_token"})
     private String token;
     private String refreshToken;
     private Integer expiresIn;

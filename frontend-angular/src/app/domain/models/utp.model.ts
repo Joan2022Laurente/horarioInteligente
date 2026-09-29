@@ -78,6 +78,8 @@ export interface StudentProfile {
   tenantId?: string;
   role?: string;
   token?: string;
+  accessToken?: string;
+  refreshToken?: string;
   avatarUrl?: string;
   dni?: string;
   career?: string;
