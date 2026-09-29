@@ -15,7 +15,6 @@ public interface UtpPortalGatewayPort {
     ScheduleInterval fetchSchedule(String token, String period);
     List<TaskSyncItem> fetchTasks(String token, String sectionId);
     Syllabus fetchSyllabus(String token, String courseCode, String sectionId, String pdfUrl);
-    String fetchSyllabusPdfText(String token, String courseCode);
 
     List<CourseSummaryDto> fetchCoursesSummary(String token);
     List<UpcomingEvaluationDto> fetchUpcomingEvaluations(String token, int limit);

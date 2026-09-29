@@ -1,6 +1,5 @@
 package com.utp.horario.application.usecase;
 
-import com.utp.horario.application.service.SyllabusParserEngine;
 import com.utp.horario.domain.model.Syllabus;
 import com.utp.horario.domain.port.in.SyllabusServicePort;
 import com.utp.horario.domain.port.out.ScheduleRepositoryPort;
@@ -24,7 +23,6 @@ public class SyllabusServiceImpl implements SyllabusServicePort {
     private final SyllabusRepositoryPort syllabusRepositoryPort;
     private final ScheduleRepositoryPort scheduleRepositoryPort;
     private final UtpPortalGatewayPort utpPortalGatewayPort;
-    private final SyllabusParserEngine syllabusParserEngine;
 
     @Override
     public Syllabus getSyllabusByCourseCode(String courseCode) {
@@ -43,8 +41,8 @@ public class SyllabusServiceImpl implements SyllabusServicePort {
                         log.info("[SyllabusServiceImpl] 💾 Guardando en repositorio local sílabo de [{}] obtenido de API externa", courseCode);
                         return syllabusRepositoryPort.save(fetched);
                     }
-                    // Si la API externa no devolvió datos estructurados, fallback preventivo
-                    return syllabusParserEngine.parse("", courseCode);
+                    // Si la API externa no devolvió datos estructurados, fallback base limpio
+                    return buildEmptySyllabus(courseCode);
                 });
     }
 
@@ -80,12 +78,6 @@ public class SyllabusServiceImpl implements SyllabusServicePort {
     }
 
     @Override
-    public Syllabus parseAndSaveSyllabusText(String courseCode, String syllabusText) {
-        Syllabus parsed = syllabusParserEngine.parse(syllabusText, courseCode);
-        return syllabusRepositoryPort.save(parsed);
-    }
-
-    @Override
     public Syllabus saveSyllabus(Syllabus syllabus) {
         if (syllabus == null) {
             throw new IllegalArgumentException("El objeto sílabo no puede ser nulo");
@@ -95,12 +87,21 @@ public class SyllabusServiceImpl implements SyllabusServicePort {
         return syllabusRepositoryPort.save(syllabus);
     }
 
-    @Override
-    public String fetchRawSyllabusText(String courseCode, String sectionId, String pdfUrl, String token) {
-        String target = (pdfUrl != null && !pdfUrl.isBlank()) ? pdfUrl : 
-                       (sectionId != null && !sectionId.isBlank()) ? sectionId : courseCode;
-        log.info("[SyllabusServiceImpl] Extrayendo texto crudo de PDF para target='{}' (courseCode='{}')", target, courseCode);
-        String pdfText = utpPortalGatewayPort.fetchSyllabusPdfText(token != null ? token : "", target);
-        return pdfText != null ? pdfText : "";
+    private Syllabus buildEmptySyllabus(String courseCode) {
+        return Syllabus.builder()
+                .id(courseCode)
+                .courseCode(courseCode)
+                .courseName(courseCode)
+                .semester("2026 - Ciclo 2 Agosto")
+                .credits(3)
+                .modality("Presencial")
+                .weeklyHours(4)
+                .careers(List.of("Ingeniería de Sistemas e Informática"))
+                .learningGoal("")
+                .formula("")
+                .evaluations(new ArrayList<>())
+                .rules(new ArrayList<>())
+                .weeklySchedule(new ArrayList<>())
+                .build();
     }
 }

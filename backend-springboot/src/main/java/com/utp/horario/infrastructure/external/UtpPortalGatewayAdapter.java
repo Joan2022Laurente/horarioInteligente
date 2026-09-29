@@ -452,17 +452,6 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
         return null;
     }
 
-    @Override
-    public String fetchSyllabusPdfText(String token, String courseCode) {
-        Syllabus s = fetchSyllabus(token, courseCode, null, null);
-        if (s != null) {
-            try {
-                return objectMapper.writeValueAsString(s);
-            } catch (Exception ignored) {}
-        }
-        return "";
-    }
-
     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     private static class LoginPayload {
         public final String username;

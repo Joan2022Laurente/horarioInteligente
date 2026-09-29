@@ -74,13 +74,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Apache PDFBox para extracción y procesamiento dinámico de sílabos en PDF -->
-        <dependency>
-            <groupId>org.apache.pdfbox</groupId>
-            <artifactId>pdfbox</artifactId>
-            <version>3.0.3</version>
-        </dependency>
-
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
