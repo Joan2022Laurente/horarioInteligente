@@ -105,16 +105,21 @@ export class SupabaseService {
       updated_at: new Date().toISOString()
     };
 
-    const url = `${this.supabaseUrl}/rest/v1/official_syllabi`;
-    const headers = this.getHeaders().set('Prefer', 'resolution=merge-duplicates');
+    // on_conflict=course_id indica a Supabase que el upsert use el PK como columna de conflicto.
+    // Sin esto, POST hace un INSERT puro que falla con 409 en duplicados (silenciado por catchError).
+    const url = `${this.supabaseUrl}/rest/v1/official_syllabi?on_conflict=course_id`;
+    const headers = this.getHeaders()
+      .set('Prefer', 'resolution=merge-duplicates,return=minimal');
 
     return this.http.post(url, row, { headers }).pipe(
       map(() => {
-        console.log(`[SupabaseService] ⚡ Sílabo oficial '${cleanCourseName}' guardado en Supabase official_syllabi.`);
+        console.log(`[SupabaseService] ✅ Sílabo '${cleanCourseName}' (${courseId}) guardado/actualizado en Supabase.`);
         return true;
       }),
       catchError(err => {
-        console.warn(`[SupabaseService] ℹ️ Error guardando sílabo '${cleanCourseName}' en Supabase:`, err.message);
+        const status = err?.status ?? '?';
+        const detail = err?.error?.message || err?.error?.hint || err?.message || 'desconocido';
+        console.error(`[SupabaseService] ❌ Error ${status} guardando sílabo '${cleanCourseName}': ${detail}`, err?.error);
         return of(false);
       })
     );
