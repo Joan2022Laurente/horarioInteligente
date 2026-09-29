@@ -45,6 +45,8 @@ yarn-error.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.agents/
+.gemini/
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -59,11 +61,13 @@ logs/
 scratch/
 
 # ==========================================
-# Labs, Playground & Raw Test Documents
+# Labs, Playground & Internal Scratch/Plans
 # ==========================================
 labs/
 **/labs/
 *.pdf
+api_externa_plan.md
+*_plan.md
 
 # Frontend build outputs in backend resources (incluidos para despliegue monolítico en Heroku)
 # backend-springboot/src/main/resources/static/
