@@ -96,6 +96,71 @@
 
     <build>
         <plugins>
+            <!-- ============================================================
+                 Frontend Maven Plugin: descarga Node/npm y compila Angular
+                 durante 'mvn package'. No requiere Node instalado en Heroku.
+                 ============================================================ -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <configuration>
+                    <workingDirectory>../frontend-angular</workingDirectory>
+                    <installDirectory>target</installDirectory>
+                </configuration>
+                <executions>
+                    <!-- 1. Descarga Node v20 y npm -->
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <goals><goal>install-node-and-npm</goal></goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <nodeVersion>v20.18.0</nodeVersion>
+                        </configuration>
+                    </execution>
+                    <!-- 2. npm install -->
+                    <execution>
+                        <id>npm-install</id>
+                        <goals><goal>npm</goal></goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>install --legacy-peer-deps</arguments>
+                        </configuration>
+                    </execution>
+                    <!-- 3. ng build --configuration=production -->
+                    <execution>
+                        <id>npm-build</id>
+                        <goals><goal>npm</goal></goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Copia los bundles compilados de Angular a static/ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-angular-build</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>../frontend-angular/dist/horario-inteligente-angular/browser</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
