@@ -47,9 +47,23 @@ yarn-error.log*
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+desktop.ini
 *.log
 logs/
 *.pid
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+scratch/
+
+# ==========================================
+# Labs, Playground & Raw Test Documents
+# ==========================================
+labs/
+**/labs/
+*.pdf
 
 # Frontend build outputs in backend resources (incluidos para despliegue monolítico en Heroku)
 # backend-springboot/src/main/resources/static/
