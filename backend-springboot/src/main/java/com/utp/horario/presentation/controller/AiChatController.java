@@ -77,70 +77,48 @@ public class AiChatController {
             log.warn("[AiChatController] ⏱️ Timeout en stream SSE");
             emitter.complete();
         });
-        emitter.onError(e -> {
-            log.info("[AiChatController] ℹ️ Conexión SSE cerrada o resuelta por cliente");
-        });
+        emitter.onError(e -> log.info("[AiChatController] ℹ️ Conexión SSE cerrada por cliente"));
 
-        // Ejecutar de forma asíncrona: emitir eventos SSE
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            try {
-                // 1. Invocar al orquestador de agente con memoria histórica
-                AiChatMessage response = aiAssistantServicePort.processUserQuery(
-                        effectiveStudentCode,
-                        message,
-                        null,
-                        null,
-                        model,
-                        history
-                );
-
-                // 2. Si se ejecutaron herramientas, emitir evento 'tool' (nombre + parámetros) y 'tool_result'
-                if (response.getMetadata() != null) {
-                    @SuppressWarnings("unchecked")
-                    java.util.List<java.util.Map<String, Object>> toolDetails = 
-                            (java.util.List<java.util.Map<String, Object>>) response.getMetadata().get("toolDetails");
-                    if (toolDetails != null && !toolDetails.isEmpty()) {
-                        for (java.util.Map<String, Object> td : toolDetails) {
-                            String toolName = (String) td.get("name");
-                            Object toolArgs = td.get("arguments");
-                            String toolResult = (String) td.get("result");
-
-                            emitter.send("event: tool\ndata: " + objectMapper.writeValueAsString(
-                                    java.util.Map.of("name", toolName, "args", toolArgs != null ? toolArgs : java.util.Map.of())
-                            ) + "\n\n");
-
-                            if (toolResult != null && !toolResult.isBlank()) {
-                                emitter.send("event: tool_result\ndata: " + toolResult + "\n\n");
-                            }
-                        }
-                    } else {
-                        @SuppressWarnings("unchecked")
-                        java.util.List<String> tools = (java.util.List<String>) response.getMetadata().get("toolsUsed");
-                        if (tools != null && !tools.isEmpty()) {
-                            for (String t : tools) {
-                                emitter.send("event: tool\ndata: " + t + "\n\n");
-                            }
-                        }
+        java.util.concurrent.CompletableFuture.runAsync(() ->
+            aiAssistantServicePort.streamProcessUserQuery(
+                effectiveStudentCode,
+                message,
+                model,
+                history,
+                // onToken: emitir cada token conforme llega de OpenRouter
+                token -> {
+                    try {
+                        String payload = objectMapper.writeValueAsString(java.util.Map.of("delta", token));
+                        emitter.send("event: delta\ndata: " + payload + "\n\n");
+                    } catch (Exception ex) {
+                        log.debug("[AiChatController] Token drop (cliente desconectado): {}", ex.getMessage());
                     }
+                },
+                // onToolEvent: emitir nombre de herramienta tan pronto como se detecta
+                toolEvt -> {
+                    try {
+                        String payload = objectMapper.writeValueAsString(toolEvt);
+                        emitter.send("event: tool\ndata: " + payload + "\n\n");
+                    } catch (Exception ex) {
+                        log.debug("[AiChatController] Tool event drop: {}", ex.getMessage());
+                    }
+                },
+                // onDone
+                () -> {
+                    try {
+                        emitter.send("event: done\ndata: [DONE]\n\n");
+                        emitter.complete();
+                    } catch (Exception ex) {
+                        log.debug("[AiChatController] Done drop: {}", ex.getMessage());
+                    }
+                },
+                // onError
+                err -> {
+                    log.error("[AiChatController] Error en stream: {}", err.getMessage(), err);
+                    emitter.completeWithError(err);
                 }
-
-                // 3. Emitir los tokens de forma segura con JSON para preservar saltos de línea y formateo Markdown
-                String content = response.getContent() != null ? response.getContent() : "";
-                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\s+|\\S+").matcher(content);
-                while (matcher.find()) {
-                    String token = matcher.group();
-                    String jsonPayload = objectMapper.writeValueAsString(java.util.Map.of("delta", token));
-                    emitter.send("event: delta\ndata: " + jsonPayload + "\n\n");
-                    Thread.sleep(6);
-                }
-
-                emitter.send("event: done\ndata: [DONE]\n\n");
-                emitter.complete();
-            } catch (Exception e) {
-                log.error("[AiChatController] Error durante emisión SSE: {}", e.getMessage(), e);
-                emitter.completeWithError(e);
-            }
-        });
+            )
+        );
 
         return emitter;
     }
