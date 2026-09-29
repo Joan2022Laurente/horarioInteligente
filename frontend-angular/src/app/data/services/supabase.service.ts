@@ -60,8 +60,8 @@ export class SupabaseService {
     if (!courseIdentifier) return of(null);
     const term = courseIdentifier.trim();
     
-    // Búsqueda flexible por código o similitud de nombre
-    const url = `${this.supabaseUrl}/rest/v1/official_syllabi?or=(course_code.eq.${encodeURIComponent(term)},course_name.ilike.*${encodeURIComponent(term)}*)&select=*`;
+    // Búsqueda flexible por ID, código o similitud de nombre
+    const url = `${this.supabaseUrl}/rest/v1/official_syllabi?or=(course_id.eq.${encodeURIComponent(term)},course_code.eq.${encodeURIComponent(term)},course_name.ilike.*${encodeURIComponent(term)}*)&select=*`;
     
     return this.http.get<SupabaseOfficialSyllabus[]>(url, { headers: this.getHeaders() }).pipe(
       map(rows => {
@@ -73,6 +73,49 @@ export class SupabaseService {
       catchError(err => {
         console.error(`[SupabaseService] Error buscando sílabo '${courseIdentifier}':`, err);
         return of(null);
+      })
+    );
+  }
+
+  /**
+   * Guarda o actualiza un sílabo oficial estructurado en Supabase official_syllabi (Upsert por course_id)
+   */
+  saveOfficialSyllabus(syllabus: ParsedSyllabus): Observable<boolean> {
+    if (!syllabus || !syllabus.generalInfo?.courseName) {
+      return of(false);
+    }
+
+    const cleanCourseName = syllabus.generalInfo.courseName.trim();
+    const courseId = syllabus.generalInfo.courseCode?.trim() || syllabus.id?.trim() || cleanCourseName;
+    const courseCode = syllabus.generalInfo.courseCode?.trim() || syllabus.id?.trim() || courseId;
+
+    const row: SupabaseOfficialSyllabus = {
+      course_id: courseId,
+      course_code: courseCode,
+      course_name: cleanCourseName,
+      credits: syllabus.generalInfo.credits || 3,
+      hours: `${syllabus.generalInfo.weeklyHours || 4} horas`,
+      modality: syllabus.generalInfo.modality || 'Presencial',
+      formula: syllabus.formula || '',
+      learning_goal: syllabus.learningGoal || '',
+      evaluations: Array.isArray(syllabus.evaluations) ? syllabus.evaluations : [],
+      weekly_schedule: Array.isArray(syllabus.weeklySchedule) ? syllabus.weeklySchedule : [],
+      rules: Array.isArray(syllabus.rules) ? syllabus.rules : [],
+      anti_plagiarism_policy: syllabus.antiPlagiarismPolicy || null,
+      updated_at: new Date().toISOString()
+    };
+
+    const url = `${this.supabaseUrl}/rest/v1/official_syllabi`;
+    const headers = this.getHeaders().set('Prefer', 'resolution=merge-duplicates');
+
+    return this.http.post(url, row, { headers }).pipe(
+      map(() => {
+        console.log(`[SupabaseService] ⚡ Sílabo oficial '${cleanCourseName}' guardado en Supabase official_syllabi.`);
+        return true;
+      }),
+      catchError(err => {
+        console.warn(`[SupabaseService] ℹ️ Error guardando sílabo '${cleanCourseName}' en Supabase:`, err.message);
+        return of(false);
       })
     );
   }

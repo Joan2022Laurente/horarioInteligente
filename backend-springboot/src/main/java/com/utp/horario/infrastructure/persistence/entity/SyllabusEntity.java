@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "syllabi")
+@Table(name = "official_syllabi")
 @Getter
 @Setter
 @Builder
@@ -20,8 +20,13 @@ import lombok.Setter;
 @AllArgsConstructor
 public class SyllabusEntity {
     @Id
+    @Column(name = "course_id")
     private String id;
+
+    @Column(name = "course_code")
     private String courseCode;
+
+    @Column(name = "course_name")
     private String courseName;
     private String semester;
     private Integer credits;

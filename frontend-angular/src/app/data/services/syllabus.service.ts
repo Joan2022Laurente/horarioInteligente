@@ -44,6 +44,7 @@ export class SyllabusService {
       const localCached = getCachedSyllabus(cleanKey);
       if (localCached && localCached.formula && localCached.weeklySchedule && localCached.weeklySchedule.length > 0) {
         console.log(`[SyllabusService] ⚡ Sílabo obtenido instantáneamente desde LocalStorage (0 llamadas): ${cleanKey}`);
+        this.supabaseService.saveOfficialSyllabus(localCached).subscribe();
         return of({
           success: true,
           message: 'Sílabo obtenido de caché local sincronizada',
@@ -76,6 +77,7 @@ export class SyllabusService {
         if (res && res.success && res.data) {
           const adapted = this.adaptApiResponseToParsedSyllabus(res.data, cleanKey);
           this.persistLocal(cleanKey, adapted);
+          this.supabaseService.saveOfficialSyllabus(adapted).subscribe();
           console.log(`[SyllabusService] ✅ Sílabo sincronizado desde API Externa: ${adapted.generalInfo.courseName} (${adapted.weeklySchedule.length} semanas)`);
           return {
             success: true,
