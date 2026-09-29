@@ -1,164 +1,199 @@
-# División de Trabajo — Horario Inteligente UTP
+# Division de Trabajo — Horario Inteligente UTP
 
-**Repo:** `github.com/Joan2022Laurente/horarioInteligente`  
-**Stack:** Angular 17 · Spring Boot 3 · Supabase · OpenRouter
-
-> La lógica de la UTP (autenticación SSO, horarios, sílabos) la maneja la **API Externa Institucional**, un servicio independiente que ya está desplegado. Este proyecto solo la consume. Cada módulo es independiente.
+**Repositorio:** github.com/Joan2022Laurente/horarioInteligente
+**Stack:** Angular (frontend) + Spring Boot (backend) + Supabase (base de datos) + OpenRouter (IA)
 
 ---
 
-```
-Angular  →  Spring Boot  →  API Externa UTP  →  Portal UTP
-                         →  OpenRouter (IA)  →  LLM
-                         →  Supabase (DB)    →  PostgreSQL
-```
+## Como funciona el sistema en una frase
 
----
+El alumno inicia sesion con sus credenciales UTP, el sistema trae su horario real desde el portal de la universidad, lo muestra de forma bonita y ademas tiene un asistente de IA que puede responder preguntas sobre sus clases, tareas y silabos.
 
-## Módulo 1 — Joan · IA & Tech Lead
+La parte dificil (conectarse al portal de la UTP, autenticar al alumno, obtener el horario oficial) ya esta resuelta por una API externa que el equipo tiene desplegada. Nosotros solo la llamamos desde nuestro backend. Por eso el codigo nuestro es relativamente simple: recibe datos, los guarda, los muestra.
 
-Integra el chat con el LLM usando Streaming y Function Calling. La IA recibe el horario real del alumno y puede consultar herramientas para responder preguntas académicas.
-
-**Backend**
 ```
-application/service/AiAssistantService.java         ← Orquesta el loop de herramientas
-application/service/tool/AcademicToolService.java   ← Herramientas: horario, sílabo, tareas
-domain/port/in/AiAssistantServicePort.java
-presentation/controller/AiChatController.java       ← Endpoint SSE /ai/chat/stream
-```
-
-**Frontend**
-```
-features/ai-assistant/ai-assistant-modal.component.ts
-features/ai-assistant/chat-message-bubble.component.ts
-features/ai-assistant/markdown-renderer.component.ts
-data/services/ai-assistant.service.ts
+El alumno usa el frontend (Angular)
+   -> que le habla a nuestro backend (Spring Boot)
+      -> que le pide datos a la API de la UTP (ya hecha)
+      -> que guarda cosas en la base de datos (Supabase)
+      -> que le pregunta cosas a la IA (OpenRouter)
 ```
 
 ---
 
-## Módulo 2 — [Nombre] · Autenticación
+## Modulo 1 — Joan — La Inteligencia Artificial
 
-Login con credenciales UTP. El backend las reenvía a la API Externa, que las valida contra el SSO institucional. Sin este módulo no funciona nada.
+**Que hace esta parte en palabras simples:**
+Es el chat que aparece en la app. El alumno escribe "que tengo hoy?" y el sistema le responde con sus clases reales, aula, horario y hasta los temas del silabo. No es un chatbot pre-programado con respuestas fijas: la IA analiza el contexto real del alumno (su horario, sus cursos, sus evaluaciones) y genera la respuesta en el momento.
 
-**Backend**
+Como funciona por dentro: el mensaje del alumno llega al backend, el backend se lo manda a un modelo de lenguaje (como ChatGPT pero de OpenRouter), el modelo dice "necesito saber el horario de hoy" y el backend va a buscarlo, se lo devuelve al modelo, y el modelo redacta la respuesta final. Todo esto pasa en segundos y la respuesta llega palabra por palabra (como cuando ves que ChatGPT escribe).
+
+**Archivos que presento yo:**
 ```
-presentation/controller/AuthController.java         ← POST /auth/login
-presentation/dto/AuthRequest.java
-infrastructure/security/SecurityConfig.java
-infrastructure/security/SecurityIdentityResolver.java
-infrastructure/persistence/entity/StudentEntity.java
-```
+Backend:
+  application/service/AiAssistantService.java
+  application/service/tool/AcademicToolService.java
+  presentation/controller/AiChatController.java
 
-**Frontend**
-```
-features/auth/login-page.component.ts
-data/services/auth.service.ts
-core/interceptors/auth.interceptor.ts               ← Añade el token a todos los requests
-```
-
----
-
-## Módulo 3 — [Nombre] · Horario & Vista de Hoy
-
-Muestra el horario semanal y las clases del día. Los datos vienen directamente de la API Externa y se cachean en Supabase para modo offline.
-
-**Backend**
-```
-presentation/controller/ScheduleController.java     ← GET /schedule/{code}
-infrastructure/persistence/entity/StudentScheduleEntity.java
-infrastructure/persistence/repository/SpringDataScheduleRepository.java
-```
-
-**Frontend**
-```
-features/schedule/schedule-view.component.ts        ← Horario semanal
-features/schedule/weekly-schedule.component.ts
-features/schedule/class-detail-modal.component.ts
-features/today/today-view.component.ts              ← Clases del día con cuenta regresiva
-features/today/today.store.ts
-data/services/schedule.service.ts
-data/schedule-parser.ts
+Frontend:
+  features/ai-assistant/ai-assistant-modal.component.ts
+  features/ai-assistant/chat-message-bubble.component.ts
+  features/ai-assistant/markdown-renderer.component.ts
+  data/services/ai-assistant.service.ts
 ```
 
 ---
 
-## Módulo 4 — [Nombre] · Sílabos & Base de Datos
+## Modulo 2 — [Nombre] — Login y Perfil del Alumno
 
-Gestiona los sílabos oficiales de cada curso. Si no están en la BD, los descarga de la API Externa y los guarda automáticamente en Supabase para todos los usuarios.
+**Que hace esta parte en palabras simples:**
+Es la pantalla de inicio de sesion. El alumno pone su usuario y contrasena UTP, y el sistema verifica que sea un alumno real. Sin esto, nadie puede entrar a la app.
 
-**Backend**
-```
-presentation/controller/SyllabusController.java     ← GET /syllabus/{code}
-infrastructure/persistence/entity/SyllabusEntity.java
-infrastructure/persistence/repository/SpringDataSyllabusRepository.java
-```
+Cuando el alumno inicia sesion, el sistema guarda su nombre, carrera, campus y ciclo. Ese perfil se usa en todos lados: la IA lo usa para personalizar las respuestas, el horario lo usa para saber de quien cargar los datos, etc.
 
-**Frontend**
-```
-features/syllabus/syllabus-view.component.ts
-data/services/syllabus.service.ts                   ← LocalStorage → API Externa → Supabase
-data/services/supabase.service.ts
-data/syllabus/client-storage.ts
-data/syllabus/types.ts
-```
+Piensalo como el portero del edificio. Si no pasas por aqui, no llegas a ninguna otra parte del sistema.
 
-**Base de datos**
+**Archivos que presento [Nombre]:**
 ```
-docs/database/supabase_schema_schedules_networking.sql
-docs/database/supabase_marketplace_schema.sql
+Backend:
+  presentation/controller/AuthController.java
+  presentation/dto/AuthRequest.java
+  infrastructure/security/SecurityConfig.java
+  infrastructure/security/SecurityIdentityResolver.java
+  infrastructure/persistence/entity/StudentEntity.java
+
+Frontend:
+  features/auth/login-page.component.ts
+  data/services/auth.service.ts
+  core/interceptors/auth.interceptor.ts
 ```
 
 ---
 
-## Módulo 5 — [Nombre] · Tareas & Evaluaciones
+## Modulo 3 — [Nombre] — Horario y Vista de Hoy
 
-Sincroniza las tareas y evaluaciones próximas desde el portal UTP sin que el alumno las cargue manualmente.
+**Que hace esta parte en palabras simples:**
+Es la pantalla principal que todos van a ver todos los dias. Muestra el horario completo de la semana (lunes a sabado, con aulas, docentes y horarios) y una vista especial de "Hoy" que resalta solo las clases del dia actual con una cuenta regresiva.
 
-**Backend**
-```
-presentation/controller/TaskController.java         ← GET /tasks/upcoming
-infrastructure/persistence/entity/TaskSyncEntity.java
-infrastructure/persistence/repository/SpringDataTaskRepository.java
-```
+Los datos no los inventamos nosotros: los obtenemos del portal real de la UTP en el momento en que el alumno inicia sesion. Despues los guardamos en la base de datos para que si el alumno no tiene internet, igual pueda ver su horario.
 
-**Frontend**
+Piensalo como la app de Google Calendar pero solo con tus clases universitarias reales, actualizada automaticamente desde la UTP.
+
+**Archivos que presento [Nombre]:**
 ```
-features/tasks/task-sync.component.ts
-data/services/task.service.ts
-data/tasks/active-tasks.ts
-data/tasks/homework-resumes.ts
-domain/models/task.model.ts
+Backend:
+  presentation/controller/ScheduleController.java
+  infrastructure/persistence/entity/StudentScheduleEntity.java
+  infrastructure/persistence/repository/SpringDataScheduleRepository.java
+
+Frontend:
+  features/schedule/schedule-view.component.ts
+  features/schedule/weekly-schedule.component.ts
+  features/schedule/class-detail-modal.component.ts
+  features/today/today-view.component.ts
+  features/today/today.store.ts
+  data/services/schedule.service.ts
+  data/schedule-parser.ts
 ```
 
 ---
 
-## Archivos compartidos
+## Modulo 4 — [Nombre] — Silabos y Base de Datos
 
-| Archivo | Qué es |
+**Que hace esta parte en palabras simples:**
+El silabo es el documento que dice que temas se ven semana a semana en cada curso, como se califica y cual es el logro del curso. Esta parte del sistema descarga esos silabos desde el portal de la UTP y los guarda en nuestra base de datos.
+
+Por que guardarlo? Porque si el primer alumno en pedir el silabo de "Desarrollo Web" tarda 3 segundos en descargarlo, el segundo alumno que pida lo mismo lo recibe al instante porque ya esta guardado. Ademas la IA lo usa para responder preguntas como "que temas veran la proxima semana?".
+
+Esta parte tambien es responsable de toda la estructura de la base de datos: las tablas, que campos tienen, como estan relacionadas.
+
+**Archivos que presento [Nombre]:**
+```
+Backend:
+  presentation/controller/SyllabusController.java
+  infrastructure/persistence/entity/SyllabusEntity.java
+  infrastructure/persistence/repository/SpringDataSyllabusRepository.java
+
+Frontend:
+  features/syllabus/syllabus-view.component.ts
+  data/services/syllabus.service.ts
+  data/services/supabase.service.ts
+  data/syllabus/client-storage.ts
+  data/syllabus/types.ts
+
+Base de datos:
+  docs/database/supabase_schema_schedules_networking.sql
+  docs/database/supabase_marketplace_schema.sql
+```
+
+---
+
+## Modulo 5 — [Nombre] — Tareas y Evaluaciones
+
+**Que hace esta parte en palabras simples:**
+Cuando el alumno entra a la app, el sistema automaticamente va al portal de la UTP y trae todas las tareas y evaluaciones que tiene pendientes, ordenadas por fecha. El alumno no tiene que registrar nada manualmente: todo aparece solo.
+
+Piensalo como si tu app de recordatorios se sincronizara sola con lo que tu profesor subio al aula virtual, sin que tu tengas que hacer nada.
+
+La IA tambien puede usar esta informacion: si el alumno pregunta "que tengo que entregar esta semana?", el sistema ya tiene los datos listos para responder.
+
+**Archivos que presento [Nombre]:**
+```
+Backend:
+  presentation/controller/TaskController.java
+  infrastructure/persistence/entity/TaskSyncEntity.java
+  infrastructure/persistence/repository/SpringDataTaskRepository.java
+
+Frontend:
+  features/tasks/task-sync.component.ts
+  data/services/task.service.ts
+  data/tasks/active-tasks.ts
+  data/tasks/homework-resumes.ts
+  domain/models/task.model.ts
+```
+
+---
+
+## Archivos que todos deben conocer (son de todos)
+
+| Archivo | Para que sirve |
 |---|---|
-| `pom.xml` | Dependencias Maven del backend |
-| `frontend-angular/.env.example` | Plantilla de variables de entorno (pedir claves a Joan) |
-| `frontend-angular/scripts/set-env.js` | Genera `environment.ts` desde `.env` |
-| `frontend-angular/angular.json` | Configuración Angular |
+| `pom.xml` | Lista de todas las librerias que usa el backend (como el package.json del frontend pero para Java) |
+| `frontend-angular/.env.example` | Plantilla con las variables de entorno que necesitas para correr el proyecto. Pedirle las claves reales a Joan. |
+| `frontend-angular/scripts/set-env.js` | Script que lee el archivo .env y genera la configuracion del Angular automaticamente |
+| `frontend-angular/angular.json` | Configuracion general del proyecto Angular |
+| `system.properties` | Le dice a Heroku que version de Java usar |
 
 ---
 
-## Setup local
+## Como correr el proyecto en tu computadora
 
+**Paso 1: Clonar el repositorio**
 ```bash
-# Clonar
 git clone https://github.com/Joan2022Laurente/horarioInteligente.git
+cd horarioInteligente
+```
 
-# Variables de entorno del frontend (pedir a Joan)
+**Paso 2: Crear el archivo de configuracion del frontend**
+```bash
+# En la carpeta frontend-angular, copiar el archivo de ejemplo
 Copy-Item frontend-angular/.env.example frontend-angular/.env
+# Luego abrir frontend-angular/.env y completar los valores que te pase Joan
+```
 
-# Backend
+**Paso 3: Levantar el backend** (en una terminal)
+```bash
 cd backend-springboot
 ./mvnw.cmd spring-boot:run
+# Esperar hasta ver "Started HorarioApplication" en la consola
+```
 
-# Frontend (otra terminal)
+**Paso 4: Levantar el frontend** (en otra terminal aparte)
+```bash
 cd frontend-angular
 npm install
-npm run start   # → http://localhost:4200
+npm run start
+# Abrir http://localhost:4200 en el navegador
 ```
+
+Las claves de produccion (Supabase, OpenRouter) las maneja Joan. Para correr local solo necesitas el .env que el te comparte.
