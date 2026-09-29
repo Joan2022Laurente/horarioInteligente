@@ -21,6 +21,9 @@ public class AiChatStreamRequest {
     @JsonAlias({"studentId", "user_id", "userId"})
     private String studentCode;
 
+    /** Token de sesión UTP del alumno. Necesario para llamar a la API externa (sílabos, evaluaciones). */
+    private String token;
+
     private String model;
 
     private List<Map<String, String>> history;

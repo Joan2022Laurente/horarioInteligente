@@ -115,6 +115,7 @@ export class AiAssistantService {
       const body = JSON.stringify({
         message,
         studentCode,
+        token,
         history: history || []
       });
 

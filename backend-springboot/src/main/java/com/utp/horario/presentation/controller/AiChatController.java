@@ -25,6 +25,7 @@ public class AiChatController {
     private final AiAssistantServicePort aiAssistantServicePort;
     private final DailyQuotaServicePort dailyQuotaServicePort;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.utp.horario.domain.port.out.UtpPortalGatewayPort utpPortalGatewayPort;
 
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<AiChatMessage>> chat(
@@ -52,6 +53,11 @@ public class AiChatController {
         String effectiveStudentCode = (studentId != null && !studentId.isBlank()) 
                 ? studentId 
                 : (request.getStudentCode() != null && !request.getStudentCode().isBlank() ? request.getStudentCode() : "current-student");
+        // Registrar el token del alumno para que AcademicToolService pueda llamar a la API externa
+        if (request.getToken() != null && !request.getToken().isBlank()) {
+            utpPortalGatewayPort.registerStudentToken(effectiveStudentCode, request.getToken());
+            log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
+        }
         return executeStreamEmitter(effectiveStudentCode, request.getMessage(), request.getModel(), request.getHistory());
     }
 
