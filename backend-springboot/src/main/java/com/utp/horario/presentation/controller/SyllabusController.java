@@ -25,6 +25,7 @@ public class SyllabusController {
 
     private final SyllabusServicePort syllabusServicePort;
     private final SecurityIdentityResolver identityResolver;
+    private final com.utp.horario.domain.port.out.UtpPortalGatewayPort utpPortalGatewayPort;
 
     @GetMapping("/{courseCode}")
     public ResponseEntity<ApiResponse<Syllabus>> getSyllabus(
@@ -35,6 +36,15 @@ public class SyllabusController {
         String token = identityResolver.extractBearerToken(authHeader);
         Syllabus syllabus = syllabusServicePort.getSyllabus(courseCode, sectionId, pdfUrl, token);
         return ResponseEntity.ok(ApiResponse.ok(syllabus));
+    }
+
+    @GetMapping(value = "/{courseCode}/markdown", produces = "text/markdown; charset=utf-8")
+    public ResponseEntity<String> getSyllabusMarkdown(
+            @PathVariable String courseCode,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String token = identityResolver.extractBearerToken(authHeader);
+        String markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(token, courseCode);
+        return ResponseEntity.ok(markdown != null ? markdown : "");
     }
 
     @GetMapping

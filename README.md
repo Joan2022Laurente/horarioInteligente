@@ -12,8 +12,8 @@ horario-inteligente-fullstack/
 │   ├── pom.xml
 │   └── src/main/java/com/utp/horario/
 │       ├── domain/                  # Entidades inmutables y Puertos (In/Out)
-│       ├── application/             # Casos de uso y motor de parsing de sílabos
-│       ├── infrastructure/          # Adaptadores JPA, Clientes UTP, OpenRouter, Seguridad
+│       ├── application/             # Casos de uso y sincronización de sílabos vía API Externa v1.2.0
+│       ├── infrastructure/          # Adaptadores JPA, Clientes UTP Gateway, OpenRouter, Seguridad
 │       └── presentation/            # Controladores REST (/api/v1/auth, /schedule, /syllabus, /ai, /tasks)
 │
 └── frontend-angular/                # Angular 18/19 Standalone (Signals & Glassmorphism Design)

@@ -31,17 +31,9 @@ if (!fs.existsSync(targetDir)) {
   fs.mkdirSync(targetDir, { recursive: true });
 }
 
-// OpenRouter Keys
-const openRouterKeysRaw = process.env.OPENROUTER_API_KEYS || envVars.OPENROUTER_API_KEYS || '';
-const openRouterKeys = openRouterKeysRaw ? openRouterKeysRaw.split(',').map(k => k.trim()).filter(Boolean) : [];
-if (openRouterKeys.length === 0 && (process.env.OPENROUTER_API_KEY || envVars.OPENROUTER_API_KEY)) {
-  openRouterKeys.push(process.env.OPENROUTER_API_KEY || envVars.OPENROUTER_API_KEY);
-}
-
 function generateEnvFile(isProd) {
   const activeBusinessUrl = isProd ? '/api/v1' : (process.env.BUSINESS_API_URL || envVars.BUSINESS_API_URL || 'http://localhost:8080/api/v1');
   const activeAcademicUrl = isProd ? '/api/v1' : (process.env.ACADEMIC_API_URL || envVars.ACADEMIC_API_URL || 'http://localhost:8080/api/v1');
-  const activeKeys = isProd ? [] : openRouterKeys;
   return `// Autogenerado automáticamente por scripts/set-env.js - NO MODIFICAR MANUALMENTE
 export const environment = {
   production: ${isProd},
@@ -49,7 +41,7 @@ export const environment = {
   academicApiUrl: '${activeAcademicUrl}',
   supabaseUrl: '${supabaseUrl}',
   supabaseAnonKey: '${supabaseAnonKey}',
-  openRouterApiKeys: ${JSON.stringify(activeKeys)}
+  openRouterApiKeys: []
 };
 `;
 }

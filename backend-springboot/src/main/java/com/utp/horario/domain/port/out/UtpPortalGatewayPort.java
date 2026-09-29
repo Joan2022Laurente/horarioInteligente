@@ -6,12 +6,15 @@ import com.utp.horario.domain.model.TaskSyncItem;
 import com.utp.horario.domain.model.tool.AcademicToolDto.CourseSummaryDto;
 import com.utp.horario.domain.model.tool.AcademicToolDto.UpcomingEvaluationDto;
 
+import com.utp.horario.domain.model.Syllabus;
+
 import java.util.List;
 
 public interface UtpPortalGatewayPort {
     StudentProfile login(String username, String password);
     ScheduleInterval fetchSchedule(String token, String period);
     List<TaskSyncItem> fetchTasks(String token, String sectionId);
+    Syllabus fetchSyllabus(String token, String courseCode, String sectionId, String pdfUrl);
     String fetchSyllabusPdfText(String token, String courseCode);
 
     List<CourseSummaryDto> fetchCoursesSummary(String token);

@@ -36,15 +36,14 @@ public class SyllabusServiceImpl implements SyllabusServicePort {
         return syllabusRepositoryPort.findByCourseCode(courseCode)
                 .filter(s -> s.getFormula() != null && !s.getFormula().isBlank() && s.getWeeklySchedule() != null && !s.getWeeklySchedule().isEmpty())
                 .orElseGet(() -> {
-                    String target = (pdfUrl != null && !pdfUrl.isBlank()) ? pdfUrl : 
-                                   (sectionId != null && !sectionId.isBlank()) ? sectionId : courseCode;
-                    log.info("[SyllabusServiceImpl] Descargando y parseando sílabo oficial para target='{}' (courseCode='{}')", target, courseCode);
-                    String pdfText = utpPortalGatewayPort.fetchSyllabusPdfText(token != null ? token : "", target);
-                    if (pdfText != null && !pdfText.isBlank()) {
-                        Syllabus parsed = syllabusParserEngine.parse(pdfText, courseCode);
-                        return syllabusRepositoryPort.save(parsed);
+                    log.info("[SyllabusServiceImpl] Solicitando sílabo oficial v1.2.0 para courseCode='{}' (sectionId='{}', pdfUrl='{}')",
+                            courseCode, sectionId, pdfUrl);
+                    Syllabus fetched = utpPortalGatewayPort.fetchSyllabus(token, courseCode, sectionId, pdfUrl);
+                    if (fetched != null && fetched.getWeeklySchedule() != null && !fetched.getWeeklySchedule().isEmpty()) {
+                        log.info("[SyllabusServiceImpl] 💾 Guardando en repositorio local sílabo de [{}] obtenido de API externa", courseCode);
+                        return syllabusRepositoryPort.save(fetched);
                     }
-                    // Si no se pudo descargar el PDF oficial, devolver objeto base limpio sin persistir como definitivo
+                    // Si la API externa no devolvió datos estructurados, fallback preventivo
                     return syllabusParserEngine.parse("", courseCode);
                 });
     }

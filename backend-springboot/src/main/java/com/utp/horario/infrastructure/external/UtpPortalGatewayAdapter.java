@@ -7,6 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.utp.horario.domain.model.ClassSession;
 import com.utp.horario.domain.model.ScheduleInterval;
 import com.utp.horario.domain.model.StudentProfile;
+import com.utp.horario.domain.model.Syllabus;
 import com.utp.horario.domain.model.TaskSyncItem;
 import com.utp.horario.domain.model.tool.AcademicToolDto.CourseEvaluationDetailDto;
 import com.utp.horario.domain.model.tool.AcademicToolDto.CourseSummaryDto;
@@ -399,13 +400,28 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
     }
 
     @Override
-    public String fetchSyllabusPdfText(String token, String courseCode) {
-        log.info("[UtpPortalGatewayAdapter] Consultando sílabo a la API Externa para curso: {}", courseCode);
+    public Syllabus fetchSyllabus(String token, String courseCode, String sectionId, String pdfUrl) {
+        log.info("[UtpPortalGatewayAdapter] Consultando sílabo oficial v1.2.0 a API Externa para curso: {} (sectionId={}, pdfUrl={})",
+                courseCode, sectionId, pdfUrl);
         try {
-            String encodedCode = URLEncoder.encode(courseCode != null ? courseCode : "", StandardCharsets.UTF_8);
+            StringBuilder urlBuilder = new StringBuilder(gatewayBaseUrl)
+                    .append("/syllabus/")
+                    .append(URLEncoder.encode(courseCode != null ? courseCode.trim() : "", StandardCharsets.UTF_8));
+
+            List<String> queryParams = new ArrayList<>();
+            if (sectionId != null && !sectionId.isBlank()) {
+                queryParams.add("sectionId=" + URLEncoder.encode(sectionId.trim(), StandardCharsets.UTF_8));
+            }
+            if (pdfUrl != null && !pdfUrl.isBlank()) {
+                queryParams.add("pdfUrl=" + URLEncoder.encode(pdfUrl.trim(), StandardCharsets.UTF_8));
+            }
+            if (!queryParams.isEmpty()) {
+                urlBuilder.append("?").append(String.join("&", queryParams));
+            }
+
             HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(gatewayBaseUrl + "/syllabus/" + encodedCode))
-                    .timeout(Duration.ofSeconds(15))
+                    .uri(URI.create(urlBuilder.toString()))
+                    .timeout(Duration.ofSeconds(25))
                     .header("Accept", "application/json")
                     .GET();
 
@@ -413,16 +429,36 @@ public class UtpPortalGatewayAdapter implements UtpPortalGatewayPort {
                 reqBuilder.header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token);
             }
 
-            HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            log.info("[UtpPortalGatewayAdapter] Respuesta /syllabus/{} statusCode={}", courseCode, response.statusCode());
+
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
-                JsonNode data = root.path("data");
-                if (!data.isMissingNode() && !data.isNull()) {
-                    return data.toString();
+                if (root.path("success").asBoolean(true) && root.hasNonNull("data")) {
+                    JsonNode dataNode = root.get("data");
+                    Syllabus syllabus = objectMapper.treeToValue(dataNode, Syllabus.class);
+                    log.info("[UtpPortalGatewayAdapter] ✅ Sílabo estructurado recibido de API Externa para [{}] - {} evaluaciones, {} semanas",
+                            courseCode,
+                            syllabus.getEvaluations() != null ? syllabus.getEvaluations().size() : 0,
+                            syllabus.getWeeklySchedule() != null ? syllabus.getWeeklySchedule().size() : 0);
+                    return syllabus;
                 }
+            } else {
+                log.warn("[UtpPortalGatewayAdapter] ⚠️ API Externa /syllabus/{} devolvió HTTP {}", courseCode, response.statusCode());
             }
         } catch (Exception e) {
-            log.error("[UtpPortalGatewayAdapter] Error al obtener sílabo de API Externa: {}", e.getMessage());
+            log.error("[UtpPortalGatewayAdapter] Error al obtener sílabo estructurado de API Externa para {}: {}", courseCode, e.getMessage());
+        }
+        return null;
+    }
+
+    @Override
+    public String fetchSyllabusPdfText(String token, String courseCode) {
+        Syllabus s = fetchSyllabus(token, courseCode, null, null);
+        if (s != null) {
+            try {
+                return objectMapper.writeValueAsString(s);
+            } catch (Exception ignored) {}
         }
         return "";
     }
