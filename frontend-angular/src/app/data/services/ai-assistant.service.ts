@@ -92,7 +92,8 @@ export class AiAssistantService {
     message: string,
     onDelta: (word: string) => void,
     onTool: (toolName: string) => void,
-    onToolResult?: (toolResult: any) => void
+    onToolResult?: (toolResult: any) => void,
+    history?: { role: string; content: string }[]
   ): Promise<void> {
     this.isThinkingSignal.set(true);
     try {
@@ -100,19 +101,27 @@ export class AiAssistantService {
       const studentCode = profile?.studentCode || profile?.username || '';
       const token = profile?.token || '';
 
-      const url = `${this.baseUrl}/chat/stream?message=${encodeURIComponent(message)}&studentCode=${encodeURIComponent(studentCode)}`;
+      const url = `${this.baseUrl}/chat/stream`;
       console.log("[AiChat] 🚀 Iniciando solicitud de streaming a:", url);
 
       const headers: Record<string, string> = {
-        'Accept': 'text/event-stream'
+        'Accept': 'text/event-stream',
+        'Content-Type': 'application/json'
       };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      const body = JSON.stringify({
+        message,
+        studentCode,
+        history: history || []
+      });
+
       const response = await fetch(url, {
-        method: 'GET',
-        headers
+        method: 'POST',
+        headers,
+        body
       });
 
       console.log("[AiChat] 📥 Respuesta recibida. Status:", response.status, response.statusText);
@@ -131,7 +140,6 @@ export class AiAssistantService {
         const { value, done } = await reader.read();
         if (done) break;
 
-        // console.debug("[AiChat] 📦 Chunk recibido:", value); // para depuración fina
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
@@ -186,7 +194,18 @@ export class AiAssistantService {
                 onToolResult(toolResult);
               }
             } else if (currentEvent === 'delta') {
-              onDelta(data);
+              let textDelta = data;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed && typeof parsed.delta === 'string') {
+                  textDelta = parsed.delta;
+                } else if (parsed && typeof parsed.text === 'string') {
+                  textDelta = parsed.text;
+                }
+              } catch {
+                // Retrocompatibilidad con texto plano
+              }
+              onDelta(textDelta);
             }
           }
         }

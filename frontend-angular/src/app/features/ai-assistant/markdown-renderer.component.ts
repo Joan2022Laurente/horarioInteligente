@@ -71,14 +71,16 @@ export class MarkdownRendererComponent implements OnChanges {
     // Links [text](url)
     out = out.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#3a86ff] hover:text-[#60a5fa] hover:underline font-bold transition">$1</a>');
 
-    // Bold **text**
+    // Bold **text** or __text__
     out = out.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-white">$1</strong>');
+    out = out.replace(/__([^_]+)__/g, '<strong class="font-extrabold text-white">$1</strong>');
 
     // Inline code `code`
     out = out.replace(/`(.*?)`/g, '<code class="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-xs text-[#bbf451] tracking-normal">$1</code>');
 
-    // Italic *text*
+    // Italic *text* or _text_
     out = out.replace(/\*(.*?)\*/g, '<em class="italic text-neutral-300">$1</em>');
+    out = out.replace(/_([^_]+)_/g, '<em class="italic text-neutral-300">$1</em>');
 
     // Restore sticker placeholders
     for (const item of stickerPlaceholders) {
@@ -125,7 +127,7 @@ export class MarkdownRendererComponent implements OnChanges {
       }
 
       if (!trimmed) {
-        out.push('<div class="h-1.5"></div>');
+        out.push('<div class="h-2"></div>');
         continue;
       }
 
@@ -151,11 +153,13 @@ export class MarkdownRendererComponent implements OnChanges {
         continue;
       }
 
-      // Viñetas (- , * , •)
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+      // Viñetas (- , * , • , +)
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ') || trimmed.startsWith('+ ')) {
         const bulletText = trimmed.substring(2);
+        const isIndented = rawLine.startsWith('  ') || rawLine.startsWith('\t');
+        const paddingClass = isIndented ? 'pl-6' : 'pl-2';
         out.push(`
-          <div class="flex items-start gap-2 text-xs sm:text-sm text-neutral-300 my-1 leading-relaxed pl-2">
+          <div class="flex items-start gap-2 text-xs sm:text-sm text-neutral-300 my-1 leading-relaxed ${paddingClass}">
             <span class="text-[#bbf451] font-bold mt-0.5 select-none shrink-0">•</span>
             <div class="flex-1">${this.parseInline(bulletText)}</div>
           </div>

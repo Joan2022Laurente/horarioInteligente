@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("/marketplace")
+@RequestMapping({"/marketplace", "/api/v1/marketplace"})
 @RequiredArgsConstructor
 public class MarketplaceController {
 

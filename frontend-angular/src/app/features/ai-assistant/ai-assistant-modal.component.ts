@@ -480,6 +480,12 @@ export class AiAssistantModalComponent implements OnChanges {
 
     let msgAdded = false;
 
+    // Construir historial reciente de conversación para contexto continuo del copiloto
+    const historyPayload = this.messages
+      .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content && m.id !== 'welcome')
+      .slice(-8)
+      .map(m => ({ role: m.role, content: m.content }));
+
     this.aiService.streamChat(
       query,
       (word: string) => {
@@ -503,7 +509,9 @@ export class AiAssistantModalComponent implements OnChanges {
           msgAdded = true;
         }
         this.scrollToBottom('smooth');
-      }
+      },
+      undefined,
+      historyPayload
     ).then(() => {
       this.isLoading = false;
       this.quota = incrementClientDailyUsage(userId);

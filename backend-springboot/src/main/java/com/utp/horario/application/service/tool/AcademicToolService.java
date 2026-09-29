@@ -191,37 +191,89 @@ public class AcademicToolService {
      * Aprovecha fetchSyllabusMarkdown de la API Externa para obtener el contenido completo en Markdown listo para LLM.
      */
     public SyllabusDetailsResult getSyllabusDetails(String courseQuery) {
-        log.info("[AcademicTool] 📚 Consultando sílabo de curso: {}", courseQuery);
+        return getSyllabusDetails(null, courseQuery);
+    }
+
+    public SyllabusDetailsResult getSyllabusDetails(String studentCode, String courseQuery) {
+        log.info("[AcademicTool] 📚 Consultando sílabo de curso: {} (alumno: {})", courseQuery, studentCode);
         String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
 
-        // 1. Intentar resolver código o consulta
-        Optional<Syllabus> syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanQuery.toUpperCase());
-        if (syllabusOpt.isEmpty()) {
-            log.info("[AcademicTool] ☁️ Sílabo no hallado en BD local para [{}]. Consultando Supabase 'official_syllabi'...", cleanQuery);
-            syllabusOpt = fetchSyllabusFromSupabase(cleanQuery);
+        // 1. Resolver código/nombre exacto desde los cursos matriculados del alumno (PRIORIDAD ALTA)
+        //    Esto garantiza que el contexto de "qué clase tiene hoy" se resuelva correctamente.
+        String resolvedCourseCode = null;
+        String resolvedCourseName = null;
+        EnrolledCoursesResult enrolled = null;
+        if (studentCode != null && !studentCode.isBlank()) {
+            try {
+                enrolled = getEnrolledCourses(studentCode);
+                if (enrolled != null && enrolled.courses() != null) {
+                    String normQuery = normalizeTerm(cleanQuery);
+                    for (var ec : enrolled.courses()) {
+                        String normEcName = normalizeTerm(ec.courseName());
+                        String normEcCode = normalizeTerm(ec.courseCode());
+                        if (normEcName.contains(normQuery) || normQuery.contains(normEcName)
+                                || normEcCode.equalsIgnoreCase(normQuery)) {
+                            resolvedCourseCode = ec.courseCode();
+                            resolvedCourseName = ec.courseName();
+                            log.info("[AcademicTool] ✅ Curso resuelto desde matriculados: {} ({})", resolvedCourseName, resolvedCourseCode);
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[AcademicTool] ⚠️ No se pudo resolver curso desde cursos matriculados: {}", e.getMessage());
+            }
         }
 
-        String courseCode = syllabusOpt.map(Syllabus::getCourseCode).orElse(cleanQuery);
+        // 2. Intentar buscar por código/nombre resuelto en Supabase (PRIORIDAD: código exacto)
+        Optional<Syllabus> syllabusOpt = Optional.empty();
+        if (resolvedCourseCode != null) {
+            syllabusOpt = syllabusRepositoryPort.findByCourseCode(resolvedCourseCode.toUpperCase());
+            if (syllabusOpt.isEmpty()) {
+                syllabusOpt = fetchSyllabusFromSupabase(resolvedCourseCode);
+            }
+            if (syllabusOpt.isEmpty() && resolvedCourseName != null) {
+                syllabusOpt = fetchSyllabusFromSupabase(resolvedCourseName);
+            }
+        }
 
-        // 2. Consultar versión Markdown de la API Externa para contexto enriquecido sin fricción de parsing
+        // 3. Fallback: buscar por query original en BD local y Supabase (sin enrolled courses)
+        if (syllabusOpt.isEmpty()) {
+            syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanQuery.toUpperCase());
+            if (syllabusOpt.isEmpty()) {
+                log.info("[AcademicTool] ☁️ Sílabo no hallado por código; consultando Supabase 'official_syllabi' por query: [{}]", cleanQuery);
+                syllabusOpt = fetchSyllabusFromSupabase(cleanQuery);
+            }
+        }
+
+        String courseCode = syllabusOpt.map(Syllabus::getCourseCode)
+                .orElse(resolvedCourseCode != null ? resolvedCourseCode : cleanQuery);
+
+        // 3. Consultar versión Markdown de la API Externa para contexto enriquecido sin fricción de parsing
         String markdown = "";
         try {
-            String token = utpPortalGatewayPort.getStudentToken(null);
-            markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(token, courseCode);
-            if (markdown != null && !markdown.isBlank()) {
-                log.info("[AcademicTool] 📝 Sílabo en Markdown obtenido de API Externa para [{}] ({} caracteres)", courseCode, markdown.length());
+            String token = resolveStudentToken(studentCode);
+            if (token != null && !token.isBlank() && courseCode != null && !courseCode.isBlank()) {
+                markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(token, courseCode);
+                if (markdown != null && !markdown.isBlank()) {
+                    log.info("[AcademicTool] 📝 Sílabo en Markdown obtenido de API Externa para [{}] ({} caracteres)", courseCode, markdown.length());
+                }
             }
         } catch (Exception e) {
             log.warn("[AcademicTool] ℹ️ No se pudo obtener Markdown de API Externa para [{}]: {}", courseCode, e.getMessage());
         }
 
         if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
+            String suggestion = "";
+            if (enrolled != null && enrolled.courses() != null && !enrolled.courses().isEmpty()) {
+                suggestion = " Cursos activos del alumno: " + enrolled.courses().stream().map(EnrolledCourseDto::courseName).toList();
+            }
             return new SyllabusDetailsResult(
                     cleanQuery,
                     "Curso no encontrado",
                     0,
                     "",
-                    "No se encontró el sílabo para '" + cleanQuery + "'. Puedes consultar tus cursos matriculados con get_enrolled_courses.",
+                    "No se encontró el sílabo registrado para '" + cleanQuery + "'." + suggestion,
                     List.of(),
                     List.of(),
                     null
@@ -459,11 +511,17 @@ public class AcademicToolService {
         }
 
         // 2. Si no encuentra resultado directo y contiene varias palabras (ej. "desarrollo web"), buscar por palabra clave principal
+        //    Se excluyen stopwords y se requiere mínimo 6 chars para evitar falsos positivos ("para", "con", "los")
+        java.util.Set<String> stopWords = java.util.Set.of(
+                "para", "con", "los", "las", "del", "que", "una", "uno",
+                "sus", "por", "ante", "bajo", "cabe", "como", "desde",
+                "entre", "hacia", "hasta", "segun", "sobre", "tras", "sistemas"
+        );
         String[] words = normalized.split("\\s+");
         if (words.length > 1) {
             java.util.Arrays.sort(words, (a, b) -> Integer.compare(b.length(), a.length()));
             for (String w : words) {
-                if (w.length() >= 4) {
+                if (w.length() >= 6 && !stopWords.contains(w)) {
                     log.info("[AcademicTool] 🔎 Reintentando búsqueda de sílabo por palabra clave: [{}]", w);
                     Optional<Syllabus> keywordMatch = querySupabaseSyllabus(w);
                     if (keywordMatch.isPresent()) {
@@ -478,9 +536,25 @@ public class AcademicToolService {
 
     private Optional<Syllabus> querySupabaseSyllabus(String searchTerm) {
         try {
-            String encoded = java.net.URLEncoder.encode(searchTerm, java.nio.charset.StandardCharsets.UTF_8);
-            String url = String.format("%s/rest/v1/official_syllabi?or=(course_code.ilike.*%s*,course_name.ilike.*%s*)&select=*&limit=1",
-                    supabaseUrl, encoded, encoded);
+            // URLEncoder usa + para espacios; PostgREST ilike necesita %20
+            String encoded = java.net.URLEncoder.encode(searchTerm, java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+
+            // Si parece un código (alfanumérico sin espacios), intentar eq exacto primero
+            String trimmed = searchTerm.trim();
+            boolean looksLikeCode = !trimmed.contains(" ") && trimmed.matches("[A-Za-z0-9_\\-\\.]+");
+            String url;
+            if (looksLikeCode) {
+                url = String.format("%s/rest/v1/official_syllabi?or=(course_code.eq.%s,course_code.ilike.*%s*)&select=*&limit=1",
+                        supabaseUrl, encoded, encoded);
+            } else {
+                // Buscar con term original Y normalizado (sin tildes) para mayor cobertura
+                String normEncoded = java.net.URLEncoder.encode(normalizeTerm(searchTerm), java.nio.charset.StandardCharsets.UTF_8)
+                        .replace("+", "%20");
+                url = String.format(
+                        "%s/rest/v1/official_syllabi?or=(course_code.ilike.*%s*,course_name.ilike.*%s*,course_name.ilike.*%s*)&select=*&limit=1",
+                        supabaseUrl, encoded, encoded, normEncoded);
+            }
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))

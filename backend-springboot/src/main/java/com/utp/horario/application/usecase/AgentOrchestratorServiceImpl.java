@@ -120,7 +120,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
             String message,
             ScheduleInterval ignoredSchedule,
             Map<String, Syllabus> ignoredSyllabi) {
-        return processUserQuery(studentCode, message, ignoredSchedule, ignoredSyllabi, null);
+        return processUserQuery(studentCode, message, ignoredSchedule, ignoredSyllabi, null, null);
     }
 
     @Override
@@ -130,6 +130,17 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
             ScheduleInterval ignoredSchedule,
             Map<String, Syllabus> ignoredSyllabi,
             String requestedModel) {
+        return processUserQuery(studentCode, message, ignoredSchedule, ignoredSyllabi, requestedModel, null);
+    }
+
+    @Override
+    public AiChatMessage processUserQuery(
+            String studentCode,
+            String message,
+            ScheduleInterval ignoredSchedule,
+            Map<String, Syllabus> ignoredSyllabi,
+            String requestedModel,
+            List<Map<String, String>> history) {
 
         // 1. Control de Cuota
         DailyQuotaStatus quota = quotaService.consumeQuota(studentCode);
@@ -148,23 +159,32 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
                 ? requestedModel
                 : (defaultModelName != null && !defaultModelName.isBlank() ? defaultModelName : "meta-llama/llama-3.3-70b-instruct");
 
-        // 2. Historial de Mensajes Inicial (System Prompt ultraligero: ~100 tokens, CERO prompt stuffing)
+        // 2. Historial de Mensajes Inicial (System Prompt optimizado con directrices de proactividad y memoria)
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of(
                 "role", "system",
-                "content", """
-                Eres el Copiloto Académico oficial de Horario Inteligente UTP.
-                Tienes acceso a herramientas para consultar el horario, aulas, cursos matriculados y sílabos del estudiante.
-                REGLAS OBLIGATORIAS:
-                1. NUNCA inventes aulas, docentes, fechas, notas ni siglas artificiales. Usa siempre las herramientas si necesitas datos específicos.
-                2. Fecha de referencia del sistema: %s.
-                3. Cuando el estudiante mencione un curso por su nombre (ej. 'desarrollo web', 'cloud', 'gestión ti'), pasa ese nombre tal cual en 'course_query' a la herramienta get_syllabus_details.
-                4. Si el estudiante pregunta de forma genérica ('¿qué temas tocan esta semana?', '¿cuáles son mis cursos?') sin nombrar un curso específico, consulta primero get_enrolled_courses para ver sus materias y pregúntale amablemente de cuál desea consultar.
-                5. Responde de forma concisa, cordial y en formato Markdown estructurado.
-                """.formatted(LocalDate.now().toString())
+                "content", getSystemPrompt()
         ));
 
-        messages.add(Map.of("role", "user", "content", message));
+        // Incorporar turnos conversacionales previos (máximo últimos 8 turnos válidos)
+        if (history != null && !history.isEmpty()) {
+            int startIdx = Math.max(0, history.size() - 8);
+            for (int i = startIdx; i < history.size(); i++) {
+                Map<String, String> prev = history.get(i);
+                if (prev == null) continue;
+                String role = prev.get("role");
+                String content = prev.get("content");
+                if (content != null && !content.isBlank() && ("user".equals(role) || "assistant".equals(role))) {
+                    messages.add(Map.of("role", role, "content", content.trim()));
+                }
+            }
+        }
+
+        // Agregar el mensaje actual si no es duplicado del último mensaje de usuario en el historial
+        if (messages.isEmpty() || !"user".equals(messages.get(messages.size() - 1).get("role"))
+                || !message.trim().equals(messages.get(messages.size() - 1).get("content"))) {
+            messages.add(Map.of("role", "user", "content", message.trim()));
+        }
 
         List<String> toolsExecuted = new ArrayList<>();
         List<Map<String, Object>> toolDetails = new ArrayList<>();
@@ -247,14 +267,16 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
                 yield objectMapper.writeValueAsString(toolService.getEnrolledCourses(studentCode));
             }
             case "get_today_schedule" -> {
-                String date = args.has("date") ? args.path("date").asText() : LocalDate.now().toString();
+                String date = args.has("date") 
+                        ? args.path("date").asText() 
+                        : LocalDate.now(java.time.ZoneId.of("America/Lima")).toString();
                 yield objectMapper.writeValueAsString(toolService.getTodaySchedule(studentCode, date));
             }
             case "get_syllabus_details" -> {
                 String query = args.has("course_query") 
                         ? args.path("course_query").asText() 
                         : (args.has("course_code") ? args.path("course_code").asText() : "");
-                yield objectMapper.writeValueAsString(toolService.getSyllabusDetails(query));
+                yield objectMapper.writeValueAsString(toolService.getSyllabusDetails(studentCode, query));
             }
             case "get_upcoming_evaluations" -> {
                 int week = args.has("current_week") ? args.path("current_week").asInt() : 6;
@@ -262,6 +284,45 @@ public class AgentOrchestratorServiceImpl implements AiAssistantServicePort {
             }
             default -> "{\"error\": \"Herramienta desconocida\"}";
         };
+    }
+
+    private String getSystemPrompt() {
+        return """
+        Eres el Copiloto Académico de Horario Inteligente UTP, un asistente universitario inteligente, proactivo, empático y muy resolutivo para estudiantes de la Universidad Tecnológica del Perú.
+
+        Tienes acceso a herramientas en tiempo real para consultar:
+        - Horarios y aulas del estudiante para hoy o fechas específicas (`get_today_schedule`)
+        - Temarios semanales, fórmulas de evaluación y sílabos oficiales (`get_syllabus_details`)
+        - Cursos matriculados del ciclo actual (`get_enrolled_courses`)
+        - Evaluaciones próximas y tareas (`get_upcoming_evaluations`)
+
+        DIRECTRICES DE RAZONAMIENTO Y PROACTIVIDAD:
+        1. Memoria Conversacional Continua:
+           - Mantén siempre la coherencia del diálogo. Si en un turno previo se mencionó un curso o clase (ej. "Formación para la Investigación - Sistemas"), cualquier pregunta subsiguiente ("¿qué temas tocan?", "¿a qué hora termina?", "¿quién es el docente?", "¿qué entra en la práctica?") se refiere a ese curso. ¡NUNCA preguntes qué curso le interesa si ya está en el contexto previo!
+
+        2. Consultas sobre "hoy" o "la clase de hoy":
+           - Si el estudiante pregunta qué clases tiene hoy ("¿qué clases tengo hoy?"), consulta `get_today_schedule`.
+           - Si el estudiante pregunta por los temas de hoy ("¿qué temas tocan hoy en la clase?", "¿de qué trata la clase de hoy?"):
+             a) Primero consulta `get_today_schedule` para saber qué clase tiene hoy.
+             b) Si tiene 1 clase hoy: Consulta inmediatamente `get_syllabus_details` con el nombre o código de ese curso y explica de forma directa el tema correspondiente a la semana actual. ¡Sé proactivo, NUNCA interrogues al alumno preguntándole qué curso quiere si hoy solo tiene esa clase!
+             c) Si tiene más de 1 clase hoy: Consulta el temario de esas clases y resume los temas de cada una ordenadamente.
+             d) Si no tiene clases hoy: Indícaselo cordialmente y ofrécele consultar el temario de sus cursos matriculados si lo desea.
+
+        3. Consultas sobre cursos específicos:
+           - Cuando el estudiante nombre un curso (ej. 'desarrollo web', 'cloud', 'gestión ti', 'investigación'), invoca directamente `get_syllabus_details` pasando el nombre en `course_query`.
+
+        4. Consultas genéricas abiertas:
+           - Solo si la pregunta es totalmente abierta sin referirse a hoy ni a ningún curso previo ("¿qué cursos llevo?", "¿cuáles son mis materias?"), consulta `get_enrolled_courses`.
+
+        5. Tono y Formato de Presentación:
+           - Tono natural de compañero universitario experto y resolutivo. Cero frases mecánicas ("Siguiente Paso...", "Una vez que me des esta información...", "Los cursos matriculados son:").
+           - Formato Markdown impecable:
+             * Separa SIEMPRE cada párrafo, encabezado y bloque con doble salto de línea.
+             * Usa encabezados breves con `###`.
+             * Usa viñetas con guion `- ` para listar aulas, horarios, docentes o temas.
+             * Resalta en **negrita** nombres de asignaturas, aulas, docentes y temas clave.
+           - Fecha actual de referencia: %s (Zona horaria: Lima, Perú).
+        """.formatted(LocalDate.now(java.time.ZoneId.of("America/Lima")).toString());
     }
 
     private JsonNode callOpenRouterWithFailover(Map<String, Object> body) throws Exception {

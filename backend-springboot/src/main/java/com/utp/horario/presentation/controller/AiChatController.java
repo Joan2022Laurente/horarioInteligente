@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
-@RequestMapping("/ai")
+@RequestMapping({"/ai", "/api/v1/ai"})
 @RequiredArgsConstructor
 public class AiChatController {
 
@@ -39,19 +39,38 @@ public class AiChatController {
                 request.getMessage(),
                 null,
                 null,
-                request.getModel()
+                request.getModel(),
+                request.getHistory()
         );
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @PostMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter streamChatPost(
+            @CurrentStudent(required = false) String studentId,
+            @RequestBody com.utp.horario.presentation.dto.AiChatStreamRequest request) {
+        String effectiveStudentCode = (studentId != null && !studentId.isBlank()) 
+                ? studentId 
+                : (request.getStudentCode() != null && !request.getStudentCode().isBlank() ? request.getStudentCode() : "current-student");
+        return executeStreamEmitter(effectiveStudentCode, request.getMessage(), request.getModel(), request.getHistory());
+    }
+
     @GetMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
-    public org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter streamChat(
+    public org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter streamChatGet(
             @CurrentStudent(required = false) String studentId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String studentCode,
             @org.springframework.web.bind.annotation.RequestParam String message) {
         String effectiveStudentCode = (studentId != null && !studentId.isBlank()) 
                 ? studentId 
                 : (studentCode != null && !studentCode.isBlank() ? studentCode : "current-student");
+        return executeStreamEmitter(effectiveStudentCode, message, null, null);
+    }
+
+    private org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter executeStreamEmitter(
+            String effectiveStudentCode,
+            String message,
+            String model,
+            java.util.List<java.util.Map<String, String>> history) {
         var emitter = new org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter(120000L);
 
         emitter.onTimeout(() -> {
@@ -65,12 +84,14 @@ public class AiChatController {
         // Ejecutar de forma asíncrona: emitir eventos SSE
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
-                // 1. Invocar al orquestador de agente (Paso 1: tools -> Paso 2: síntesis final conversacional)
+                // 1. Invocar al orquestador de agente con memoria histórica
                 AiChatMessage response = aiAssistantServicePort.processUserQuery(
                         effectiveStudentCode,
                         message,
                         null,
-                        null
+                        null,
+                        model,
+                        history
                 );
 
                 // 2. Si se ejecutaron herramientas, emitir evento 'tool' (nombre + parámetros) y 'tool_result'
@@ -103,13 +124,14 @@ public class AiChatController {
                     }
                 }
 
-                // 3. Emitir los tokens de la síntesis conversacional palabra por palabra antes de complete()
+                // 3. Emitir los tokens de forma segura con JSON para preservar saltos de línea y formateo Markdown
                 String content = response.getContent() != null ? response.getContent() : "";
-                String[] words = content.split(" ");
-                for (int i = 0; i < words.length; i++) {
-                    String space = (i < words.length - 1) ? " " : "";
-                    emitter.send("event: delta\ndata: " + words[i] + space + "\n\n");
-                    Thread.sleep(8);
+                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\s+|\\S+").matcher(content);
+                while (matcher.find()) {
+                    String token = matcher.group();
+                    String jsonPayload = objectMapper.writeValueAsString(java.util.Map.of("delta", token));
+                    emitter.send("event: delta\ndata: " + jsonPayload + "\n\n");
+                    Thread.sleep(6);
                 }
 
                 emitter.send("event: done\ndata: [DONE]\n\n");

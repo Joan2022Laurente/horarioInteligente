@@ -22,6 +22,17 @@ public interface AiAssistantServicePort {
         Map<String, Syllabus> syllabi,
         String requestedModel
     ) {
+        return processUserQuery(userIdentifier, message, schedule, syllabi, requestedModel, null);
+    }
+
+    default AiChatMessage processUserQuery(
+        String userIdentifier,
+        String message,
+        ScheduleInterval schedule,
+        Map<String, Syllabus> syllabi,
+        String requestedModel,
+        List<Map<String, String>> history
+    ) {
         return processUserQuery(userIdentifier, message, schedule, syllabi);
     }
 }

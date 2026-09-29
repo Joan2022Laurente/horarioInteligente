@@ -31,4 +31,5 @@ public class AiChatRequest {
     private JsonNode liveContext;
     private JsonNode studentProfile;
     private String model;
+    private java.util.List<Map<String, String>> history;
 }
