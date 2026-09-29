@@ -263,10 +263,30 @@ public class AcademicToolService {
             log.warn("[AcademicTool] ℹ️ No se pudo obtener Markdown de API Externa para [{}]: {}", courseCode, e.getMessage());
         }
 
+        // 4. Último recurso: fetchSyllabus() estructurado desde API Externa (NO solo markdown)
+        if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
+            try {
+                String tokenForApi = resolveStudentToken(studentCode);
+                if (tokenForApi != null && !tokenForApi.isBlank()) {
+                    String codeToTry = resolvedCourseCode != null ? resolvedCourseCode : cleanQuery;
+                    log.info("[AcademicTool] 🔄 Intentando fetchSyllabus() estructurado para [{}]", codeToTry);
+                    Syllabus apiSyllabus = utpPortalGatewayPort.fetchSyllabus(tokenForApi, codeToTry, null, null);
+                    if (apiSyllabus != null) {
+                        syllabusOpt = Optional.of(apiSyllabus);
+                        // Persistir en Supabase para futuros cache hits
+                        persistSyllabusToSupabase(apiSyllabus, codeToTry);
+                        log.info("[AcademicTool] ✅ Sílabo obtenido de API Externa y cacheado en Supabase para [{}]", codeToTry);
+                    }
+                }
+            } catch (Exception apiEx) {
+                log.warn("[AcademicTool] ⚠️ fetchSyllabus() estructurado también falló para [{}]: {}", cleanQuery, apiEx.getMessage());
+            }
+        }
+
         if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
             String suggestion = "";
             if (enrolled != null && enrolled.courses() != null && !enrolled.courses().isEmpty()) {
-                suggestion = " Cursos activos del alumno: " + enrolled.courses().stream().map(EnrolledCourseDto::courseName).toList();
+                suggestion = " Cursos disponibles: " + enrolled.courses().stream().map(EnrolledCourseDto::courseName).toList();
             }
             return new SyllabusDetailsResult(
                     cleanQuery,
@@ -515,7 +535,7 @@ public class AcademicToolService {
         java.util.Set<String> stopWords = java.util.Set.of(
                 "para", "con", "los", "las", "del", "que", "una", "uno",
                 "sus", "por", "ante", "bajo", "cabe", "como", "desde",
-                "entre", "hacia", "hasta", "segun", "sobre", "tras", "sistemas"
+                "entre", "hacia", "hasta", "segun", "sobre", "tras"
         );
         String[] words = normalized.split("\\s+");
         if (words.length > 1) {
@@ -616,4 +636,54 @@ public class AcademicToolService {
         String nfd = java.text.Normalizer.normalize(text.trim().toLowerCase(), java.text.Normalizer.Form.NFD);
         return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").replaceAll("\\s+", " ").trim();
     }
+
+    /**
+     * Persiste un sílabo obtenido de la API Externa en Supabase official_syllabi (upsert).
+     * Esto permite que futuros llamados al copiloto eviten llamar a la API Externa.
+     */
+    private void persistSyllabusToSupabase(Syllabus syllabus, String courseCode) {
+        try {
+            if (syllabus == null || courseCode == null || courseCode.isBlank()) return;
+            String code = syllabus.getCourseCode() != null && !syllabus.getCourseCode().isBlank()
+                    ? syllabus.getCourseCode() : courseCode;
+            String name = syllabus.getCourseName() != null ? syllabus.getCourseName() : courseCode;
+
+            java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("course_id", code);
+            body.put("course_code", code);
+            body.put("course_name", name.toUpperCase());
+            if (syllabus.getCredits() != null) body.put("credits", syllabus.getCredits());
+            if (syllabus.getFormula() != null) body.put("formula", syllabus.getFormula());
+            if (syllabus.getLearningGoal() != null) body.put("learning_goal", syllabus.getLearningGoal());
+            if (syllabus.getWeeklySchedule() != null && !syllabus.getWeeklySchedule().isEmpty()) {
+                body.put("weekly_schedule", syllabus.getWeeklySchedule());
+            }
+            if (syllabus.getEvaluations() != null && !syllabus.getEvaluations().isEmpty()) {
+                body.put("evaluations", syllabus.getEvaluations());
+            }
+
+            String json = objectMapper.writeValueAsString(body);
+            String url = supabaseUrl + "/rest/v1/official_syllabi?on_conflict=course_id";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("apikey", supabaseAnonKey)
+                    .header("Authorization", "Bearer " + supabaseAnonKey)
+                    .header("Content-Type", "application/json")
+                    .header("Prefer", "resolution=merge-duplicates")
+                    .timeout(Duration.ofSeconds(8))
+                    .POST(HttpRequest.BodyPublishers.ofString(json, java.nio.charset.StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("[AcademicTool] 💾 Sílabo [{}] ({}) persistido en Supabase official_syllabi", code, name);
+            } else {
+                log.warn("[AcademicTool] ⚠️ Error al persistir sílabo en Supabase: HTTP {} - {}", response.statusCode(), response.body());
+            }
+        } catch (Exception e) {
+            log.warn("[AcademicTool] ℹ️ No se pudo persistir el sílabo en Supabase: {}", e.getMessage());
+        }
+    }
 }
+
