@@ -62,9 +62,33 @@ Horario Inteligente aborda estas cuatro necesidades mediante una arquitectura mo
 ---
 
 ### 1.5. Equipo del Proyecto
-* **Arquitectura de Software & Backend:** Diseño de arquitectura hexagonal, integración con API Gateway externa, gestión de persistencia y configuración del flujo ReAct con herramientas.
-* **Desarrollo Frontend & Interfaz de Usuario:** Implementación de componentes Standalone en Angular 18, control de estado reactivo mediante Signals y aplicación del sistema de tema oscuro.
-* **Control de Calidad & Datos:** Validación de esquemas en Supabase, pruebas de integración de endpoints y verificación de consistencia en el parseo de sílabos.
+El equipo de desarrollo está conformado por 5 integrantes con roles delimitados según las capas del sistema:
+
+1. **Ingeniero de Inteligencia Artificial & Agentes Autónomos (Responsable del Módulo de IA):**
+   * Diseño e implementación del motor agéntico bajo el patrón ReAct (*Reasoning + Acting*).
+   * Definición del registro de herramientas institucionales (*AcademicToolRegistry*) e integración de *Function Calling*.
+   * Orquestación de inferencia con modelos LLM (LLaMA 3.3 70B vía OpenRouter) y mitigación de alucinaciones mediante anclaje en datos oficiales (*grounding*).
+   * Implementación de streaming en tiempo real vía Server-Sent Events (SSE) y fallback determinista.
+
+2. **Arquitecto de Software & Backend Lead:**
+   * Diseño e implementación de la Arquitectura Hexagonal (Puertos y Adaptadores) en Spring Boot 3.
+   * Integración con la API Externa UTP v1.2.0 (módulos de autenticación SSO, horarios y sílabos normalizados).
+   * Controladores REST, filtros de seguridad JWT y puertos de salida del dominio.
+
+3. **Desarrollador Frontend & UI/UX (Angular 18):**
+   * Desarrollo de la interfaz gráfica web mediante componentes Standalone y control de flujo moderno (`@if`, `@for`).
+   * Implementación del sistema de Tema Oscuro (Dark Theme) para reducir la fatiga visual.
+   * Maquetación de la grilla semanal interactiva, vista del día (*Today View*) y ficha de aula.
+
+4. **Ingeniero de Base de Datos & Persistencia Cloud:**
+   * Modelado relacional y administración de esquemas en Supabase (PostgreSQL 15 Serverless).
+   * Implementación de políticas de contingencia sin conexión y almacenamiento local particionado por estudiante (`LocalStorage`).
+   * Optimización de consultas para las entidades `students`, `official_syllabi` y `student_schedules`.
+
+5. **Ingeniero de Calidad (QA) & DevOps:**
+   * Configuración del pipeline de compilación e integración continua en Heroku (Heroku-24 Stack con Azul Zulu OpenJDK 17).
+   * Ejecución de pruebas deterministas de consistencia en sílabos (validación de sumatoria de ponderaciones ~100% y rangos de semanas).
+   * Pruebas de integración de endpoints y verificación de tiempos de respuesta (< 50 ms).
 
 ---
 
