@@ -75,7 +75,7 @@ Frontend:
 **Que hace esta parte en palabras simples:**
 Es la pantalla principal que todos van a ver todos los dias. Muestra el horario completo de la semana (lunes a sabado, con aulas, docentes y horarios) y una vista especial de "Hoy" que resalta solo las clases del dia actual con una cuenta regresiva.
 
-Los datos no los inventamos nosotros: los obtenemos del portal real de la UTP en el momento en que el alumno inicia sesion. Despues los guardamos en la base de datos para que si el alumno no tiene internet, igual pueda ver su horario.
+Los datos no los inventamos nosotros: los obtenemos del portal real de la UTP en el momento en que el alumno inicia sesion. Despues los guardamos en nuestra base de datos porque el portal de la UTP puede ser lento o estar caido en cualquier momento, y asi la segunda vez que el alumno entre no dependemos de que la UTP responda: ya tenemos su horario guardado nosotros.
 
 Piensalo como la app de Google Calendar pero solo con tus clases universitarias reales, actualizada automaticamente desde la UTP.
 
