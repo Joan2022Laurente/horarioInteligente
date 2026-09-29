@@ -127,7 +127,7 @@
                             <arguments>install --legacy-peer-deps</arguments>
                         </configuration>
                     </execution>
-                    <!-- 3. ng build --configuration=production -->
+                    <!-- 3. ng build production -->
                     <execution>
                         <id>npm-build</id>
                         <goals><goal>npm</goal></goals>
