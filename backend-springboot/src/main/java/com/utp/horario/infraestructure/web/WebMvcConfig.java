@@ -1,0 +1,67 @@
+package com.utp.horario.infraestructure.web;
+
+import com.utp.horario.infraestructure.security.CurrentStudentArgumentResolver;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
+
+import java.io.IOException;
+import java.util.List;
+
+@Configuration
+@RequiredArgsConstructor
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    private final CurrentStudentArgumentResolver currentStudentArgumentResolver;
+
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(currentStudentArgumentResolver);
+    }
+
+    @Override
+    public void configurePathMatch(PathMatchConfigurer configurer) {
+        // Prefijar automÃ¡ticamente todos los @RestController con /api/v1 (excepto endpoints estÃ¡ndar como MCP y .well-known)
+        configurer.addPathPrefix("/api/v1", c -> c.isAnnotationPresent(RestController.class) 
+                && !c.getSimpleName().equals("McpServerController")
+                && !c.getSimpleName().equals("WellKnownController"));
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Servir archivos estÃ¡ticos del frontend Angular y resolver rutas SPA a index.html
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .resourceChain(true)
+                .addResolver(new PathResourceResolver() {
+                    @Override
+                    protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        // NO servir index.html para endpoints de sistema como .well-known, mcp o api (debe devolver 404 real)
+                        if (resourcePath.startsWith(".well-known") || resourcePath.startsWith("mcp") || resourcePath.startsWith("api")) {
+                            return null;
+                        }
+                        
+                        Resource requestedResource = super.getResource(resourcePath, location);
+                        if (requestedResource != null && requestedResource.isReadable()) {
+                            return requestedResource;
+                        }
+
+                        // Si la peticiÃ³n tiene extensiÃ³n (.js, .css, .ico, .png, etc.) y no se encontrÃ³, NO devolver index.html
+                        if (resourcePath.contains(".")) {
+                            return null;
+                        }
+
+                        // Para rutas de navegaciÃ³n SPA del frontend (ej. /horario, /login), devolver index.html
+                        return super.getResource("index.html", location);
+                    }
+                });
+    }
+}
+

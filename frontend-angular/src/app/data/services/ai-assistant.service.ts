@@ -98,11 +98,28 @@ export class AiAssistantService {
     this.isThinkingSignal.set(true);
     try {
       const profile = getCachedStudentProfile();
-      const studentCode = profile?.studentCode || profile?.username || '';
-      const token = profile?.token || '';
+      let studentCode = (profile?.studentCode || profile?.username || '').trim().toUpperCase();
+      let token = profile?.token || profile?.accessToken || '';
 
-      const url = `${this.baseUrl}/chat/stream`;
-      console.log("[AiChat] 🚀 Iniciando solicitud de streaming a:", url);
+      if (!studentCode) {
+        studentCode = (localStorage.getItem('utp_current_student_code') || '').trim().toUpperCase();
+      }
+      if (!studentCode || !token) {
+        try {
+          const rawAuth = localStorage.getItem('utp_auth_profile');
+          if (rawAuth) {
+            const authProfile = JSON.parse(rawAuth);
+            if (!studentCode) studentCode = (authProfile?.studentCode || authProfile?.username || '').trim().toUpperCase();
+            if (!token) token = authProfile?.token || authProfile?.accessToken || '';
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const queryParam = studentCode ? `?studentId=${encodeURIComponent(studentCode)}` : '';
+      const url = `${this.baseUrl}/chat/stream${queryParam}`;
+      console.log("[AiChat] 🚀 Iniciando solicitud de streaming a:", url, "para estudiante:", studentCode);
 
       const headers: Record<string, string> = {
         'Accept': 'text/event-stream',

@@ -6,10 +6,9 @@
 const DAILY_LIMIT = 6;
 const STORAGE_PREFIX = 'utp_ai_usage_';
 const UNLIMITED_USERS = new Set<string>([
-  'u23307609',
-  'u23107609',
   'admin@utp.edu.pe',
-  'admin'
+  'admin',
+  'tester'
 ]);
 
 export function getTodayDateKey(): string {

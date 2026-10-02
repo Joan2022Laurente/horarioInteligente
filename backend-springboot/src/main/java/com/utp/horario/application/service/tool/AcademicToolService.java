@@ -2,15 +2,15 @@ package com.utp.horario.application.service.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.utp.horario.domain.model.ClassSession;
-import com.utp.horario.domain.model.ScheduleInterval;
-import com.utp.horario.domain.model.StudentProfile;
-import com.utp.horario.domain.model.Syllabus;
-import com.utp.horario.domain.model.tool.AcademicToolDto.*;
-import com.utp.horario.domain.port.out.ScheduleRepositoryPort;
-import com.utp.horario.domain.port.out.StudentRepositoryPort;
-import com.utp.horario.domain.port.out.SyllabusRepositoryPort;
-import com.utp.horario.domain.port.out.UtpPortalGatewayPort;
+import com.utp.horario.domain.model.value_objets.ClassSession;
+import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.aggregate.StudentProfile;
+import com.utp.horario.domain.model.aggregate.Syllabus;
+import com.utp.horario.application.dtos.AcademicToolDto.*;
+import com.utp.horario.domain.model.repositories.IScheduleRepository;
+import com.utp.horario.domain.model.repositories.IStudentRepository;
+import com.utp.horario.domain.model.repositories.ISyllabusRepository;
+import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,10 +33,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AcademicToolService {
 
-    private final ScheduleRepositoryPort scheduleRepositoryPort;
-    private final SyllabusRepositoryPort syllabusRepositoryPort;
-    private final StudentRepositoryPort studentRepositoryPort;
-    private final UtpPortalGatewayPort utpPortalGatewayPort;
+    private final IScheduleRepository scheduleRepositoryPort;
+    private final ISyllabusRepository syllabusRepositoryPort;
+    private final IStudentRepository studentRepositoryPort;
+    private final IUtpPortalGateway utpPortalGatewayPort;
     private final ObjectMapper objectMapper;
 
     @Value("${supabase.url:https://hvunobsbasdksiajmfjf.supabase.co}")
@@ -49,11 +49,31 @@ public class AcademicToolService {
             .connectTimeout(Duration.ofSeconds(6))
             .build();
 
+    public String resolveEffectiveStudentCode(String studentCode) {
+        if (studentCode != null && !studentCode.isBlank() && !"current-student".equalsIgnoreCase(studentCode)) {
+            return studentCode.trim().toUpperCase();
+        }
+        try {
+            List<StudentProfile> students = studentRepositoryPort.list();
+            if (students != null && !students.isEmpty()) {
+                String resolved = students.get(students.size() - 1).getStudentCode();
+                if (resolved != null && !resolved.isBlank()) {
+                    log.info("[AcademicTool] 💡 studentCode 'current-student' resuelto automáticamente a [{}] desde BD local", resolved);
+                    return resolved.trim().toUpperCase();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AcademicTool] Error al resolver estudiante fallback: {}", e.getMessage());
+        }
+        return "U23307609";
+    }
+
     /**
      * Tool 1: Obtiene las clases del estudiante para una fecha determinada.
      * Soporta fallback automático a Supabase si no se encuentra en el repositorio local.
      */
     public DayScheduleResult getTodaySchedule(String studentCode, String dateIso) {
+        studentCode = resolveEffectiveStudentCode(studentCode);
         // Fijar zona horaria de Perú para evitar inconsistencias en Heroku (que corre en UTC)
         java.time.ZoneId LIMA = java.time.ZoneId.of("America/Lima");
         LocalDate today = (dateIso != null && !dateIso.isBlank())
@@ -110,6 +130,7 @@ public class AcademicToolService {
     }
 
     private String resolveStudentToken(String studentCode) {
+        studentCode = resolveEffectiveStudentCode(studentCode);
         // 1. Caché en memoria del gateway (registrado en cada request SSE)
         String token = utpPortalGatewayPort.getStudentToken(studentCode);
         if (token != null && !token.isBlank()) {
@@ -136,6 +157,7 @@ public class AcademicToolService {
      * Consulta fetchCoursesSummary(token) de la API Externa como fuente primaria institucional.
      */
     public EnrolledCoursesResult getEnrolledCourses(String studentCode) {
+        studentCode = resolveEffectiveStudentCode(studentCode);
         log.info("[AcademicTool] 🎓 Consultando cursos matriculados para alumno {}", studentCode);
 
         // 1. Fuente Primaria Institucional: API Externa Gateway /courses/summary
@@ -203,6 +225,7 @@ public class AcademicToolService {
     }
 
     public SyllabusDetailsResult getSyllabusDetails(String studentCode, String courseQuery) {
+        studentCode = resolveEffectiveStudentCode(studentCode);
         log.info("[AcademicTool] 📚 Consultando sílabo de curso: {} (alumno: {})", courseQuery, studentCode);
         String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
 
@@ -378,6 +401,7 @@ public class AcademicToolService {
      * Usa fetchUpcomingEvaluations(token, 5) de la API Externa como fuente prioritaria de tareas y exámenes calificados.
      */
     public List<EvaluationSummaryDto> getUpcomingEvaluations(String studentCode, int currentWeek) {
+        studentCode = resolveEffectiveStudentCode(studentCode);
         log.info("[AcademicTool] 🎯 Consultando evaluaciones próximas para alumno {} desde semana {}", studentCode, currentWeek);
 
         // 1. Fuente Prioritaria Institucional: API Externa Gateway /tasks/upcoming?limit=5
@@ -528,6 +552,12 @@ public class AcademicToolService {
                             .classes(sessions)
                             .build();
 
+                    try {
+                        scheduleRepositoryPort.save(studentCode, interval);
+                    } catch (Exception ex) {
+                        log.debug("[AcademicTool] No se pudo persistir en L1 cache local: {}", ex.getMessage());
+                    }
+
                     log.info("[AcademicTool] ☁️ Supabase student_schedules: {} sesiones cargadas para [{}] (período: {})",
                             sessions.size(), studentCode, periodName);
                     return Optional.of(interval);
@@ -644,7 +674,7 @@ public class AcademicToolService {
                         if ((s.getWeeklySchedule() == null || s.getWeeklySchedule().isEmpty()) && row.has("weekly_schedule")) {
                             try {
                                 var weeklyType = objectMapper.getTypeFactory()
-                                        .constructCollectionType(java.util.List.class, com.utp.horario.domain.model.SyllabusWeeklySession.class);
+                                        .constructCollectionType(java.util.List.class, com.utp.horario.domain.model.value_objets.SyllabusWeeklySession.class);
                                 s.setWeeklySchedule(objectMapper.readValue(row.get("weekly_schedule").toString(), weeklyType));
                             } catch (Exception we) {
                                 log.warn("[AcademicTool] ℹ️ No se pudo parsear weekly_schedule para [{}]: {}", searchTerm, we.getMessage());
