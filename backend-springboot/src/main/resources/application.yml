@@ -8,10 +8,10 @@ spring:
   application:
     name: horario-backend-negocio
   datasource:
-    url: ${SUPABASE_DB_URL:jdbc:h2:mem:horariodb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
-    driver-class-name: ${SUPABASE_DB_DRIVER:org.h2.Driver}
-    username: ${SUPABASE_DB_USER:sa}
-    password: ${SUPABASE_DB_PASSWORD:}
+    url: ${MYSQL_URL:${SUPABASE_DB_URL:jdbc:h2:mem:horariodb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}}
+    driver-class-name: ${MYSQL_DRIVER:${SUPABASE_DB_DRIVER:org.h2.Driver}}
+    username: ${MYSQL_USER:${SUPABASE_DB_USER:sa}}
+    password: ${MYSQL_PASSWORD:${SUPABASE_DB_PASSWORD:}}
   h2:
     console:
       enabled: true
