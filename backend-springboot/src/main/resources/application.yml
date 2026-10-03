@@ -8,13 +8,13 @@ spring:
   application:
     name: horario-backend-negocio
   datasource:
-    url: ${MYSQL_URL:${SUPABASE_DB_URL:jdbc:h2:mem:horariodb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}}
-    driver-class-name: ${MYSQL_DRIVER:${SUPABASE_DB_DRIVER:org.h2.Driver}}
-    username: ${MYSQL_USER:${SUPABASE_DB_USER:sa}}
-    password: ${MYSQL_PASSWORD:${SUPABASE_DB_PASSWORD:}}
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/horariodb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    driver-class-name: ${MYSQL_DRIVER:com.mysql.cj.jdbc.Driver}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:}
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
   jpa:
     hibernate:
@@ -28,10 +28,6 @@ spring:
 academic:
   gateway:
     url: ${ACADEMIC_GATEWAY_URL:https://utp-academic-gateway-c0da87808dcb.herokuapp.com/api/v1}
-
-supabase:
-  url: ${SUPABASE_URL}
-  anon-key: ${SUPABASE_ANON_KEY}
 
 app:
   jwt:

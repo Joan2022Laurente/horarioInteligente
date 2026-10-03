@@ -52,7 +52,7 @@ horario-inteligente-fullstack/
 
 ## 2. Base de Datos y MySQL Workbench
 
-El backend soporta **MySQL** para desarrollo local y sustentación docente con **MySQL Workbench**, así como **H2 in-memory** (fallback automático sin configuración) y **PostgreSQL / Supabase** en producción.
+El backend opera con **MySQL 8.4** para la sustentación docente con **MySQL Workbench**, soportando conexión tanto a base de datos en la nube (**Aiven Cloud**) como local (**XAMPP / MySQL Server**).
 
 ### Guía de Uso en MySQL Workbench
 1. Abre **MySQL Workbench** y conéctate a tu servidor MySQL local (puerto 3306).

@@ -1,6 +1,5 @@
 package com.utp.horario.application.service.tool;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.domain.model.value_objets.ClassSession;
 import com.utp.horario.domain.model.value_objets.ScheduleInterval;
@@ -13,15 +12,9 @@ import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -39,15 +32,7 @@ public class AcademicToolService {
     private final IUtpPortalGateway utpPortalGatewayPort;
     private final ObjectMapper objectMapper;
 
-    @Value("${supabase.url:https://hvunobsbasdksiajmfjf.supabase.co}")
-    private String supabaseUrl;
 
-    @Value("${supabase.anon-key:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2dW5vYnNiYXNka3NpYWptZmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Njg0NzAsImV4cCI6MjEwNTE0NDQ3MH0.ZP2J4bJ8V55Y7fggZKfFIzp9p-TxwsRp01UQultfpxc}")
-    private String supabaseAnonKey;
-
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(6))
-            .build();
 
     public String resolveEffectiveStudentCode(String studentCode) {
         if (studentCode != null && !studentCode.isBlank() && !"current-student".equalsIgnoreCase(studentCode)) {
@@ -87,11 +72,7 @@ public class AcademicToolService {
         // 1. Intento desde repositorio local H2 / L1 Cache
         Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
 
-        // 2. Si no existe en BD local (común en dev), fallback a Supabase REST
-        if (scheduleOpt.isEmpty() || scheduleOpt.get().getClasses() == null || scheduleOpt.get().getClasses().isEmpty()) {
-            log.info("[AcademicTool] ☁️ Horario local vacío para [{}]. Consultando Supabase 'student_schedules'...", studentCode);
-            scheduleOpt = fetchScheduleFromSupabase(studentCode);
-        }
+
 
         if (scheduleOpt.isPresent() && scheduleOpt.get().getClasses() != null) {
             for (ClassSession c : scheduleOpt.get().getClasses()) {
@@ -181,13 +162,8 @@ public class AcademicToolService {
             }
         }
 
-        // 2. Fallback: Base de datos local (H2) y Supabase
+        // 2. Base de datos (MySQL / Caché local)
         Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
-        if (scheduleOpt.isEmpty()
-                || (scheduleOpt.get().getCourses() == null || scheduleOpt.get().getCourses().isEmpty())
-                && (scheduleOpt.get().getClasses() == null || scheduleOpt.get().getClasses().isEmpty())) {
-            scheduleOpt = fetchScheduleFromSupabase(studentCode);
-        }
 
         List<EnrolledCourseDto> courses = new ArrayList<>();
         if (scheduleOpt.isPresent()) {
@@ -256,25 +232,15 @@ public class AcademicToolService {
             }
         }
 
-        // 2. Intentar buscar por código/nombre resuelto en Supabase (PRIORIDAD: código exacto)
+        // 2. Buscar por código resuelto en repositorio (MySQL)
         Optional<Syllabus> syllabusOpt = Optional.empty();
         if (resolvedCourseCode != null) {
             syllabusOpt = syllabusRepositoryPort.findByCourseCode(resolvedCourseCode.toUpperCase());
-            if (syllabusOpt.isEmpty()) {
-                syllabusOpt = fetchSyllabusFromSupabase(resolvedCourseCode);
-            }
-            if (syllabusOpt.isEmpty() && resolvedCourseName != null) {
-                syllabusOpt = fetchSyllabusFromSupabase(resolvedCourseName);
-            }
         }
 
-        // 3. Fallback: buscar por query original en BD local y Supabase (sin enrolled courses)
+        // 3. Fallback: buscar por query original en repositorio (MySQL)
         if (syllabusOpt.isEmpty()) {
             syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanQuery.toUpperCase());
-            if (syllabusOpt.isEmpty()) {
-                log.info("[AcademicTool] ☁️ Sílabo no hallado por código; consultando Supabase 'official_syllabi' por query: [{}]", cleanQuery);
-                syllabusOpt = fetchSyllabusFromSupabase(cleanQuery);
-            }
         }
 
         String courseCode = syllabusOpt.map(Syllabus::getCourseCode)
@@ -321,7 +287,12 @@ public class AcademicToolService {
                                 codeToTry,
                                 apiSyllabus.getWeeklySchedule() != null ? apiSyllabus.getWeeklySchedule().size() : 0,
                                 apiSyllabus.getEvaluations() != null ? apiSyllabus.getEvaluations().size() : 0);
-                        persistSyllabusToSupabase(apiSyllabus, codeToTry);
+                        try {
+                            syllabusRepositoryPort.save(apiSyllabus);
+                            log.info("[AcademicTool] 💾 Sílabo [{}] persistido en base de datos (MySQL)", codeToTry);
+                        } catch (Exception persistEx) {
+                            log.debug("[AcademicTool] No se pudo persistir sílabo en base de datos: {}", persistEx.getMessage());
+                        }
                     } else {
                         log.warn("[AcademicTool] ❌ [PASO 4b MISS] fetchSyllabus() devolvió null para [{}] — API Externa no tiene este sílabo", codeToTry);
                     }
@@ -448,9 +419,6 @@ public class AcademicToolService {
         for (EnrolledCourseDto course : courseList) {
             String code = course.courseCode();
             Optional<Syllabus> sylOpt = syllabusRepositoryPort.findByCourseCode(code);
-            if (sylOpt.isEmpty()) {
-                sylOpt = fetchSyllabusFromSupabase(code);
-            }
 
             if (sylOpt.isPresent() && sylOpt.get().getEvaluations() != null) {
                 sylOpt.get().getEvaluations().stream()
@@ -469,229 +437,7 @@ public class AcademicToolService {
         return upcoming;
     }
 
-    /**
-     * Consulta Supabase REST para obtener el horario del estudiante si no está en BD local.
-     */
-    private Optional<ScheduleInterval> fetchScheduleFromSupabase(String studentCode) {
-        try {
-            String url = String.format("%s/rest/v1/student_schedules?student_code=eq.%s&select=*",
-                    supabaseUrl, java.net.URLEncoder.encode(studentCode, java.nio.charset.StandardCharsets.UTF_8));
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("apikey", supabaseAnonKey)
-                    .header("Authorization", "Bearer " + supabaseAnonKey)
-                    .header("Accept", "application/json")
-                    .timeout(Duration.ofSeconds(6))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                JsonNode arrayNode = objectMapper.readTree(response.body());
-                if (arrayNode.isArray() && !arrayNode.isEmpty()) {
-                    JsonNode row = arrayNode.get(0);
-                    JsonNode scheduleDataNode = row.get("schedule_data");
-                    if (scheduleDataNode == null || scheduleDataNode.isNull()) {
-                        log.warn("[AcademicTool] ⚠️ schedule_data es null en Supabase para [{}]", studentCode);
-                        return Optional.empty();
-                    }
-
-                    String rawJson = scheduleDataNode.isTextual() ? scheduleDataNode.asText() : scheduleDataNode.toString();
-                    JsonNode scheduleJson = objectMapper.readTree(rawJson);
-
-                    // Estructura real de Supabase: { "events": [...], "period_name": "...", "week_number": N }
-                    JsonNode eventsNode = scheduleJson.get("events");
-                    if (eventsNode == null || !eventsNode.isArray() || eventsNode.isEmpty()) {
-                        log.warn("[AcademicTool] ⚠️ No se encontró el campo 'events' en schedule_data para [{}]. Keys: {}", studentCode, scheduleJson.fieldNames());
-                        return Optional.empty();
-                    }
-
-                    List<ClassSession> sessions = new ArrayList<>();
-                    for (JsonNode event : eventsNode) {
-                        if (!"SESSION".equals(event.path("type").asText(""))) continue;
-
-                        JsonNode meta = event.path("metadata");
-                        ClassSession cs = new ClassSession();
-                        // courseCode viene de meta.courseId (ej. "100000ST61") o meta.sectionCode
-                        String courseId = meta.path("courseId").asText(null);
-                        String sectionCode = meta.path("sectionCode").asText(null);
-                        cs.setCourseCode(
-                            (courseId != null && !courseId.isBlank()) ? courseId :
-                            (sectionCode != null && !sectionCode.isBlank()) ? sectionCode : ""
-                        );
-                        cs.setCourseName(meta.path("courseName").asText(event.path("title").asText("")));
-                        cs.setBuilding(meta.path("building").asText(""));
-                        cs.setClassroom(meta.path("classroom").asText(""));
-                        cs.setTeacher(meta.path("teacher").asText(""));
-                        cs.setFloor(meta.path("floor").asText(null));
-                        cs.setEnvironmentType(meta.path("environmentType").asText(null));
-                        cs.setZoomLink(meta.path("zoomLink").asText(null));
-                        cs.setClassLink(meta.path("classLink").asText(null));
-                        cs.setModality(event.path("modality").asText("P"));
-                        cs.setStartAt(ClassSession.parseDateTimeSafely(event.path("startAt").asText(null)));
-                        cs.setFinishAt(ClassSession.parseDateTimeSafely(event.path("finishAt").asText(null)));
-                        sessions.add(cs);
-                    }
-
-                    String periodName = scheduleJson.path("period_name").asText("2026 - Ciclo 2 Agosto");
-                    Integer weekNumber = scheduleJson.path("week_number").asInt(1);
-                    Integer totalWeeks = scheduleJson.path("total_weeks").asInt(18);
-
-                    // Leer también de los campos de nivel raíz de la fila (period_name, week_number, total_weeks)
-                    if (periodName.isBlank() || "2026 - Ciclo 2 Agosto".equals(periodName)) {
-                        periodName = row.path("period_name").asText("2026 - Ciclo 2 Agosto");
-                    }
-                    if (weekNumber <= 1) weekNumber = row.path("week_number").asInt(1);
-                    if (totalWeeks <= 1) totalWeeks = row.path("total_weeks").asInt(18);
-
-                    ScheduleInterval interval = ScheduleInterval.builder()
-                            .periodName(periodName)
-                            .weekNumber(weekNumber)
-                            .totalWeeks(totalWeeks)
-                            .classes(sessions)
-                            .build();
-
-                    try {
-                        scheduleRepositoryPort.save(studentCode, interval);
-                    } catch (Exception ex) {
-                        log.debug("[AcademicTool] No se pudo persistir en L1 cache local: {}", ex.getMessage());
-                    }
-
-                    log.info("[AcademicTool] ☁️ Supabase student_schedules: {} sesiones cargadas para [{}] (período: {})",
-                            sessions.size(), studentCode, periodName);
-                    return Optional.of(interval);
-                }
-            } else {
-                log.warn("[AcademicTool] ⚠️ Supabase respondió HTTP {} al consultar student_schedules para [{}]", response.statusCode(), studentCode);
-            }
-        } catch (Exception e) {
-            log.warn("[AcademicTool] ℹ️ Error en fallback a Supabase student_schedules para [{}]: {}", studentCode, e.getMessage());
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Consulta Supabase REST para obtener el sílabo por código o nombre aproximado (fuzzy match).
-     */
-    private Optional<Syllabus> fetchSyllabusFromSupabase(String courseQuery) {
-        if (courseQuery == null || courseQuery.isBlank()) {
-            return Optional.empty();
-        }
-
-        String term = courseQuery.trim();
-        String normalized = normalizeTerm(term);
-
-        // 1. Intento con término original o normalizado
-        Optional<Syllabus> match = querySupabaseSyllabus(term);
-        if (match.isEmpty() && !normalized.equalsIgnoreCase(term)) {
-            match = querySupabaseSyllabus(normalized);
-        }
-
-        if (match.isPresent()) {
-            return match;
-        }
-
-        // 2. Si no encuentra resultado directo y contiene varias palabras (ej. "desarrollo web"), buscar por palabra clave principal
-        //    Se excluyen stopwords y se requiere mínimo 6 chars para evitar falsos positivos ("para", "con", "los")
-        java.util.Set<String> stopWords = java.util.Set.of(
-                "para", "con", "los", "las", "del", "que", "una", "uno",
-                "sus", "por", "ante", "bajo", "cabe", "como", "desde",
-                "entre", "hacia", "hasta", "segun", "sobre", "tras"
-        );
-        String[] words = normalized.split("\\s+");
-        if (words.length > 1) {
-            java.util.Arrays.sort(words, (a, b) -> Integer.compare(b.length(), a.length()));
-            for (String w : words) {
-                if (w.length() >= 6 && !stopWords.contains(w)) {
-                    log.info("[AcademicTool] 🔎 Reintentando búsqueda de sílabo por palabra clave: [{}]", w);
-                    Optional<Syllabus> keywordMatch = querySupabaseSyllabus(w);
-                    if (keywordMatch.isPresent()) {
-                        return keywordMatch;
-                    }
-                }
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    private Optional<Syllabus> querySupabaseSyllabus(String searchTerm) {
-        try {
-            // URLEncoder usa + para espacios; PostgREST ilike necesita %20
-            String encoded = java.net.URLEncoder.encode(searchTerm, java.nio.charset.StandardCharsets.UTF_8)
-                    .replace("+", "%20");
-
-            // Si parece un código (alfanumérico sin espacios), intentar eq exacto primero
-            String trimmed = searchTerm.trim();
-            boolean looksLikeCode = !trimmed.contains(" ") && trimmed.matches("[A-Za-z0-9_\\-\\.]+");
-            String url;
-            if (looksLikeCode) {
-                url = String.format("%s/rest/v1/official_syllabi?or=(course_code.eq.%s,course_code.ilike.*%s*)&select=*&limit=1",
-                        supabaseUrl, encoded, encoded);
-            } else {
-                // Buscar con term original Y normalizado (sin tildes) para mayor cobertura
-                String normEncoded = java.net.URLEncoder.encode(normalizeTerm(searchTerm), java.nio.charset.StandardCharsets.UTF_8)
-                        .replace("+", "%20");
-                url = String.format(
-                        "%s/rest/v1/official_syllabi?or=(course_code.ilike.*%s*,course_name.ilike.*%s*,course_name.ilike.*%s*)&select=*&limit=1",
-                        supabaseUrl, encoded, encoded, normEncoded);
-            }
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("apikey", supabaseAnonKey)
-                    .header("Authorization", "Bearer " + supabaseAnonKey)
-                    .header("Accept", "application/json")
-                    .timeout(Duration.ofSeconds(6))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                JsonNode arrayNode = objectMapper.readTree(response.body());
-                if (arrayNode.isArray() && !arrayNode.isEmpty()) {
-                    JsonNode row = arrayNode.get(0);
-                    Syllabus s = objectMapper.readValue(row.toString(), Syllabus.class);
-                    if (s != null) {
-                        // Supabase devuelve snake_case: mapear manualmente si Jackson no lo resuelve
-                        if ((s.getCourseCode() == null || s.getCourseCode().isBlank()) && row.has("course_code")) {
-                            s.setCourseCode(row.get("course_code").asText(null));
-                        }
-                        if ((s.getCourseName() == null || s.getCourseName().isBlank()) && row.has("course_name")) {
-                            s.setCourseName(row.get("course_name").asText(null));
-                        }
-                        if (s.getCredits() == null && row.has("credits")) {
-                            s.setCredits(row.get("credits").asInt(3));
-                        }
-                        if ((s.getFormula() == null || s.getFormula().isBlank()) && row.has("formula")) {
-                            s.setFormula(row.get("formula").asText(null));
-                        }
-                        if ((s.getLearningGoal() == null || s.getLearningGoal().isBlank()) && row.has("learning_goal")) {
-                            s.setLearningGoal(row.get("learning_goal").asText(null));
-                        }
-                        // Mapear weekly_schedule (snake_case de Supabase)
-                        if ((s.getWeeklySchedule() == null || s.getWeeklySchedule().isEmpty()) && row.has("weekly_schedule")) {
-                            try {
-                                var weeklyType = objectMapper.getTypeFactory()
-                                        .constructCollectionType(java.util.List.class, com.utp.horario.domain.model.value_objets.SyllabusWeeklySession.class);
-                                s.setWeeklySchedule(objectMapper.readValue(row.get("weekly_schedule").toString(), weeklyType));
-                            } catch (Exception we) {
-                                log.warn("[AcademicTool] ℹ️ No se pudo parsear weekly_schedule para [{}]: {}", searchTerm, we.getMessage());
-                            }
-                        }
-                        log.info("[AcademicTool] ✅ Sílabo hallado en Supabase: {} ({}) - {} semanas de temario, para término [{}]",
-                                s.getCourseName(), s.getCourseCode(),
-                                s.getWeeklySchedule() != null ? s.getWeeklySchedule().size() : 0, searchTerm);
-                        return Optional.of(s);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("[AcademicTool] ℹ️ Error en consulta a Supabase official_syllabi para [{}]: {}", searchTerm, e.getMessage());
-        }
-        return Optional.empty();
-    }
 
     private String normalizeTerm(String text) {
         if (text == null) return "";
@@ -699,53 +445,6 @@ public class AcademicToolService {
         return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").replaceAll("\\s+", " ").trim();
     }
 
-    /**
-     * Persiste un sílabo obtenido de la API Externa en Supabase official_syllabi (upsert).
-     * Esto permite que futuros llamados al copiloto eviten llamar a la API Externa.
-     */
-    private void persistSyllabusToSupabase(Syllabus syllabus, String courseCode) {
-        try {
-            if (syllabus == null || courseCode == null || courseCode.isBlank()) return;
-            String code = syllabus.getCourseCode() != null && !syllabus.getCourseCode().isBlank()
-                    ? syllabus.getCourseCode() : courseCode;
-            String name = syllabus.getCourseName() != null ? syllabus.getCourseName() : courseCode;
 
-            java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
-            body.put("course_id", code);
-            body.put("course_code", code);
-            body.put("course_name", name.toUpperCase());
-            if (syllabus.getCredits() != null) body.put("credits", syllabus.getCredits());
-            if (syllabus.getFormula() != null) body.put("formula", syllabus.getFormula());
-            if (syllabus.getLearningGoal() != null) body.put("learning_goal", syllabus.getLearningGoal());
-            if (syllabus.getWeeklySchedule() != null && !syllabus.getWeeklySchedule().isEmpty()) {
-                body.put("weekly_schedule", syllabus.getWeeklySchedule());
-            }
-            if (syllabus.getEvaluations() != null && !syllabus.getEvaluations().isEmpty()) {
-                body.put("evaluations", syllabus.getEvaluations());
-            }
-
-            String json = objectMapper.writeValueAsString(body);
-            String url = supabaseUrl + "/rest/v1/official_syllabi?on_conflict=course_id";
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("apikey", supabaseAnonKey)
-                    .header("Authorization", "Bearer " + supabaseAnonKey)
-                    .header("Content-Type", "application/json")
-                    .header("Prefer", "resolution=merge-duplicates")
-                    .timeout(Duration.ofSeconds(8))
-                    .POST(HttpRequest.BodyPublishers.ofString(json, java.nio.charset.StandardCharsets.UTF_8))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("[AcademicTool] 💾 Sílabo [{}] ({}) persistido en Supabase official_syllabi", code, name);
-            } else {
-                log.warn("[AcademicTool] ⚠️ Error al persistir sílabo en Supabase: HTTP {} - {}", response.statusCode(), response.body());
-            }
-        } catch (Exception e) {
-            log.warn("[AcademicTool] ℹ️ No se pudo persistir el sílabo en Supabase: {}", e.getMessage());
-        }
-    }
 }
 

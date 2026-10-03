@@ -21,7 +21,7 @@ if (fs.existsSync(envPath)) {
 }
 
 // Fallbacks de entorno o defaults seguros
-const supabaseUrl = process.env.SUPABASE_URL || envVars.SUPABASE_URL || 'https://hvunobsbasdksiajmfjf.supabase.co';
+const supabaseUrl = process.env.SUPABASE_URL || envVars.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || envVars.SUPABASE_ANON_KEY || '';
 const businessApiUrl = process.env.BUSINESS_API_URL || envVars.BUSINESS_API_URL || 'http://localhost:8080/api/v1';
 const academicApiUrl = process.env.ACADEMIC_API_URL || envVars.ACADEMIC_API_URL || 'http://localhost:8080/api/v1';
