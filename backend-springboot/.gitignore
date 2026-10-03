@@ -1,4 +1,4 @@
-﻿target/
+target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -16,8 +16,4 @@
 .env
 *.env
 
-# Frontend build outputs â€” generados en build-time, NO trackear en git
-src/main/resources/static/main-*.js
-src/main/resources/static/polyfills-*.js
-src/main/resources/static/styles-*.css
-src/main/resources/static/chunk-*.js
+

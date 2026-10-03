@@ -21,8 +21,6 @@ if (fs.existsSync(envPath)) {
 }
 
 // Fallbacks de entorno o defaults seguros
-const supabaseUrl = process.env.SUPABASE_URL || envVars.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || envVars.SUPABASE_ANON_KEY || '';
 const businessApiUrl = process.env.BUSINESS_API_URL || envVars.BUSINESS_API_URL || 'http://localhost:8080/api/v1';
 const academicApiUrl = process.env.ACADEMIC_API_URL || envVars.ACADEMIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -38,9 +36,7 @@ function generateEnvFile(isProd) {
 export const environment = {
   production: ${isProd},
   businessApiUrl: '${activeBusinessUrl}',
-  academicApiUrl: '${activeAcademicUrl}',
-  supabaseUrl: '${supabaseUrl}',
-  supabaseAnonKey: '${supabaseAnonKey}'
+  academicApiUrl: '${activeAcademicUrl}'
 };
 `;
 }
@@ -48,4 +44,4 @@ export const environment = {
 fs.writeFileSync(path.join(targetDir, 'environment.ts'), generateEnvFile(false), 'utf8');
 fs.writeFileSync(path.join(targetDir, 'environment.prod.ts'), generateEnvFile(true), 'utf8');
 
-console.log('✅ [set-env] Archivos environment.ts y environment.prod.ts generados con éxito desde .env (Sin Service Role Key)');
+console.log('✅ [set-env] Archivos environment.ts y environment.prod.ts generados con éxito desde .env');

@@ -69,116 +69,14 @@ export class AuthService {
             token: res.data.token || res.data.accessToken || ''
           });
 
-          // Sincronizar perfil persistente en Supabase
-          this.syncStudentProfileToSupabase(res.data);
         }
       })
     );
   }
 
   /**
-   * Persiste el perfil del alumno en la tabla 'students' de Supabase
+   * Cierra la sesión activa del estudiante y purga credenciales locales.
    */
-  private syncStudentProfileToSupabase(profile: StudentProfile): void {
-    const studentCode = (profile.studentCode || profile.username || '').toUpperCase();
-    if (!studentCode) return;
-
-    // Si los datos locales son incompletos o dummy (ej. nombre igual al código), enriquecer desde Supabase
-    const isDummyName = !profile.fullName || profile.fullName.trim().toUpperCase() === studentCode;
-    if (isDummyName) {
-      this.refreshProfileFromSupabase(studentCode);
-      return;
-    }
-
-    const headers = {
-      'apikey': environment.supabaseAnonKey,
-      'Authorization': `Bearer ${environment.supabaseAnonKey}`,
-      'Content-Type': 'application/json'
-    };
-
-    const checkUrl = `${environment.supabaseUrl}/rest/v1/students?student_code=eq.${encodeURIComponent(studentCode)}&select=id`;
-    this.http.get<any[]>(checkUrl, { headers }).subscribe({
-      next: (existing) => {
-        const body = {
-          student_code: studentCode,
-          full_name: profile.fullName || profile.name || 'Estudiante UTP',
-          email: profile.email || `${studentCode.toLowerCase()}@utp.edu.pe`,
-          career: profile.career || '',
-          campus: profile.campus || '',
-          cycle: profile.currentCycle || 1,
-          updated_at: new Date().toISOString()
-        };
-
-        if (existing && existing.length > 0) {
-          const updateUrl = `${environment.supabaseUrl}/rest/v1/students?student_code=eq.${encodeURIComponent(studentCode)}`;
-          this.http.patch(updateUrl, body, { headers }).subscribe({
-            next: () => console.log(`[AuthService] ⚡ Perfil de estudiante ${studentCode} sincronizado en Supabase.`),
-            error: (err) => console.warn('[AuthService] ℹ️ Error actualizando estudiante en Supabase:', err.message)
-          });
-        } else {
-          const insertUrl = `${environment.supabaseUrl}/rest/v1/students`;
-          this.http.post(insertUrl, body, { headers }).subscribe({
-            next: () => console.log(`[AuthService] ⚡ Nuevo estudiante ${studentCode} registrado en Supabase.`),
-            error: (err) => console.warn('[AuthService] ℹ️ Error insertando estudiante en Supabase:', err.message)
-          });
-        }
-      },
-      error: (err) => console.warn('[AuthService] ℹ️ Consulta Supabase students en espera:', err.message)
-    });
-  }
-
-  /**
-   * Refresca y auto-sana los datos del estudiante desde Supabase si el almacenamiento local contiene datos desactualizados
-   */
-  public refreshProfileFromSupabase(studentCode: string): void {
-    if (!studentCode) return;
-    const headers = {
-      'apikey': environment.supabaseAnonKey,
-      'Authorization': `Bearer ${environment.supabaseAnonKey}`
-    };
-    const url = `${environment.supabaseUrl}/rest/v1/students?student_code=eq.${encodeURIComponent(studentCode)}&select=*`;
-    this.http.get<any[]>(url, { headers }).subscribe({
-      next: (rows) => {
-        if (rows && rows.length > 0) {
-          const row = rows[0];
-          const current = this.currentStudentSignal();
-          if (current) {
-            const updated: StudentProfile = {
-              ...current,
-              fullName: row.full_name || current.fullName,
-              name: row.full_name || current.name,
-              career: row.career || current.career,
-              campus: row.campus || current.campus,
-              currentCycle: row.cycle != null ? Number(row.cycle) : current.currentCycle,
-            };
-            this.currentStudentSignal.set(updated);
-            localStorage.setItem('utp_auth_profile', JSON.stringify(updated));
-            saveCachedStudentProfile({
-              id: updated.id || '',
-              name: updated.fullName || '',
-              fullName: updated.fullName || '',
-              studentCode: updated.studentCode || '',
-              username: updated.username || '',
-              email: updated.email || '',
-              userId: updated.id || '',
-              career: updated.career || '',
-              campus: updated.campus || '',
-              currentCycle: updated.currentCycle || 1,
-              role: updated.role || 'STUDENT',
-              token: updated.token || ''
-            });
-            console.log('[AuthService] ⚡ Perfil de estudiante enriquecido desde Supabase:', {
-              studentName: updated.fullName,
-              career: updated.career,
-              cycle: updated.currentCycle
-            });
-          }
-        }
-      },
-      error: (err) => console.warn('[AuthService] ℹ️ No se pudo enriquecer perfil desde Supabase:', err.message)
-    });
-  }
-
   logout(): void {
     console.log('[AuthService] 🚪 Cerrando sesión y limpiando credenciales locales...');
     this.currentStudentSignal.set(null);
@@ -215,8 +113,6 @@ export class AuthService {
         campus: profileData.campus,
         hasToken: !!profileData.token,
       });
-      this.syncStudentProfileToSupabase(profileData);
-      this.refreshProfileFromSupabase(profileData.studentCode || profileData.username);
       this.runLegacyStorageMigration();
       return;
     }
@@ -230,8 +126,6 @@ export class AuthService {
           hasToken: !!parsed.token,
         });
         this.currentStudentSignal.set(parsed);
-        this.syncStudentProfileToSupabase(parsed);
-        this.refreshProfileFromSupabase(parsed.studentCode || parsed.username);
         this.runLegacyStorageMigration();
       } catch {
         localStorage.removeItem('utp_auth_profile');
@@ -247,11 +141,11 @@ export class AuthService {
   private runLegacyStorageMigration(): void {
     if (typeof window === 'undefined') return;
     const MIGRATION_KEY = 'utp_storage_version';
-    if (localStorage.getItem(MIGRATION_KEY) === 'v2_supabase') {
+    if (localStorage.getItem(MIGRATION_KEY) === 'v3_ddd_mysql') {
       return;
     }
 
-    console.log('[AuthService] 🧹 Ejecutando migración de almacenamiento previo a v2_supabase...');
+    console.log('[AuthService] 🧹 Ejecutando migración de almacenamiento a v3_ddd_mysql...');
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -261,7 +155,7 @@ export class AuthService {
         }
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem(MIGRATION_KEY, 'v2_supabase');
+      localStorage.setItem(MIGRATION_KEY, 'v3_ddd_mysql');
       console.log('[AuthService] ✅ Migración completada: Sílabos huérfanos anteriores purgados.');
     } catch (e: any) {
       console.warn('[AuthService] ℹ️ Error en migración de almacenamiento:', e.message);

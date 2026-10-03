@@ -1,6 +1,5 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { getCachedStudentProfile } from '@data/syllabus/client-storage';
-import { environment } from '@env/environment';
 
 /**
  * Interceptor funcional HTTP que inyecta automáticamente el token JWT Bearer
@@ -8,10 +7,6 @@ import { environment } from '@env/environment';
  * preservando las claves de autenticación en llamadas directas a Supabase.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  // Respetar peticiones directas a Supabase que configuran su propio apikey/anonKey
-  if (req.url.includes(environment.supabaseUrl) || req.headers.has('apikey')) {
-    return next(req);
-  }
 
   // Respetar si la solicitud ya incluye una cabecera Authorization válida
   if (req.headers.has('Authorization') && !req.headers.get('Authorization')?.includes('Bearer undefined')) {

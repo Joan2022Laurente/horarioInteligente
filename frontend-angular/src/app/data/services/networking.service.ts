@@ -1,7 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of, from, map, catchError, shareReplay } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Observable, of } from 'rxjs';
 import { 
   StudentNetworkingProfile, 
   StudyBuddyMatch, 
@@ -28,9 +26,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos TTL
   providedIn: 'root'
 })
 export class NetworkingService {
-  private readonly supabaseUrl = environment.supabaseUrl;
-  private readonly apiKey = environment.supabaseAnonKey;
-
   private matchesSignal = signal<StudyBuddyMatch[]>([]);
   readonly matches = this.matchesSignal.asReadonly();
 
@@ -40,24 +35,10 @@ export class NetworkingService {
   private myProfileSignal = signal<StudentNetworkingProfile | null>(null);
   readonly myProfile = this.myProfileSignal.asReadonly();
 
-  // In-flight request deduplication map
-  private inFlightMatches$: Observable<StudyBuddyMatch[]> | null = null;
-  private inFlightBeacons$: Observable<StudyBeaconRow[]> | null = null;
-
   constructor(
-    private http: HttpClient,
     private scheduleService: ScheduleService
   ) {
     this.hydrateFromLocalCache();
-  }
-
-  private getHeaders(): HttpHeaders {
-    return new HttpHeaders({
-      'apikey': this.apiKey,
-      'Authorization': `Bearer ${this.apiKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    });
   }
 
   private hydrateFromLocalCache(): void {
@@ -124,6 +105,9 @@ export class NetworkingService {
   /**
    * Sincroniza el perfil en Supabase con Dirty-Checking para evitar escrituras innecesarias.
    */
+  /**
+   * Sincroniza el perfil en caché local con Dirty-Checking para evitar re-cálculos innecesarios.
+   */
   syncProfileToSupabase(): Observable<boolean> {
     const profile = this.getMyProfile();
     const currentHash = JSON.stringify({
@@ -136,29 +120,17 @@ export class NetworkingService {
 
     const lastHash = localStorage.getItem(NETWORKING_HASH_KEY);
     if (lastHash === currentHash) {
-      // 0 writes: El estado no cambió
       return of(true);
     }
 
-    const url = `${this.supabaseUrl}/rest/v1/student_networking_profiles`;
-    return this.http.post(url, profile, { 
-      headers: this.getHeaders().set('Prefer', 'resolution=merge-duplicates') 
-    }).pipe(
-      map(() => {
-        localStorage.setItem(NETWORKING_HASH_KEY, currentHash);
-        console.log('[NetworkingService] ⚡ Perfil de networking sincronizado en Supabase.');
-        return true;
-      }),
-      catchError(err => {
-        console.warn('[NetworkingService] ℹ️ Usando perfil local de networking:', err.message);
-        return of(true);
-      })
-    );
+    localStorage.setItem(NETWORKING_HASH_KEY, currentHash);
+    console.log('[NetworkingService] ⚡ Perfil de networking actualizado localmente.');
+    return of(true);
   }
 
   /**
    * Obtiene la lista optimizada de compañeros compatibles mediante Matching Dual Multidimensional.
-   * Aplica Deduplicación en Vuelo (In-Flight Sharing) y Caché TTL (5 min).
+   * Aplica Deduplicación en Vuelo y Caché TTL (5 min).
    */
   getDualMatches(forceRefresh = false): Observable<StudyBuddyMatch[]> {
     // 1. Verificar si hay caché fresca
@@ -173,98 +145,15 @@ export class NetworkingService {
       }
     }
 
-    // 2. Si ya hay una petición en curso, compartirla (0 llamadas extra)
-    if (this.inFlightMatches$) {
-      return this.inFlightMatches$;
-    }
-
     const myProf = this.getMyProfile();
-    const url = `${this.supabaseUrl}/rest/v1/student_networking_profiles?select=student_code,full_name,career,campus,cycle,program,enrolled_courses,free_windows,skills,match_intent,contact_channels,ghost_mode&campus=eq.${encodeURIComponent(myProf.campus)}&ghost_mode=eq.false&limit=20`;
+    const matches = this.generateLocalFallbackMatches(myProf);
+    this.matchesSignal.set(matches);
+    localStorage.setItem(NETWORKING_CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      data: matches
+    }));
 
-    this.inFlightMatches$ = this.http.get<StudentNetworkingProfile[]>(url, { headers: this.getHeaders() }).pipe(
-      map(remoteProfiles => {
-        // Combinar perfiles remotos con el pool realista de la sede
-        const candidateMap = new Map<string, StudentNetworkingProfile>();
-        MOCK_STUDENTS_LIMA_CENTRO.forEach(p => candidateMap.set(p.student_code, p));
-        (remoteProfiles || []).forEach(p => {
-          if (p.student_code !== myProf.student_code) {
-            candidateMap.set(p.student_code, p);
-          }
-        });
-
-        const matches: StudyBuddyMatch[] = [];
-
-        for (const candidate of candidateMap.values()) {
-          if (candidate.student_code === myProf.student_code || candidate.ghost_mode) continue;
-
-          const score = computeDualMatchScore(myProf, candidate);
-          const firstWindow = candidate.free_windows[0] || myProf.free_windows[0] || {
-            dayName: 'Jueves',
-            startTime: '14:00',
-            endTime: '16:00',
-            building: 'SL02_TTA',
-            floor: 'P08'
-          };
-
-          const matchedCourse = candidate.enrolled_courses.find((c: string) => 
-            myProf.enrolled_courses.some((mc: string) => mc.toUpperCase().includes(c.toUpperCase()) || c.toUpperCase().includes(mc.toUpperCase()))
-          ) || 'Desarrollo Web Integrado';
-
-          matches.push({
-            id: `match_${candidate.student_code}`,
-            name: candidate.full_name,
-            studentCode: candidate.student_code,
-            avatarLetter: candidate.avatar_letter || candidate.full_name.charAt(0),
-            career: candidate.career,
-            cycle: candidate.cycle,
-            campus: candidate.campus,
-            program: candidate.program,
-            courseName: matchedCourse,
-            sharedWindow: {
-              dayName: firstWindow.dayName,
-              start: firstWindow.startTime,
-              end: firstWindow.endTime,
-              durationMinutes: 90,
-              location: `${firstWindow.building || 'Torre A'} • ${firstWindow.floor || 'P08'}`,
-              isNow: false
-            },
-            locationPreference: `${candidate.campus} (${firstWindow.building || 'Torre A'})`,
-            currentGoal: score.reasons[0] || 'Coordinando proyectos y laboratorios',
-            skills: candidate.skills,
-            matchScore: score,
-            compatibilityPercent: score.overall,
-            status: 'WINDOW_OPEN' as const,
-            whatsappPhone: candidate.contact_channels?.whatsapp,
-            discordTag: candidate.contact_channels?.discord,
-            email: candidate.contact_channels?.email,
-            modality: (candidate.free_windows.some((w: FreeWindow) => !!w.campus) ? 'Presencial' : 'Virtual') as 'Presencial' | 'Virtual'
-          });
-        }
-
-        // Ordenar por mayor compatibilidad
-        matches.sort((a, b) => b.compatibilityPercent - a.compatibilityPercent);
-
-        this.matchesSignal.set(matches);
-        localStorage.setItem(NETWORKING_CACHE_KEY, JSON.stringify({
-          timestamp: Date.now(),
-          data: matches
-        }));
-
-        this.inFlightMatches$ = null;
-        return matches;
-      }),
-      catchError(err => {
-        console.warn('[NetworkingService] ℹ️ Error en Supabase, calculando matches locales:', err.message);
-        // Fallback local con el pool
-        const fallbackMatches = this.generateLocalFallbackMatches(myProf);
-        this.matchesSignal.set(fallbackMatches);
-        this.inFlightMatches$ = null;
-        return of(fallbackMatches);
-      }),
-      shareReplay(1)
-    );
-
-    return this.inFlightMatches$;
+    return of(matches);
   }
 
   private generateLocalFallbackMatches(myProf: StudentNetworkingProfile): StudyBuddyMatch[] {
@@ -313,31 +202,13 @@ export class NetworkingService {
   }
 
   /**
-   * Consulta las mesas activas de estudio in-campus con filtro de expiración en servidor.
+   * Consulta las mesas activas de estudio in-campus.
    */
   getBeacons(): Observable<StudyBeaconRow[]> {
-    if (this.inFlightBeacons$) return this.inFlightBeacons$;
-
     const myProf = this.getMyProfile();
-    const url = `${this.supabaseUrl}/rest/v1/study_beacons?select=*&campus=eq.${encodeURIComponent(myProf.campus)}&status=eq.ACTIVE&limit=15`;
-
-    this.inFlightBeacons$ = this.http.get<StudyBeaconRow[]>(url, { headers: this.getHeaders() }).pipe(
-      map(beacons => {
-        const list = (beacons && beacons.length > 0) ? beacons : this.getMockBeacons(myProf.campus);
-        this.beaconsSignal.set(list);
-        this.inFlightBeacons$ = null;
-        return list;
-      }),
-      catchError(() => {
-        const list = this.getMockBeacons(myProf.campus);
-        this.beaconsSignal.set(list);
-        this.inFlightBeacons$ = null;
-        return of(list);
-      }),
-      shareReplay(1)
-    );
-
-    return this.inFlightBeacons$;
+    const list = this.beaconsSignal().length > 0 ? this.beaconsSignal() : this.getMockBeacons(myProf.campus);
+    this.beaconsSignal.set(list);
+    return of(list);
   }
 
   private getMockBeacons(campus: string): StudyBeaconRow[] {
@@ -393,17 +264,7 @@ export class NetworkingService {
       created_at: new Date().toISOString()
     };
 
-    const url = `${this.supabaseUrl}/rest/v1/study_beacons`;
-    return this.http.post<StudyBeaconRow[]>(url, newBeacon, { headers: this.getHeaders() }).pipe(
-      map(res => {
-        const created = (res && res.length > 0) ? res[0] : newBeacon;
-        this.beaconsSignal.update(list => [created, ...list]);
-        return created;
-      }),
-      catchError(() => {
-        this.beaconsSignal.update(list => [newBeacon, ...list]);
-        return of(newBeacon);
-      })
-    );
+    this.beaconsSignal.update(list => [newBeacon, ...list]);
+    return of(newBeacon);
   }
 }

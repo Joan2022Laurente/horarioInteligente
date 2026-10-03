@@ -141,17 +141,9 @@ export class ScheduleService {
     this.syncDailyInBackground(today);
   }
 
-  private getSupabaseHeaders(): Record<string, string> {
-    return {
-      'apikey': environment.supabaseAnonKey,
-      'Authorization': `Bearer ${environment.supabaseAnonKey}`,
-      'Content-Type': 'application/json'
-    };
-  }
-
   /**
-   * Ejecuta la sincronización en segundo plano con persistencia en Supabase.
-   * Aplica Daily Gate: Si ya se sincronizó hoy en Supabase, lee desde la BD (0 llamadas a UTP).
+   * Ejecuta la sincronización en segundo plano con Daily Gate en LocalStorage y backend.
+   * Aplica Daily Gate: Si ya se sincronizó hoy, lee desde la caché local (<5ms, 0 llamadas a UTP).
    */
   private async syncDailyInBackground(todayDateStr: string, tokenOverride?: string): Promise<ScheduleInterval | null> {
     this.loadingSignal.set(true);
@@ -165,100 +157,33 @@ export class ScheduleService {
         return this.scheduleSignal();
       }
 
-    // 1. GATEWAY LOCAL: Verificar si ya existe horario del día en LocalStorage particionado
-    const localSyncKey = studentCode ? `utp_schedule_last_sync_${studentCode}` : DAILY_SYNC_KEY;
-    const localLastSync = localStorage.getItem(localSyncKey);
-    const cachedCalendar = getCachedCalendarData(studentCode);
+      // 1. GATEWAY LOCAL: Verificar si ya existe horario del día en LocalStorage particionado
+      const localSyncKey = studentCode ? `utp_schedule_last_sync_${studentCode}` : DAILY_SYNC_KEY;
+      const localLastSync = localStorage.getItem(localSyncKey);
+      const cachedCalendar = getCachedCalendarData(studentCode);
 
-    if (localLastSync === todayDateStr && cachedCalendar?.data?.current_interval?.events?.length) {
-      const interval = cachedCalendar.data.current_interval;
-      const scheduleData = this.mapToScheduleInterval(interval);
-      this.activeStudentCode = studentCode;
-      this.intervalSignal.set(interval);
-      this.scheduleSignal.set(scheduleData);
-      console.log(`[ScheduleService] 🛡️ Daily Gate LocalStorage: Horario del día recuperado (<5ms, 0 llamadas a API externa) para ${studentCode}.`);
-      return scheduleData;
-    }
+      if (localLastSync === todayDateStr && cachedCalendar?.data?.current_interval?.events?.length) {
+        const interval = cachedCalendar.data.current_interval;
+        const scheduleData = this.mapToScheduleInterval(interval);
+        this.activeStudentCode = studentCode;
+        this.intervalSignal.set(interval);
+        this.scheduleSignal.set(scheduleData);
+        console.log(`[ScheduleService] 🛡️ Daily Gate LocalStorage: Horario del día recuperado (<5ms, 0 llamadas a API externa) para ${studentCode}.`);
+        return scheduleData;
+      }
 
-    // 2. GATEWAY SUPABASE: Verificar si ya existe horario del día en Supabase
-    if (studentCode) {
+      // 2. Si no estaba en caché del día, consultar API backend con Bearer token
       try {
-        const sbCheckUrl = `${environment.supabaseUrl}/rest/v1/student_schedules?student_code=eq.${encodeURIComponent(studentCode)}&select=*`;
-        const sbRes = await fetch(sbCheckUrl, { headers: this.getSupabaseHeaders() });
-        if (sbRes.ok) {
-          const sbRows = await sbRes.json();
-          if (Array.isArray(sbRows) && sbRows.length > 0) {
-            const row = sbRows[0];
-            const isFreshToday = row.last_synced_date === todayDateStr;
-
-            // Usar datos de Supabase si existen, independientemente de si son del día.
-            // Solo fallar al gateway UTP si Supabase no tiene ningún dato.
-            if (row.schedule_data) {
-              const rawData = typeof row.schedule_data === 'string' ? JSON.parse(row.schedule_data) : row.schedule_data;
-              const interval: UTPCurrentInterval = rawData.events ? rawData : (rawData.current_interval || rawData);
-              const scheduleData = this.mapToScheduleInterval(interval);
-
-              this.activeStudentCode = studentCode;
-              this.intervalSignal.set(interval);
-              this.scheduleSignal.set(scheduleData);
-
-              if (isFreshToday) {
-                localStorage.setItem(`utp_schedule_last_sync_${studentCode}`, todayDateStr);
-                localStorage.setItem(DAILY_SYNC_KEY, todayDateStr);
-              }
-
-              saveCachedCalendarData({
-                success: true,
-                code: 200,
-                message: 'OK',
-                idTransaction: '',
-                data: { current_interval: interval },
-              }, studentCode);
-
-              const origin = isFreshToday ? 'SUPABASE_DAILY_GATE' : 'SUPABASE_CACHED';
-              console.log(`[ScheduleService] 🛡️ ${origin}: Horario recuperado de Supabase (<20ms) para ${studentCode}. Fresco hoy: ${isFreshToday}.`);
-
-              const courses = getProcessedCourses(interval.events);
-              AppDiagnosticLogger.logScheduleSource({
-                origin,
-                studentCode,
-                period: interval.period_name,
-                weekNumber: interval.week_number,
-                sessionsCount: interval.events.length,
-                coursesCount: courses.length,
-                courseList: courses.map(c => c.name),
-                isFreshToday
-              });
-
-              return scheduleData;
-            }
-          } else {
-            // Migración silenciosa: el alumno ya tenía horario en su navegador pero no en Supabase
-            const localCached = getCachedCalendarData(studentCode);
-            if (localCached?.data?.current_interval?.events && localCached.data.current_interval.events.length > 0) {
-              const localInterval = localCached.data.current_interval;
-              console.log(`[ScheduleService] 🚀 Migrando automáticamente horario local previo de ${studentCode} a Supabase...`);
-              this.persistScheduleToSupabase(studentCode, localInterval.period_name || '2026 - Ciclo 2 Agosto', localInterval, todayDateStr);
-            }
-          }
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
-      } catch (err: any) {
-        console.warn('[ScheduleService] ℹ️ Verificación Supabase student_schedules omitida:', err.message);
-      }
-    }
+        const res = await firstValueFrom(
+          this.http.get<ApiResponse<ScheduleInterval>>(`${environment.academicApiUrl}/schedule`, { headers })
+        );
 
-    // 3. Si no estaba en caché del día ni en Supabase, consultar API externa con Bearer token
-    try {
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const res = await firstValueFrom(
-        this.http.get<ApiResponse<ScheduleInterval>>(`${environment.academicApiUrl}/schedule`, { headers })
-      );
-
-      if (res?.success && res.data?.classes && res.data.classes.length > 0) {
-        const scheduleData: ScheduleInterval = res.data;
+        if (res?.success && res.data?.classes && res.data.classes.length > 0) {
+          const scheduleData: ScheduleInterval = res.data;
           const events: UTPEvent[] = scheduleData.classes.map((c: any) => ({
             id: c.id,
             title: `${c.courseName}${c.section && c.section !== 'Sección Única' ? ' (' + c.section + ')' : ''} (Semana ${scheduleData.weekNumber}) - Sesión`,
@@ -293,11 +218,6 @@ export class ScheduleService {
             events: events,
           };
 
-          // 3. Persistir en Supabase student_schedules (Daily Gate permanente)
-          if (studentCode) {
-            this.persistScheduleToSupabase(studentCode, scheduleData.periodName, interval, todayDateStr);
-          }
-
           saveCachedCalendarData({
             success: true,
             code: 200,
@@ -311,7 +231,7 @@ export class ScheduleService {
           this.scheduleSignal.set(scheduleData);
           localStorage.setItem(`utp_schedule_last_sync_${studentCode}`, todayDateStr);
           localStorage.setItem(DAILY_SYNC_KEY, todayDateStr);
-          console.log(`[ScheduleService] ✅ Horario (${scheduleData.periodName}) sincronizado vía Academic API Gateway (${events.length} sesiones) y guardado en Supabase.`);
+          console.log(`[ScheduleService] ✅ Horario (${scheduleData.periodName}) sincronizado vía Academic API (${events.length} sesiones).`);
 
           const courses = getProcessedCourses(events);
           AppDiagnosticLogger.logScheduleSource({
@@ -333,47 +253,6 @@ export class ScheduleService {
       return this.scheduleSignal();
     } finally {
       this.loadingSignal.set(false);
-    }
-  }
-
-  /**
-   * Guarda o actualiza el horario en Supabase student_schedules
-   */
-  private async persistScheduleToSupabase(studentCode: string, periodName: string, interval: UTPCurrentInterval, todayDateStr: string): Promise<void> {
-    try {
-      const checkUrl = `${environment.supabaseUrl}/rest/v1/student_schedules?student_code=eq.${encodeURIComponent(studentCode)}&period_name=eq.${encodeURIComponent(periodName)}&select=id`;
-      const checkRes = await fetch(checkUrl, { headers: this.getSupabaseHeaders() });
-      const existing = checkRes.ok ? await checkRes.json() : [];
-
-      const payload = {
-        student_code: studentCode,
-        period_name: periodName,
-        week_number: interval.week_number || 1,
-        total_weeks: interval.total_weeks || 18,
-        schedule_data: interval,
-        last_synced_date: todayDateStr,
-        updated_at: new Date().toISOString()
-      };
-
-      if (Array.isArray(existing) && existing.length > 0) {
-        const patchUrl = `${environment.supabaseUrl}/rest/v1/student_schedules?id=eq.${existing[0].id}`;
-        await fetch(patchUrl, {
-          method: 'PATCH',
-          headers: this.getSupabaseHeaders(),
-          body: JSON.stringify(payload)
-        });
-        console.log(`[ScheduleService] ⚡ Horario de ${studentCode} actualizado en Supabase student_schedules.`);
-      } else {
-        const postUrl = `${environment.supabaseUrl}/rest/v1/student_schedules`;
-        await fetch(postUrl, {
-          method: 'POST',
-          headers: this.getSupabaseHeaders(),
-          body: JSON.stringify(payload)
-        });
-        console.log(`[ScheduleService] ⚡ Nuevo horario de ${studentCode} registrado en Supabase student_schedules.`);
-      }
-    } catch (err: any) {
-      console.warn('[ScheduleService] ℹ️ No se pudo persistir horario en Supabase:', err.message);
     }
   }
 

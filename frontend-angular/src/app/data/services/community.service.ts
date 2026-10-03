@@ -1,7 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of, map, catchError, shareReplay } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Observable, of } from 'rxjs';
 import { 
   CommunityPost, 
   CommunityComment, 
@@ -19,9 +17,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos TTL
   providedIn: 'root'
 })
 export class CommunityService {
-  private readonly supabaseUrl = environment.supabaseUrl;
-  private readonly apiKey = environment.supabaseAnonKey;
-
   private postsSignal = signal<CommunityPost[]>([]);
   readonly allPosts = this.postsSignal.asReadonly();
 
@@ -94,19 +89,8 @@ export class CommunityService {
       });
   });
 
-  // Request deduplication
-  private inFlightPosts$: Observable<CommunityPost[]> | null = null;
-
-  constructor(private http: HttpClient) {
+  constructor() {
     this.hydrateFromLocalCache();
-  }
-
-  private getHeaders(): HttpHeaders {
-    return new HttpHeaders({
-      'apikey': this.apiKey,
-      'Authorization': `Bearer ${this.apiKey}`,
-      'Content-Type': 'application/json'
-    });
   }
 
   private hydrateFromLocalCache(): void {
@@ -126,50 +110,10 @@ export class CommunityService {
   }
 
   /**
-   * Carga los posts desde Supabase con fallback local y deduplicación de peticiones.
+   * Carga los posts desde la caché reactiva local.
    */
   getPosts(forceRefresh = false): Observable<CommunityPost[]> {
-    if (!forceRefresh && this.postsSignal().length > 0) {
-      const raw = localStorage.getItem(COMMUNITY_POSTS_CACHE_KEY);
-      if (raw) {
-        const { timestamp } = JSON.parse(raw);
-        if (Date.now() - timestamp < CACHE_TTL_MS) {
-          return of(this.postsSignal());
-        }
-      }
-    }
-
-    if (this.inFlightPosts$) {
-      return this.inFlightPosts$;
-    }
-
-    const url = `${this.supabaseUrl}/rest/v1/community_posts?select=*&order=created_at.desc&limit=30`;
-
-    this.inFlightPosts$ = this.http.get<any[]>(url, { headers: this.getHeaders() }).pipe(
-      map(remotePosts => {
-        let combined: CommunityPost[] = [];
-        if (remotePosts && remotePosts.length > 0) {
-          combined = remotePosts.map(p => this.mapRemoteToCommunityPost(p));
-        }
-
-        this.postsSignal.set(combined);
-        localStorage.setItem(COMMUNITY_POSTS_CACHE_KEY, JSON.stringify({
-          timestamp: Date.now(),
-          data: combined
-        }));
-        this.inFlightPosts$ = null;
-        return combined;
-      }),
-      catchError(() => {
-        const fallback = this.postsSignal().length > 0 ? this.postsSignal() : [];
-        this.postsSignal.set(fallback);
-        this.inFlightPosts$ = null;
-        return of(fallback);
-      }),
-      shareReplay(1)
-    );
-
-    return this.inFlightPosts$;
+    return of(this.postsSignal());
   }
 
   private mapRemoteToCommunityPost(row: any): CommunityPost {
@@ -254,12 +198,6 @@ export class CommunityService {
     // Actualización optimista local
     this.postsSignal.update(list => [newPost, ...list]);
     this.persistCache();
-
-    // Intentar sincronizar en Supabase
-    const url = `${this.supabaseUrl}/rest/v1/community_posts`;
-    this.http.post(url, newPost, { headers: this.getHeaders() }).subscribe({
-      error: () => console.log('[CommunityService] ℹ️ Post persistido localmente.')
-    });
 
     return of(newPost);
   }
