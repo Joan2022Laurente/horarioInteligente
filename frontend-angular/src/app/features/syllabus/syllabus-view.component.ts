@@ -111,7 +111,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
         }
       </div>
 
-      <!-- MODAL: Sílabo Completo & Rúbricas (Supabase Database - Pinned Header & Strict Scroll) -->
+      <!-- MODAL: Sílabo Completo & Rúbricas (Syllabus Database - Pinned Header & Strict Scroll) -->
       @if (isSyllabusModalOpen) {
         <div 
           class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-xl animate-fade-in text-white font-sans"

@@ -3,8 +3,7 @@ import { getCachedStudentProfile } from '@data/syllabus/client-storage';
 
 /**
  * Interceptor funcional HTTP que inyecta automáticamente el token JWT Bearer
- * y el encabezado de identidad x-user-id en todas las solicitudes salientes,
- * preservando las claves de autenticación en llamadas directas a Supabase.
+ * y el encabezado de identidad x-user-id en todas las solicitudes salientes al backend Spring Boot.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
 

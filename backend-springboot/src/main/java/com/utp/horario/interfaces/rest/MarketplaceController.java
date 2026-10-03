@@ -1,10 +1,8 @@
 package com.utp.horario.interfaces.rest;
 
-import com.utp.horario.application.assembler.MarketplaceAssembler;
 import com.utp.horario.application.command.PublishMarketplaceCommand;
 import com.utp.horario.application.dtos.MarketplaceDto;
 import com.utp.horario.application.handle.PublishMarketplaceCommandHandler;
-import com.utp.horario.domain.model.repositories.IMarketplaceRepository;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import com.utp.horario.interfaces.rest.dto.MarketplacePublishRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +19,6 @@ import java.util.List;
 public class MarketplaceController {
 
     private final PublishMarketplaceCommandHandler marketplaceCommandHandler;
-    private final IMarketplaceRepository marketplaceRepository;
-    private final MarketplaceAssembler marketplaceAssembler;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<MarketplaceDto>>> getItems(
@@ -38,8 +34,7 @@ public class MarketplaceController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<MarketplaceDto>> getItemById(@PathVariable String id) {
-        return marketplaceRepository.findById(id)
-                .map(marketplaceAssembler::toDto)
+        return marketplaceCommandHandler.findById(id)
                 .map(item -> ResponseEntity.ok(ApiResponse.ok(item)))
                 .orElseGet(() -> ResponseEntity.status(404).body(ApiResponse.fail("Publicación no encontrada")));
     }

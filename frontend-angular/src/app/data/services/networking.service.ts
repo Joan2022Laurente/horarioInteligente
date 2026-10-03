@@ -103,12 +103,9 @@ export class NetworkingService {
   }
 
   /**
-   * Sincroniza el perfil en Supabase con Dirty-Checking para evitar escrituras innecesarias.
-   */
-  /**
    * Sincroniza el perfil en caché local con Dirty-Checking para evitar re-cálculos innecesarios.
    */
-  syncProfileToSupabase(): Observable<boolean> {
+  syncProfile(): Observable<boolean> {
     const profile = this.getMyProfile();
     const currentHash = JSON.stringify({
       courses: profile.enrolled_courses,

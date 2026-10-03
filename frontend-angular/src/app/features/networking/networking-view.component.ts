@@ -416,8 +416,8 @@ export class NetworkingViewComponent implements OnInit {
   constructor(private networkingService: NetworkingService) {}
 
   ngOnInit(): void {
-    // Sincronizar perfil local con Supabase (con dirty check)
-    this.networkingService.syncProfileToSupabase().subscribe();
+    // Sincronizar perfil local (con dirty check)
+    this.networkingService.syncProfile().subscribe();
 
     // Obtener matches duales optimizados
     this.networkingService.getDualMatches().subscribe(matches => {

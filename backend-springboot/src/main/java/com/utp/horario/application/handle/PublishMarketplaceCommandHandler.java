@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +26,10 @@ public class PublishMarketplaceCommandHandler {
 
     public List<MarketplaceDto> listAll() {
         return repository.list().stream().map(assembler::toDto).toList();
+    }
+
+    public Optional<MarketplaceDto> findById(String id) {
+        return repository.findById(id).map(assembler::toDto);
     }
 
     public List<MarketplaceDto> findByCategory(String category) {

@@ -174,7 +174,7 @@ public class AcademicToolService {
                     courses.add(new EnrolledCourseDto(c.getCode(), c.getName()));
                 }
             }
-            // Prioridad 2: derivar cursos únicos desde las sesiones (estructura real de Supabase)
+            // Prioridad 2: derivar cursos únicos desde las sesiones (estructura persistida en MySQL)
             if (courses.isEmpty() && schedule.getClasses() != null) {
                 java.util.LinkedHashMap<String, String> seen = new java.util.LinkedHashMap<>();
                 for (var cl : schedule.getClasses()) {

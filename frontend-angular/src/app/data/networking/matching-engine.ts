@@ -146,6 +146,6 @@ export function computeDualMatchScore(
 
 /**
  * Pool de compañeros para matching.
- * Vacío por defecto: las coincidencias provienen de perfiles reales de estudiantes en Supabase.
+ * Vacío por defecto: las coincidencias provienen de perfiles reales de estudiantes.
  */
 export const MOCK_STUDENTS_LIMA_CENTRO: StudentNetworkingProfile[] = [];

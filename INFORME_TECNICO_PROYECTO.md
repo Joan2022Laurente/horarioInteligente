@@ -139,7 +139,7 @@ Horario Inteligente aborda estas problemáticas mediante un diseño técnico enf
 | **3. Propuesta de Valor** | Plataforma académica unificada con visualización de horario en tema oscuro, integración directa de temas del sílabo en cada bloque de clase, calendario de evaluaciones ponderadas y copiloto agéntico para consultas contextuales. |
 | **4. Solución** | • Interfaz web en tema oscuro nativo (`#070709`) con micro-interacciones funcionales.<br>• Ficha de clase con aula, pabellón, docente y tema correspondiente según semana lectiva.<br>• Desglose curricular por curso: unidades, semanas, fórmulas oficiales y rúbricas.<br>• Motor agéntico con *Function Calling* sobre la API académica institucional. |
 | **5. Canales** | • Aplicación web responsiva (PWA) accesible desde cualquier navegador moderno.<br>• Repositorio institucional y despliegue cloud en Heroku Platform. |
-| **6. Estructura de Costos** | • Cómputo e inferencia del modelo LLM (vía OpenRouter API).<br>• Infraestructura de alojamiento en Heroku Dynos (Java 17 runtime).<br>• Almacenamiento PostgreSQL serverless en Supabase DB. |
+| **6. Estructura de Costos** | • Cómputo e inferencia del modelo LLM (vía OpenRouter API).<br>• Infraestructura de alojamiento en Heroku Dynos (Java 17 runtime).<br>• Almacenamiento relacional MySQL 8.0 (Aiven Cloud / Local). |
 | **7. Flujos de Ingresos** | • Acceso académico abierto para la comunidad estudiantil.<br>• Esquema institucional de cuota diaria de inferencia para balancear recursos de IA. |
 | **8. Métricas Clave** | • Tiempo de renderizado de la grilla horaria (< 50 ms en local).<br>• Tasa de exactitud en llamadas a herramientas del agente (> 98%).<br>• Frecuencia de consulta diaria de temarios y aulas por estudiante activo. |
 | **9. Ventaja Diferencial** | Normalización de sílabos rectores y vinculación algorítmica con las sesiones del horario oficial mediante una arquitectura modular desacoplada. |
@@ -167,7 +167,7 @@ El equipo de trabajo está compuesto por 5 estudiantes de Ingeniería de Sistema
    * Construcción de la grilla semanal responsive, la vista diaria (*Today View*) y modales de clase.
 
 4. **Ingeniero de Base de Datos & Persistencia Cloud:**
-   * Modelado de datos relacional y gestión de esquemas en Supabase PostgreSQL.
+   * Modelado de datos relacional y gestión de esquemas en MySQL 8.0.
    * Implementación del esquema de contingencia y persistencia en cliente (*LocalStorage*).
    * Mapeo de entidades JPA en backend para estudiantes, horarios y sílabos oficiales.
 
@@ -265,7 +265,7 @@ El proyecto se justifica desde tres perspectivas concretas:
 ### 3.1.3. Interfaces Externas
 * **API Externa Institucional v1.2.0:** Endpoints REST que proveen datos autenticados de estudiantes, horarios estructurados y sílabos en formato JSON y Markdown.
 * **OpenRouter API:** Pasarela HTTPS hacia el modelo `meta-llama/llama-3.3-70b-instruct` con soporte nativo de *Function Calling*.
-* **Supabase PostgreSQL:** Base de datos cloud accesible vía JDBC y REST para persistencia y respaldo de perfiles y horarios.
+* **MySQL 8.0 Relational DB:** Base de datos relacional cloud (Aiven) y local accesible vía JDBC para persistencia y respaldo de perfiles, tareas y horarios.
 
 ### 3.1.4. Interfaces de Usuario
 * **Pantalla de Acceso (Login):** Formulario ergonómico con autenticación institucional y enlace a políticas de privacidad.
@@ -305,7 +305,7 @@ El proyecto se justifica desde tres perspectivas concretas:
 * **Lucide Angular:** Conjunto de iconos vectoriales ligeros de alta legibilidad.
 
 ### 3.3.3. Base de Datos
-* **PostgreSQL 15 (Supabase Cloud):** Motor relacional principal para persistencia de perfiles y cachés de horarios.
+* **MySQL 8.0 (Aiven Cloud / Local):** Motor relacional principal para persistencia de perfiles, tareas, marketplace y cachés de horarios.
 * **LocalStorage Web API:** Almacenamiento estructurado en el navegador para garantizar navegación Local-First sin latencia de red.
 
 ### 3.3.4. Testing
@@ -358,7 +358,7 @@ graph TB
     Usuario["Estudiante Universitario"] -->|Interactúa en tema oscuro| DominioAcademico
     DominioAcademico -->|Consume datos normalizados| ApiExterna["API Externa UTP v1.2.0"]
     DominioAcademico -->|Solicita inferencia y function calling| OpenRouter["OpenRouter (LLaMA 3.3 70B)"]
-    DominioAcademico -->|Persiste horarios y sílabos| SupabaseDB["Supabase PostgreSQL"]
+    DominioAcademico -->|Persiste datos y perfiles| MySqlDB["MySQL 8.0 Database"]
 ```
 
 ---
@@ -487,7 +487,7 @@ flowchart LR
         Service -->|Aplica reglas de| Domain["Modelos de Dominio Inmutables"]
         Service -->|Invoca| PortOut["Puerto de Salida (Interface)"]
         PortOut -->|Implementado por| OutAdapter["Adaptador Gateway / Repositorio"]
-        OutAdapter -->|Llamadas HTTP / SQL| CloudServices["API Externa v1.2.0 / OpenRouter / Supabase"]
+        OutAdapter -->|Llamadas HTTP / SQL| CloudServices["API Externa v1.2.0 / OpenRouter / MySQL"]
     end
 
     subgraph PatronesDeProgramacion["Patrones de Programación Aplicados"]
@@ -560,13 +560,13 @@ flowchart TB
 
     subgraph ExternalEcosystem["Servicios Externos Integrados"]
         UtpGateway["API Externa UTP v1.2.0 (Autenticación y Horarios)"]
-        SupabaseCloud["Supabase PostgreSQL 15 (Persistencia Cloud)"]
+        MySqlCloud["MySQL 8.0 Database (Aiven Cloud / Local)"]
         OpenRouterCloud["OpenRouter Gateway (LLaMA 3.3 70B Instruct)"]
     end
 
     AngularApp -->|HTTPS / REST / SSE| SpringApp
     SpringApp -->|HTTP/2 REST JSON / Bearer JWT| UtpGateway
-    SpringApp -->|JDBC PostgreSQL Wire Protocol| SupabaseCloud
+    SpringApp -->|JDBC MySQL Protocol (HikariCP)| MySqlCloud
     SpringApp -->|HTTPS ReAct Function Calling| OpenRouterCloud
 ```
 
@@ -815,7 +815,7 @@ Mediante una sesión de modelado de eventos, se identificaron los eventos de dom
 * **Joan Laurente (Líder / IA):** Arquitectura agéntica, integración de *Function Calling*, pasarela OpenRouter y orquestador ReAct.
 * **Integrante 2 (Backend):** Implementación de la Arquitectura Hexagonal en Spring Boot 3 y validación de seguridad.
 * **Integrante 3 (Frontend):** Construcción de componentes Angular Standalone, Signals y diseño del Tema Oscuro.
-* **Integrante 4 (Base de Datos):** Mapeo relacional, optimización de consultas SQL en Supabase y soporte Local-First.
+* **Integrante 4 (Base de Datos):** Mapeo relacional, optimización de consultas SQL en MySQL y soporte Local-First.
 * **Integrante 5 (QA / DevOps):** Pipeline de integración continua, configuración de despliegue en Heroku y validación de calidad.
 
 ---

@@ -1,7 +1,7 @@
 # Division de Trabajo — Horario Inteligente UTP
 
 **Repositorio:** github.com/Joan2022Laurente/horarioInteligente
-**Stack:** Angular (frontend) + Spring Boot (backend) + Supabase (base de datos) + OpenRouter (IA)
+**Stack:** Angular (frontend) + Spring Boot DDD Puro CQRS (backend) + MySQL (base de datos) + OpenRouter (IA)
 
 ---
 
@@ -15,7 +15,7 @@ La parte dificil (conectarse al portal de la UTP, autenticar al alumno, obtener 
 El alumno usa el frontend (Angular)
    -> que le habla a nuestro backend (Spring Boot)
       -> que le pide datos a la API de la UTP (ya hecha)
-      -> que guarda cosas en la base de datos (Supabase)
+      -> que guarda cosas en la base de datos (MySQL)
       -> que le pregunta cosas a la IA (OpenRouter)
 ```
 
@@ -110,20 +110,18 @@ Esta parte tambien es responsable de toda la estructura de la base de datos: las
 **Archivos que presento [Nombre]:**
 ```
 Backend:
-  presentation/controller/SyllabusController.java
-  infrastructure/persistence/entity/SyllabusEntity.java
-  infrastructure/persistence/repository/SpringDataSyllabusRepository.java
+  interfaces/rest/SyllabusController.java
+  infraestructure/persistence/entity/SyllabusEntity.java
+  infraestructure/persistence/repository/SpringDataSyllabusRepository.java
 
 Frontend:
   features/syllabus/syllabus-view.component.ts
   data/services/syllabus.service.ts
-  data/services/supabase.service.ts
   data/syllabus/client-storage.ts
   data/syllabus/types.ts
 
 Base de datos:
-  docs/database/supabase_schema_schedules_networking.sql
-  docs/database/supabase_marketplace_schema.sql
+  backend-springboot/src/main/resources/schema-mysql.sql
 ```
 
 ---
@@ -196,4 +194,4 @@ npm run start
 # Abrir http://localhost:4200 en el navegador
 ```
 
-Las claves de produccion (Supabase, OpenRouter) las maneja Joan. Para correr local solo necesitas el .env que el te comparte.
+Las claves de produccion (MySQL Aiven, OpenRouter) las maneja Joan. Para correr local solo necesitas el .env que el te comparte.
