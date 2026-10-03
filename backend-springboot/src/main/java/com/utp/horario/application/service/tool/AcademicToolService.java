@@ -55,7 +55,7 @@ public class AcademicToolService {
 
     /**
      * Tool 1: Obtiene las clases del estudiante para una fecha determinada.
-     * Soporta fallback automático a Supabase si no se encuentra en el repositorio local.
+     * Soporta fallback automático a MySQL si no se encuentra en el repositorio en memoria.
      */
     public DayScheduleResult getTodaySchedule(String studentCode, String dateIso) {
         studentCode = resolveEffectiveStudentCode(studentCode);
@@ -118,7 +118,7 @@ public class AcademicToolService {
             log.debug("[AcademicTool] 🔑 Token resuelto desde caché gateway para [{}] (len={})", studentCode, token.length());
             return token;
         }
-        // 2. BD local (H2/Supabase via StudentRepository)
+        // 2. BD MySQL (via StudentRepository)
         if (studentCode != null && !studentCode.isBlank()) {
             String dbToken = studentRepositoryPort.findByStudentCode(studentCode)
                     .map(StudentProfile::getToken)
@@ -247,12 +247,12 @@ public class AcademicToolService {
                 .orElse(resolvedCourseCode != null ? resolvedCourseCode : cleanQuery);
 
         if (syllabusOpt.isPresent()) {
-            log.info("[AcademicTool] 📚 [PASO 2/3 HIT] Sílabo '{}' hallado en Supabase/BD local. Semanas: {}, Evaluaciones: {}",
+            log.info("[AcademicTool] 📚 [PASO 2/3 HIT] Sílabo '{}' hallado en MySQL/BD local. Semanas: {}, Evaluaciones: {}",
                     courseCode,
                     syllabusOpt.get().getWeeklySchedule() != null ? syllabusOpt.get().getWeeklySchedule().size() : 0,
                     syllabusOpt.get().getEvaluations() != null ? syllabusOpt.get().getEvaluations().size() : 0);
         } else {
-            log.info("[AcademicTool] ❌ [PASO 2/3 MISS] Sílabo '{}' no encontrado en Supabase/BD. Pasando a fallback API Externa...", courseCode);
+            log.info("[AcademicTool] ❌ [PASO 2/3 MISS] Sílabo '{}' no encontrado en MySQL/BD local. Pasando a fallback API Externa...", courseCode);
         }
 
         // PASO 4: Markdown de la API Externa
@@ -305,7 +305,7 @@ public class AcademicToolService {
         }
 
         if (syllabusOpt.isEmpty() && (markdown == null || markdown.isBlank())) {
-            log.warn("[AcademicTool] 🚫 [RESULTADO FINAL] Sílabo NO encontrado para '{}' tras agotar todos los pasos (Supabase + Markdown + fetchSyllabus)", cleanQuery);
+            log.warn("[AcademicTool] 🚫 [RESULTADO FINAL] Sílabo NO encontrado para '{}' tras agotar todos los pasos (MySQL + Markdown + fetchSyllabus)", cleanQuery);
             String suggestion = "";
             if (enrolled != null && enrolled.courses() != null && !enrolled.courses().isEmpty()) {
                 suggestion = " Cursos disponibles: " + enrolled.courses().stream().map(EnrolledCourseDto::courseName).toList();
@@ -323,7 +323,7 @@ public class AcademicToolService {
         }
 
         // Fuente ganadora del sílabo
-        String source = syllabusOpt.isPresent() ? "fetchSyllabus/Supabase" : "Markdown-API";
+        String source = syllabusOpt.isPresent() ? "MySQL-Repository" : "Markdown-API";
         log.info("[AcademicTool] ✅ [RESULTADO FINAL] Sílabo '{}' servido desde [{}]", cleanQuery, source);
 
         Syllabus s = syllabusOpt.orElseGet(() -> {
@@ -410,7 +410,7 @@ public class AcademicToolService {
             }
         }
 
-        // 2. Fallback: Cálculo local y Supabase a partir de sílabos
+        // 2. Fallback: Cálculo local y MySQL a partir de sílabos
         log.info("[AcademicTool] ℹ️ Usando fallback de sílabos para evaluaciones próximas de [{}]...", studentCode);
         List<EvaluationSummaryDto> upcoming = new ArrayList<>();
         EnrolledCoursesResult enrolled = getEnrolledCourses(studentCode);

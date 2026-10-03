@@ -90,7 +90,7 @@ public class TaskController {
             @CurrentStudent String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token,
-            @RequestParam String sectionId) {
+            @RequestParam(required = false) String sectionId) {
         String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
         if (effectiveToken == null || effectiveToken.isBlank()) {
             throw new SecurityException("Se requiere un token de sesión legítimo para sincronizar tareas");
