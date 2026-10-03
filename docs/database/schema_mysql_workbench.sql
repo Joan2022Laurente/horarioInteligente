@@ -38,7 +38,7 @@ CREATE TABLE students (
 -- ----------------------------------------------------------------------------
 CREATE TABLE student_schedules (
     id VARCHAR(64) PRIMARY KEY,
-    student_code VARCHAR(32) NOT NULL,
+    student_code VARCHAR(50) NOT NULL,
     period_name VARCHAR(64) NOT NULL,
     week_number INT,
     total_weeks INT,
@@ -47,6 +47,7 @@ CREATE TABLE student_schedules (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uq_student_schedule_period UNIQUE (student_code, period_name),
+    CONSTRAINT fk_schedules_student FOREIGN KEY (student_code) REFERENCES students(student_code) ON DELETE CASCADE,
     INDEX idx_schedule_student (student_code)
 ) ENGINE=InnoDB;
 
@@ -55,7 +56,7 @@ CREATE TABLE student_schedules (
 -- ----------------------------------------------------------------------------
 CREATE TABLE tasks (
     id VARCHAR(100) PRIMARY KEY,
-    student_id VARCHAR(100) NOT NULL,
+    student_id VARCHAR(50) NOT NULL,
     course_name VARCHAR(255),
     section_id VARCHAR(100),
     homework_id VARCHAR(100),
@@ -69,6 +70,7 @@ CREATE TABLE tasks (
     max_score DOUBLE,
     score DOUBLE,
     is_delivered BOOLEAN DEFAULT FALSE,
+    CONSTRAINT fk_tasks_student FOREIGN KEY (student_id) REFERENCES students(student_code) ON DELETE CASCADE,
     INDEX idx_tasks_student (student_id),
     INDEX idx_tasks_status (homework_status)
 ) ENGINE=InnoDB;
@@ -78,7 +80,7 @@ CREATE TABLE tasks (
 -- ----------------------------------------------------------------------------
 CREATE TABLE official_syllabi (
     course_id VARCHAR(100) PRIMARY KEY,
-    course_code VARCHAR(50) NOT NULL,
+    course_code VARCHAR(50) NOT NULL UNIQUE,
     course_name VARCHAR(255) NOT NULL,
     semester VARCHAR(50),
     credits INT DEFAULT 3,
@@ -93,6 +95,7 @@ CREATE TABLE official_syllabi (
 -- ----------------------------------------------------------------------------
 CREATE TABLE marketplace_items (
     id VARCHAR(64) PRIMARY KEY,
+    seller_student_code VARCHAR(50),
     item_type VARCHAR(32),
     category VARCHAR(64) NOT NULL,
     service_type VARCHAR(64),
@@ -115,8 +118,10 @@ CREATE TABLE marketplace_items (
     reputation INT DEFAULT 100,
     contact_method VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_marketplace_student FOREIGN KEY (seller_student_code) REFERENCES students(student_code) ON DELETE SET NULL,
     INDEX idx_marketplace_category (category),
-    INDEX idx_marketplace_type (item_type)
+    INDEX idx_marketplace_type (item_type),
+    INDEX idx_marketplace_seller (seller_student_code)
 ) ENGINE=InnoDB;
 
 -- ============================================================================
@@ -139,10 +144,10 @@ VALUES
 ('task-demo-02', 'U23307609', 'DESARROLLO DE SOFTWARE AVANZADO', 'SEC-02', 'HW-02', 'Implementación de Microservicio DDD con Spring Boot y MySQL', 'PROYECTO', 5, 'Pendiente', 'En progreso', '2026-10-18 23:59:00', 20.0, NULL, FALSE),
 ('task-demo-03', 'U23307609', 'REDES Y COMUNICACIONES', 'SEC-03', 'HW-03', 'Laboratorio 3: Simulación Packet Tracer VLANs', 'LABORATORIO', 3, 'Completada', 'Entregado', '2026-10-12 18:00:00', 20.0, 19.5, TRUE);
 
-INSERT INTO marketplace_items (id, item_type, category, service_type, item_condition, price, numeric_price, original_price, unit, title, description, badge, location, rating, reviews_count, sales_count, tutor_name, tutor_career, tutor_cycle, reputation, contact_method)
+INSERT INTO marketplace_items (id, seller_student_code, item_type, category, service_type, item_condition, price, numeric_price, original_price, unit, title, description, badge, location, rating, reviews_count, sales_count, tutor_name, tutor_career, tutor_cycle, reputation, contact_method)
 VALUES 
-('item-demo-01', 'MATERIAL', 'TESIS', 'RECURSO', 'DIGITAL', 'Gratis', 0.00, 0.00, 'PDF', 'Plantilla Látex para Tesis UTP IEEE', 'Formato oficial de investigación con normas bibliográficas automatizadas.', 'POPULAR', 'Campus Lima Centro', 5.0, 14, 32, 'Joan Callañaupa', 'Ing. de Sistemas', 7, 98, 'u23307609@utp.edu.pe'),
-('item-demo-02', 'SERVICIO', 'ASESORIA', 'TUTORIA', 'ONLINE', 'S/. 25.00', 25.00, 35.00, 'Hora', 'Asesoría en Arquitectura DDD y Spring Boot 3', 'Sesión 1 a 1 para diseño de agregados, puertos y adaptadores.', 'TOP RATED', 'Remoto Google Meet', 4.9, 8, 12, 'Joan Callañaupa', 'Ing. de Sistemas', 7, 100, 'u23307609@utp.edu.pe');
+('item-demo-01', 'U23307609', 'MATERIAL', 'TESIS', 'RECURSO', 'DIGITAL', 'Gratis', 0.00, 0.00, 'PDF', 'Plantilla Látex para Tesis UTP IEEE', 'Formato oficial de investigación con normas bibliográficas automatizadas.', 'POPULAR', 'Campus Lima Centro', 5.0, 14, 32, 'Joan Callañaupa', 'Ing. de Sistemas', 7, 98, 'u23307609@utp.edu.pe'),
+('item-demo-02', 'U23307609', 'SERVICIO', 'ASESORIA', 'TUTORIA', 'ONLINE', 'S/. 25.00', 25.00, 35.00, 'Hora', 'Asesoría en Arquitectura DDD y Spring Boot 3', 'Sesión 1 a 1 para diseño de agregados, puertos y adaptadores.', 'TOP RATED', 'Remoto Google Meet', 4.9, 8, 12, 'Joan Callañaupa', 'Ing. de Sistemas', 7, 100, 'u23307609@utp.edu.pe');
 
 INSERT INTO student_schedules (id, student_code, period_name, week_number, total_weeks, schedule_data, last_synced_date)
 VALUES 

@@ -107,7 +107,7 @@ Para esta segunda entrega académica, el sistema se enfoca estrictamente en esto
 ## 1.2. Objetivos del proyecto
 
 ### 1.2.1. Objetivo General
-Diseñar e implementar una solución web académica basada en Arquitectura Hexagonal con Spring Boot 3 y Angular 18 Standalone, que unifique el horario de clases con el avance temático del sílabo oficial, ofrezca ergonomía visual mediante un tema oscuro de alto contraste y provea asistencia inteligente basada en agentes autónomos conectados a datos institucionales.
+Diseñar e implementar una solución web académica basada en Domain-Driven Design (DDD) y CQRS con Spring Boot 3 y Angular 18 Standalone, que unifique el horario de clases con el avance temático del sílabo oficial, ofrezca ergonomía visual mediante un tema oscuro de alto contraste y provea asistencia inteligente basada en agentes autónomos conectados a datos institucionales.
 
 ### 1.2.2. Objetivos Específicos
 1. **Ergonomía Visual:** Proveer una interfaz con fondo oscuro (`#070709`) que cumpla con los estándares de contraste WCAG AA, mitigando la fatiga ocular en jornadas prolongadas.
@@ -157,7 +157,7 @@ El equipo de trabajo está compuesto por 5 estudiantes de Ingeniería de Sistema
    * Gestión de streaming de respuestas vía Server-Sent Events (SSE).
 
 2. **Arquitecto de Software & Backend Lead:**
-   * Estructuración de la Arquitectura Hexagonal (Puertos y Adaptadores) en Spring Boot 3.3.
+   * Estructuración de la Arquitectura DDD y CQRS en Spring Boot 3.3.
    * Aislamiento del dominio académico y diseño de los contratos REST de la API Externa v1.2.0.
    * Implementación de filtros de seguridad, resolución de identidad de estudiantes y configuración de CORS.
 
@@ -186,7 +186,7 @@ gantt
     dateFormat  YYYY-MM-DD
     section Fase 1: Análisis y Arquitectura
     Análisis de la plataforma oficial y requerimientos :done, a1, 2026-08-15, 2026-08-25
-    Diseño de Arquitectura Hexagonal y Contratos API  :done, a2, 2026-08-26, 2026-09-05
+    Diseño de Arquitectura DDD + CQRS y Contratos API  :done, a2, 2026-08-26, 2026-09-05
     section Fase 2: Backend y Servicios Core
     Implementación de Casos de Uso (Horario y Sílabo)  :done, b1, 2026-09-06, 2026-09-15
     Integración de API Externa v1.2.0 y Persistencia  :done, b2, 2026-09-12, 2026-09-20
@@ -205,9 +205,9 @@ gantt
 
 ## 1.7. Metodologías Aplicadas
 * **Scrum Ágil Adaptado:** Ciclos iterativos de dos semanas orientados a entregables funcionales (sprints), priorizando primero la estabilidad de datos de horarios y luego la asistencia inteligente.
-* **Domain-Driven Design (DDD):** Delimitación clara del dominio académico mediante conceptos rectores: `ClassSession`, `Syllabus`, `StudentProfile` y `AcademicTool`.
+* **Domain-Driven Design (DDD Estratégico y Táctico):** Delimitación clara del dominio académico mediante contextos acotados, agregados coherentes (`StudentProfile`, `TaskSyncItem`, `Syllabus`, `MarketplaceItem`), objetos de valor (`ScheduleInterval`) y repositorios de dominio.
 * **Desarrollo Guiado por Pruebas (TDD Pragmático):** Validación previa de componentes algorítmicos complejos, como el cálculo de ponderaciones porcentuales y el mapeo de semanas lectivas.
-* **Arquitectura Hexagonal (Ports & Adapters):** Desacoplamiento total entre las reglas de negocio y los mecanismos de entrada (controladores REST) o salida (adaptadores HTTP a servicios universitarios y bases de datos).
+* **Patrón CQRS (Command Query Responsibility Segregation):** Separación estricta entre operaciones de mutación/sincronización (Commands procesados por Command Handlers) y operaciones de consulta optimizadas que explotan el Read Model en MySQL 8.0 y la caché local.
 
 ---
 
@@ -240,8 +240,8 @@ El proyecto se justifica desde tres perspectivas concretas:
 ---
 
 ## 2.4. Bases Teóricas
-* **Arquitectura Hexagonal (Cockburn, 2005):** Permite aislar el núcleo del negocio académico de los detalles de infraestructura mediante interfaces (*Ports*) e implementaciones concretas (*Adapters*). Esto permite sustituir el proveedor de inferencia de IA o el motor de base de datos sin alterar la lógica de cálculo del horario.
-* **Domain-Driven Design (Evans, 2004):** Establece el modelado a partir de agregados coherentes e invariantes del negocio, como la consistencia de que la sumatoria de evaluaciones de un sílabo debe equivaler al 100%.
+* **Domain-Driven Design (Evans, 2003):** Establece el modelado a partir de agregados coherentes e invariantes del negocio, definiendo un lenguaje ubicuo compartido entre los desarrolladores y la lógica académica universitaria.
+* **Command Query Responsibility Segregation - CQRS (Fowler, 2011; Young, 2010):** Patrón arquitectónico que divide los modelos de lectura y escritura. Los comandos gestionan la orquestación e integridad del agregado mientras que las consultas leen proyecciones desnormalizadas y optimizadas en MySQL.
 * **Patrón ReAct: Reasoning + Acting (Yao et al., 2022):** Paradigma que combina cadenas de pensamiento (*Reasoning*) con la ejecución de acciones en el entorno (*Acting*). Permite al asistente de IA determinar cuándo requiere consultar el horario antes de emitir una respuesta.
 * **Arquitectura Local-First (Kleppmann et al., 2019):** Otorga prioridad a la copia de datos en el cliente (almacenamiento local estructurado), asegurando que el estudiante acceda a su horario aun en condiciones de conectividad inestable.
 
@@ -255,7 +255,7 @@ El proyecto se justifica desde tres perspectivas concretas:
 * **Rendimiento:** Carga inicial de datos desde almacenamiento local en menos de 50 ms. Consultas a la API Externa completadas en menos de 350 ms en condiciones normales de red.
 * **Confiabilidad:** Respuestas del asistente de IA ancladas estrictamente a los resultados de las herramientas (*grounding*), eliminando alucinaciones sobre aulas o fechas inexistentes.
 * **Usabilidad:** Diseño oscuro nativo con relación de contraste mínima de 7:1 para texto principal (`#FFFFFF` sobre `#070709`), superando el criterio de éxito WCAG 2.1 Nivel AAA.
-* **Mantenibilidad:** Separación estricta de responsabilidades entre el frontend (Angular) y la lógica de integración (Spring Boot Hexagonal).
+* **Mantenibilidad:** Separación estricta de responsabilidades entre el frontend (Angular) y la lógica de integración y negocio (Spring Boot con DDD y CQRS).
 
 ### 3.1.2. Restricciones Técnicas
 * **Tiempo de Ejecución:** Java 17 LTS (Azul Zulu) en el backend y Node.js 18+ para compilación de Angular.
@@ -363,138 +363,213 @@ graph TB
 
 ---
 
-### 3.4.2. Diagrama de Clases
+### 3.4.2. Diagrama de Clases (Arquitectura DDD + CQRS)
 
 ```mermaid
 classDiagram
+    class AuthController {
+        -AuthenticateStudentCommandHandler authCommandHandler
+        -SecurityIdentityResolver identityResolver
+        +login(request) ResponseEntity
+        +getAuthenticatedProfile(authHeader) ResponseEntity
+    }
+
     class ScheduleController {
-        -ScheduleServicePort scheduleService
-        +getSchedule(authHeader) ResponseEntity
+        -GenerateScheduleCommandHandler scheduleCommandHandler
+        -SecurityIdentityResolver identityResolver
+        -IUtpPortalGateway utpPortalGateway
+        +getSchedule(studentId, authHeader) ResponseEntity
+    }
+
+    class TaskController {
+        -SyncTaskCommandHandler taskCommandHandler
+        -SecurityIdentityResolver identityResolver
+        -IUtpPortalGateway utpPortalGateway
+        +syncTasks(studentId, authHeader) ResponseEntity
+        +getTasks(studentId) ResponseEntity
     }
 
     class SyllabusController {
-        -SyllabusServicePort syllabusService
-        +getSyllabus(courseCode, authHeader) ResponseEntity
+        -SyllabusService syllabusService
+        -IUtpPortalGateway utpPortalGateway
+        +getSyllabus(courseCode) ResponseEntity
+        +getSyllabusMarkdown(courseCode) ResponseEntity
     }
 
     class AiChatController {
-        -AiAssistantServicePort aiService
-        +chat(request, authHeader) ResponseEntity
+        -AiAssistantService aiAssistantService
+        -DailyQuotaService dailyQuotaService
+        -AcademicToolService academicToolService
+        +chat(studentId, request) ResponseEntity
+        +streamChatPost(studentId, request) ResponseBodyEmitter
+        +getQuota(studentId) ResponseEntity
     }
 
-    class ScheduleServicePort {
-        <<interface>>
-        +getStudentSchedule(token, studentCode) ScheduleInterval
+    class AuthenticateStudentCommandHandler {
+        -IStudentRepository repository
+        -IUtpPortalGateway utpPortalGateway
+        -StudentAssembler assembler
+        +handle(command) StudentProfile
+        +handleAsDto(command) StudentDto
+        +authenticateWithToken(token) StudentProfile
     }
 
-    class SyllabusServicePort {
-        <<interface>>
-        +getSyllabusByCourse(token, courseCode) Syllabus
+    class GenerateScheduleCommandHandler {
+        -IScheduleRepository repository
+        -IUtpPortalGateway utpPortalGateway
+        -ScheduleAssembler assembler
+        +handle(command) ScheduleInterval
+        +handleAsDto(command) ScheduleDto
     }
 
-    class AiAssistantServicePort {
-        <<interface>>
-        +processQuery(prompt, studentCode, token) AiChatMessage
+    class SyncTaskCommandHandler {
+        -ITaskRepository taskRepository
+        -IUtpPortalGateway utpPortalGateway
+        -TaskAssembler assembler
+        +handle(command) List~TaskSyncItem~
+        +handleAsDto(command) List~TaskDto~
     }
 
-    class ScheduleServiceImpl {
-        -UtpPortalGatewayPort gatewayPort
-        -ScheduleRepositoryPort repositoryPort
-        +getStudentSchedule(token, studentCode) ScheduleInterval
-    }
-
-    class SyllabusServiceImpl {
-        -UtpPortalGatewayPort gatewayPort
-        -SyllabusRepositoryPort repositoryPort
-        +getSyllabusByCourse(token, courseCode) Syllabus
-    }
-
-    class AgentOrchestratorServiceImpl {
-        -AcademicToolRegistry toolRegistry
-        -LlmGatewayPort llmGateway
-        +processQuery(prompt, studentCode, token) AiChatMessage
-        -runReActLoop(prompt, studentCode) String
-    }
-
-    class AcademicToolRegistry {
-        -ScheduleServicePort scheduleService
-        -SyllabusServicePort syllabusService
+    class AcademicToolService {
+        -IScheduleRepository scheduleRepository
+        -ISyllabusRepository syllabusRepository
+        -IStudentRepository studentRepository
+        -IUtpPortalGateway utpPortalGateway
         +executeTool(toolName, argumentsJson) String
         +getAvailableToolsSchema() List
     }
 
-    ScheduleController --> ScheduleServicePort
-    SyllabusController --> SyllabusServicePort
-    AiChatController --> AiAssistantServicePort
+    class StudentProfile {
+        <<AggregateRoot>>
+        -String studentCode
+        -String fullName
+        -String email
+        -String career
+        -String campus
+        -int currentCycle
+    }
 
-    ScheduleServiceImpl ..|> ScheduleServicePort
-    SyllabusServiceImpl ..|> SyllabusServicePort
-    AgentOrchestratorServiceImpl ..|> AiAssistantServicePort
+    class ScheduleInterval {
+        <<ValueObject>>
+        -String periodName
+        -int weekNumber
+        -int totalWeeks
+        -List~Course~ courses
+        -List~ClassSession~ classes
+    }
 
-    AgentOrchestratorServiceImpl --> AcademicToolRegistry
-    AcademicToolRegistry --> ScheduleServicePort
-    AcademicToolRegistry --> SyllabusServicePort
+    class TaskSyncItem {
+        <<AggregateRoot>>
+        -String id
+        -String studentId
+        -String title
+        -String homeworkStatus
+        -LocalDateTime dueDate
+        -double maxScore
+    }
+
+    AuthController --> AuthenticateStudentCommandHandler : despacha Command
+    ScheduleController --> GenerateScheduleCommandHandler : despacha Command
+    TaskController --> SyncTaskCommandHandler : despacha Command
+    AiChatController --> AcademicToolService : invoca herramientas semánticas
+
+    AuthenticateStudentCommandHandler --> StudentProfile : muta / persiste
+    GenerateScheduleCommandHandler --> ScheduleInterval : construye / valida
+    SyncTaskCommandHandler --> TaskSyncItem : sincroniza / persiste
 ```
 
 ---
 
-### 3.4.3. Diagrama de Paquetes
+### 3.4.3. Diagrama de Paquetes (Estructura de Capas DDD)
 
 ```mermaid
 graph TD
-    subgraph PresentationLayer["com.utp.horario.presentation"]
-        Controllers["Controllers: Auth, Schedule, Syllabus, AiChat"]
-        DTOs["DTOs: ApiResponse, AiChatRequest, AuthRequest"]
-        Exceptions["GlobalExceptionHandler"]
+    subgraph InterfacesLayer["interfaces.rest (Capa de Interfaces / Presentación)"]
+        Controllers["Controllers: AuthController, ScheduleController, TaskController, SyllabusController, AiChatController, MarketplaceController"]
+        REST_DTOs["Request / Response DTOs: ApiResponse, AuthRequest, AiChatRequest"]
+        Resolvers["Security Resolvers: CurrentStudentArgumentResolver, SecurityIdentityResolver"]
     end
 
-    subgraph ApplicationLayer["com.utp.horario.application"]
-        UseCases["Use Cases: ScheduleServiceImpl, SyllabusServiceImpl, AgentOrchestratorServiceImpl"]
-        Tools["Tool Registry: AcademicToolRegistry, AcademicToolService"]
+    subgraph ApplicationLayer["application (Capa de Aplicación - CQRS)"]
+        Commands["Commands: AuthenticateStudentCommand, GenerateScheduleCommand, SyncTaskCommand"]
+        Handlers["Command Handlers: AuthenticateStudentCommandHandler, GenerateScheduleCommandHandler, SyncTaskCommandHandler"]
+        AppServices["Application Services: AgentOrchestratorServiceImpl, AcademicToolService, DailyQuotaService"]
+        Assemblers["Assemblers: StudentAssembler, ScheduleAssembler, TaskAssembler, MarketplaceAssembler"]
+        AppDTOs["Application Projections: StudentDto, ScheduleDto, TaskDto, CourseSummaryDto"]
     end
 
-    subgraph DomainLayer["com.utp.horario.domain"]
-        Models["Models: ClassSession, Course, Syllabus, StudentProfile, AiChatMessage"]
-        PortsIn["Ports In: ScheduleServicePort, SyllabusServicePort, AiAssistantServicePort"]
-        PortsOut["Ports Out: UtpPortalGatewayPort, LlmGatewayPort, ScheduleRepositoryPort"]
+    subgraph DomainLayer["domain.model (Capa de Dominio Puro - Agregados y Reglas)"]
+        Aggregates["Aggregates: StudentProfile, TaskSyncItem, Syllabus, MarketplaceItem"]
+        ValueObjects["Value Objects: ScheduleInterval, ClassSession, Course, DailyQuotaStatus"]
+        DomainRepos["Repository Interfaces: IStudentRepository, IScheduleRepository, ITaskRepository, ISyllabusRepository, IMarketplaceRepository"]
+        Gateways["Gateway Interfaces: IUtpPortalGateway, IOpenRouterGateway"]
     end
 
-    subgraph InfrastructureLayer["com.utp.horario.infrastructure"]
-        AdaptersExternal["External: UtpPortalGatewayAdapter, OpenRouterGatewayAdapter"]
-        AdaptersPersistence["Persistence: ScheduleRepositoryAdapter, SyllabusRepositoryAdapter"]
-        Security["Security: SecurityConfig, CurrentStudentArgumentResolver"]
+    subgraph InfrastructureLayer["infraestructure (Capa de Infraestructura - Persistencia y Red)"]
+        JPA_Repos["JPA Repositories: JPAStudentRepository, JPAScheduleRepository, JPATaskRepository, JPASyllabusRepository, JPAMarketplaceRepository"]
+        Adapters["Adapters: StudentRepositoryAdapter, ScheduleRepositoryAdapter, TaskSyncRepositoryAdapter, SyllabusRepositoryAdapter, MarketplaceRepositoryAdapter"]
+        ExternalGateways["External Adapters: UtpPortalGatewayAdapter, OpenRouterGatewayAdapter, OpenRouterModelSelector"]
+        Entities["Database Entities: StudentEntity, StudentScheduleEntity, TaskSyncEntity, SyllabusEntity, MarketplaceItemEntity"]
+        Mappers["MapStruct / Manual Mappers: StudentMapper, ScheduleMapper, TaskSyncMapper, SyllabusMapper, MarketplaceMapper"]
     end
 
-    PresentationLayer --> PortsIn
-    PresentationLayer --> DTOs
-    ApplicationLayer ..|> PortsIn
-    ApplicationLayer --> PortsOut
-    ApplicationLayer --> Models
-    InfrastructureLayer ..|> PortsOut
-    InfrastructureLayer --> Models
+    InterfacesLayer --> Commands
+    InterfacesLayer --> Handlers
+    InterfacesLayer --> REST_DTOs
+
+    Handlers --> Aggregates
+    Handlers --> DomainRepos
+    Handlers --> Gateways
+    Handlers --> Assemblers
+
+    AppServices --> DomainRepos
+    AppServices --> Gateways
+
+    Adapters ..|> DomainRepos
+    ExternalGateways ..|> Gateways
+    Adapters --> JPA_Repos
+    Adapters --> Entities
+    Adapters --> Mappers
 ```
 
 ---
 
-### 3.4.4. Diagrama de Patrones de Diseño Arquitectónico y de Programación
+### 3.4.4. Diagrama de Patrones de Diseño Arquitectónico y de Programación (DDD + CQRS)
 
 ```mermaid
 flowchart LR
-    subgraph ArquitecturaHexagonal["Patrón Arquitectónico: Arquitectura Hexagonal"]
-        UI["Cliente Web (Angular 18)"] -->|HTTP / REST| InAdapter["Controlador REST (Driving Adapter)"]
-        InAdapter -->|Invoca| PortIn["Puerto de Entrada (Interface)"]
-        PortIn -->|Implementado por| Service["Caso de Uso (Core de Aplicación)"]
-        Service -->|Aplica reglas de| Domain["Modelos de Dominio Inmutables"]
-        Service -->|Invoca| PortOut["Puerto de Salida (Interface)"]
-        PortOut -->|Implementado por| OutAdapter["Adaptador Gateway / Repositorio"]
-        OutAdapter -->|Llamadas HTTP / SQL| CloudServices["API Externa v1.2.0 / OpenRouter / MySQL"]
+    subgraph ArquitecturaCQRS["Patrón Arquitectónico: CQRS (Command Query Responsibility Segregation)"]
+        UI["Cliente Web (Angular 18)"]
+        
+        subgraph WriteSide["Lado de Escritura / Mutación (Commands)"]
+            CMD["Command: GenerateScheduleCommand"]
+            HND["Command Handler: GenerateScheduleCommandHandler"]
+            AGG["Aggregate / Entity: ScheduleInterval"]
+            REPO_W["Repository: IScheduleRepository"]
+        end
+
+        subgraph ReadSide["Lado de Lectura / Consulta (Queries & Read Model)"]
+            QRY["Query: getSchedule(studentCode, period)"]
+            READ_MODEL["Read Model Optimizado (MySQL 8.0 / Local Cache)"]
+        end
+
+        UI -->|POST / Dispatch| CMD
+        CMD --> HND
+        HND -->|Aplica invariantes en| AGG
+        AGG --> REPO_W
+        REPO_W -->|Persiste en| DB[("MySQL 8.0 (InnoDB)")]
+
+        UI -->|GET / Read| QRY
+        QRY --> READ_MODEL
+        DB -.->|Sincroniza / Proyecta| READ_MODEL
     end
 
-    subgraph PatronesDeProgramacion["Patrones de Programación Aplicados"]
-        P1["ReAct Pattern: Orquestación del LLM mediante razonamiento y ejecución de herramientas"]
-        P2["Local-First: Persistencia en navegador (LocalStorage) antes de consultar red"]
-        P3["Signals Pattern: Reactividad fina de UI en componentes Angular"]
-        P4["Singleton Registry: Registro centralizado de funciones ejecutables (AcademicToolRegistry)"]
+    subgraph PatronesDeProgramacion["Patrones Tácticos y de Programación Aplicados"]
+        P1["ReAct Pattern: Razonamiento + Acción con ejecución de herramientas semánticas en LLM"]
+        P2["Local-First: Resiliencia de datos en navegador antes de llamadas de red"]
+        P3["Signals Pattern: Reactividad fina de UI en componentes Angular Standalone"]
+        P4["Assembler Pattern: Transformación desacoplada entre Agregados de Dominio y DTOs de salida"]
+        P5["Value Object: ScheduleInterval y DailyQuotaStatus como objetos inmutables del dominio"]
     end
 ```
 
@@ -572,85 +647,187 @@ flowchart TB
 
 ---
 
-### 3.4.7. Diseño de la Base de Datos
+### 3.4.7. Diseño de la Base de Datos (Modelo Entidad-Relación Relacional)
 
-El diseño de persistencia para esta segunda entrega omite deliberadamente los módulos no esenciales (Marketplace, Red Social y Comunidad) para centrarse exclusivamente en las entidades de autenticación, horarios y sílabos oficiales:
+El esquema de base de datos relacional implementado en **MySQL 8.0 (InnoDB)** modela integralmente el ecosistema académico y de apoyo entre pares. A diferencia de un simple proxy de lectura, el motor relacional actúa como **Read Model persistente y resiliente (CQRS)** con claves foráneas explícitas e integridad referencial en cascada:
 
 ```mermaid
 erDiagram
-    STUDENTS ||--o{ STUDENT_SCHEDULES : posee
+    STUDENTS ||--o{ STUDENT_SCHEDULES : "registra (1:N, Cascade)"
+    STUDENTS ||--o{ TASKS : "posee (1:N, Cascade)"
+    STUDENTS ||--o{ MARKETPLACE_ITEMS : "publica (1:N, Set Null)"
+    OFFICIAL_SYLLABI ||--o{ TASKS : "vincula_asignatura (1:N)"
+
     STUDENTS {
-        varchar student_code PK "Código del estudiante (ej. U23307609)"
-        varchar full_name "Nombre completo oficial"
-        varchar email "Correo institucional institucional"
+        varchar id PK "Identificador único de usuario (usr-...)"
+        varchar student_code UK "Código oficial del estudiante (ej. U23307609)"
+        varchar full_name "Nombres y apellidos completos"
+        varchar email UK "Correo institucional (@utp.edu.pe)"
         varchar career "Carrera profesional matriculada"
         varchar campus "Campus o sede asignada"
-        int current_cycle "Ciclo académico actual"
-        timestamp updated_at "Marca de tiempo de sincronización"
+        int current_cycle "Ciclo académico cursado (1 al 10)"
     }
 
     STUDENT_SCHEDULES {
-        uuid id PK "Identificador único de sincronización"
-        varchar student_code FK "Referencia al estudiante"
+        varchar id PK "Identificador único de snapshot (sched-...)"
+        varchar student_code FK "Referencia a students.student_code (ON DELETE CASCADE)"
         varchar period_name "Periodo lectivo (ej. 2026 - Ciclo 2 Agosto)"
-        jsonb schedule_data "Sesiones completas con aula, horario y temario"
-        varchar last_synced_date "Fecha en formato ISO YYYY-MM-DD"
-        timestamp created_at "Fecha y hora de registro"
+        int week_number "Semana del ciclo sincronizada"
+        int total_weeks "Total de semanas lectivas (18)"
+        longtext schedule_data "JSON inmutable de bloques horarios, aulas y docentes"
+        date last_synced_date "Fecha de última sincronización (YYYY-MM-DD)"
+        datetime created_at "Fecha y hora de registro"
+        datetime updated_at "Fecha de última modificación"
+    }
+
+    TASKS {
+        varchar id PK "Identificador único de tarea (task-...)"
+        varchar student_id FK "Referencia a students.student_code (ON DELETE CASCADE)"
+        varchar course_name "Denominación de la asignatura"
+        varchar section_id "Identificador de sección (SEC-XX)"
+        varchar homework_id "Identificador oficial de la asignación"
+        varchar title "Título de la evaluación o entrega"
+        varchar type "Tipo de asignación (TAREA, PROYECTO, LABORATORIO)"
+        int week "Semana lectiva de vencimiento"
+        varchar homework_status "Estado de entrega (Pendiente, Entregado, Calificado)"
+        varchar assignment_progress "Progreso de realización"
+        datetime due_date "Fecha y hora límite de entrega"
+        datetime delivered_date "Fecha y hora efectiva de entrega"
+        double max_score "Puntaje máximo de la rúbrica (ej. 20.0)"
+        double score "Calificación obtenida"
+        boolean is_delivered "Bandera booleana de estado de entrega"
     }
 
     OFFICIAL_SYLLABI {
-        varchar course_code PK "Código del curso oficial (ej. 100000ST61)"
-        varchar course_name "Nombre de la asignatura"
-        int credits "Créditos universitarios"
-        varchar modality "Presencial / Remoto Zoom / Virtual"
-        varchar formula "Fórmula matemática de calificación"
-        text learning_goal "Logro general de aprendizaje"
-        jsonb evaluations "Evaluaciones, porcentajes y semanas"
-        jsonb weekly_schedule "Contenido temático de las 18 semanas"
-        timestamp updated_at "Fecha de validación del sílabo"
+        varchar course_id PK "ID único de asignatura"
+        varchar course_code UK "Código oficial del curso (ej. 100000SI60)"
+        varchar course_name "Nombre completo de la materia rectora"
+        varchar semester "Semestre o periodo curricular"
+        int credits "Créditos universitarios oficiales"
+        varchar modality "Modalidad (Presencial, Remoto Zoom, Virtual)"
+        text formula "Fórmula matemática oficial de calificación"
+        longtext raw_json_data "JSON con temario de 18 semanas, logros y competencias"
+    }
+
+    MARKETPLACE_ITEMS {
+        varchar id PK "Identificador de oferta/publicación (item-...)"
+        varchar seller_student_code FK "Referencia a students.student_code (ON DELETE SET NULL)"
+        varchar item_type "Tipo de publicación (MATERIAL, SERVICIO, ASESORIA)"
+        varchar category "Categoría académica (TESIS, TUTORIA, LIBROS)"
+        varchar service_type "Modalidad del servicio (RECURSO, ONLINE, PRESENCIAL)"
+        varchar item_condition "Condición del bien (DIGITAL, FISICO)"
+        varchar price "Texto visual formateado (ej. S/. 25.00 o Gratis)"
+        double numeric_price "Monto numérico para transacciones"
+        double original_price "Precio referencial de mercado"
+        varchar unit "Unidad de cobro (PDF, Hora, Sesión)"
+        varchar title "Título de la publicación académica"
+        text description "Descripción pedagógica y alcances"
+        text image_url "URL o banner del recurso"
+        varchar badge "Insignia destacada (POPULAR, TOP RATED)"
+        varchar location "Lugar de encuentro o enlace de sesión"
+        double rating "Calificación promedio de pares (1.0 a 5.0)"
+        int reviews_count "Cantidad de valoraciones recibidas"
+        int sales_count "Intercambios o tutorías concretadas"
+        varchar tutor_name "Nombre del estudiante tutor o autor"
+        varchar tutor_career "Carrera profesional del tutor"
+        int tutor_cycle "Ciclo académico del tutor"
+        int reputation "Puntaje de reputación de la comunidad (0 a 100)"
+        varchar contact_method "Canal de contacto institucional (@utp.edu.pe)"
+        datetime created_at "Fecha y hora de publicación"
     }
 ```
 
 ---
 
-### 3.4.8. Diccionario de Datos
+### 3.4.8. Diccionario de Datos Detallado
 
-#### Tabla: `students`
-Almacena el perfil básico del estudiante autenticado mediante el SSO institucional.
-| Campo | Tipo | Nulo | Clave | Descripción |
-| :--- | :--- | :---: | :---: | :--- |
-| `student_code` | `VARCHAR(20)` | NO | **PK** | Código único de alumno (ej. `U23307609`). |
-| `full_name` | `VARCHAR(150)` | NO | - | Nombre y apellidos oficiales del estudiante. |
-| `email` | `VARCHAR(100)` | NO | - | Correo electrónico institucional (`@utp.edu.pe`). |
-| `career` | `VARCHAR(120)` | SÍ | - | Carrera profesional de matrícula vigente. |
-| `campus` | `VARCHAR(80)` | SÍ | - | Sede o campus universitario asignado. |
-| `current_cycle` | `INTEGER` | SÍ | - | Ciclo cursado actualmente (1 al 10). |
-| `updated_at` | `TIMESTAMPTZ` | NO | - | Timestamp de la última sincronización de perfil. |
+#### 1. Tabla: `students`
+Entidad raíz del agregado de identidad. Mantiene el registro de los estudiantes autenticados y sus metadatos universitarios.
+| Campo | Tipo | Nulo | Clave | Restricciones / Reglas | Descripción |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| `id` | `VARCHAR(100)` | NO | **PK** | `PRIMARY KEY` | Identificador interno único del estudiante (`usr-...`). |
+| `student_code` | `VARCHAR(50)` | NO | **UK** | `UNIQUE, INDEX` | Código oficial universitario (ej. `U23307609`). |
+| `full_name` | `VARCHAR(255)` | NO | - | - | Nombres y apellidos completos según padrón oficial. |
+| `email` | `VARCHAR(150)` | NO | **UK** | `UNIQUE` | Correo electrónico institucional (`@utp.edu.pe`). |
+| `career` | `VARCHAR(200)` | SÍ | - | - | Programa académico o carrera matriculada. |
+| `campus` | `VARCHAR(100)` | SÍ | - | - | Sede universitaria asignada (ej. `Lima Centro`). |
+| `current_cycle` | `INT` | SÍ | - | `DEFAULT 1` | Ciclo académico cursado actualmente (1 al 10). |
 
-#### Tabla: `official_syllabi`
-Repositorio normalizado de sílabos rectores oficiales para enriquecer el horario y alimentar al asistente IA.
-| Campo | Tipo | Nulo | Clave | Descripción |
-| :--- | :--- | :---: | :---: | :--- |
-| `course_code` | `VARCHAR(30)` | NO | **PK** | Código oficial de asignatura (ej. `100000ST61`). |
-| `course_name` | `VARCHAR(150)` | NO | - | Denominación oficial del curso. |
-| `credits` | `INTEGER` | NO | - | Número de créditos académicos del curso. |
-| `modality` | `VARCHAR(30)` | NO | - | Modalidad de dictado: `Presencial`, `Remoto Zoom`, `Virtual`. |
-| `formula` | `VARCHAR(255)` | NO | - | Expresión matemática oficial de calificación del curso. |
-| `learning_goal` | `TEXT` | SÍ | - | Descripción del logro general de aprendizaje de la materia. |
-| `evaluations` | `JSONB` | NO | - | Arreglo JSON con tipo de evaluación, semana y porcentaje oficial. |
-| `weekly_schedule` | `JSONB` | NO | - | Detalle estructurado de unidades, temas y logros por semana. |
-| `updated_at` | `TIMESTAMPTZ` | NO | - | Timestamp de validación e inserción en el sistema. |
+#### 2. Tabla: `student_schedules`
+Almacenamiento del horario estructurado por periodo académico. Funciona como Read Model inmutable para consulta Local-First y resiliencia sin conexión.
+| Campo | Tipo | Nulo | Clave | Restricciones / Reglas | Descripción |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| `id` | `VARCHAR(64)` | NO | **PK** | `PRIMARY KEY` | Identificador único del snapshot de horario (`sched-...`). |
+| `student_code` | `VARCHAR(50)` | NO | **FK** | `FOREIGN KEY (students.student_code) ON DELETE CASCADE` | Código del estudiante propietario del horario. |
+| `period_name` | `VARCHAR(64)` | NO | **UQ** | `UNIQUE(student_code, period_name)` | Periodo académico oficial (ej. `2026 - Ciclo 2 Agosto`). |
+| `week_number` | `INT` | SÍ | - | - | Número de semana del ciclo académico en sincronización. |
+| `total_weeks` | `INT` | SÍ | - | `DEFAULT 18` | Total de semanas lectivas del semestre regular. |
+| `schedule_data` | `LONGTEXT` | SÍ | - | Formato JSON UTF-8 | Matriz completa de cursos, aulas, pabellones y docentes. |
+| `last_synced_date` | `DATE` | NO | - | - | Fecha de última sincronización exitosa (`YYYY-MM-DD`). |
+| `created_at` | `DATETIME` | SÍ | - | `DEFAULT CURRENT_TIMESTAMP` | Marca de tiempo de registro inicial. |
+| `updated_at` | `DATETIME` | SÍ | - | `ON UPDATE CURRENT_TIMESTAMP` | Marca de tiempo de última actualización. |
 
-#### Tabla: `student_schedules`
-Almacenamiento del horario estructurado asociado a cada alumno para contingencia sin conexión.
-| Campo | Tipo | Nulo | Clave | Descripción |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `UUID` | NO | **PK** | Identificador UUID del registro de horario. |
-| `student_code` | `VARCHAR(20)` | NO | **FK** | Código de estudiante relacionado. |
-| `period_name` | `VARCHAR(50)` | NO | - | Periodo académico oficial (ej. `2026 - Ciclo 2 Agosto`). |
-| `schedule_data` | `JSONB` | NO | - | Estructura completa de eventos con aula, docente y tema de clase. |
-| `last_synced_date` | `VARCHAR(10)` | NO | - | Fecha de sincronización en formato `YYYY-MM-DD`. |
-| `created_at` | `TIMESTAMPTZ` | NO | - | Fecha y hora de creación del registro. |
+#### 3. Tabla: `tasks`
+Gestión de evaluaciones continuas, prácticas calificadas, laboratorios y proyectos sincronizados del estudiante.
+| Campo | Tipo | Nulo | Clave | Restricciones / Reglas | Descripción |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| `id` | `VARCHAR(100)` | NO | **PK** | `PRIMARY KEY` | Identificador único de tarea (`task-...`). |
+| `student_id` | `VARCHAR(50)` | NO | **FK** | `FOREIGN KEY (students.student_code) ON DELETE CASCADE` | Código del estudiante asignado a la tarea. |
+| `course_name` | `VARCHAR(255)` | SÍ | - | - | Nombre oficial de la asignatura evaluada. |
+| `section_id` | `VARCHAR(100)` | SÍ | - | - | Sección académica del curso (ej. `SEC-02`). |
+| `homework_id` | `VARCHAR(100)` | SÍ | - | - | Código identificador de la evaluación en plataforma. |
+| `title` | `VARCHAR(255)` | NO | - | - | Título descriptivo de la entrega académica. |
+| `type` | `VARCHAR(50)` | SÍ | - | `DEFAULT 'TAREA'` | Clasificación: `TAREA`, `PROYECTO`, `LABORATORIO`. |
+| `week` | `INT` | SÍ | - | - | Semana curricular en la que vence la evaluación. |
+| `homework_status` | `VARCHAR(50)` | SÍ | - | `INDEX` | Estado operativo: `Pendiente`, `Completada`, `Retrasada`. |
+| `assignment_progress` | `VARCHAR(50)` | SÍ | - | - | Indicador de avance: `En progreso`, `Entregado`. |
+| `due_date` | `DATETIME` | SÍ | - | - | Fecha y hora máxima programada para la entrega. |
+| `delivered_date` | `DATETIME` | SÍ | - | - | Fecha y hora real en que se registró la entrega. |
+| `max_score` | `DOUBLE` | SÍ | - | `DEFAULT 20.0` | Calificación máxima posible según escala vigesimal. |
+| `score` | `DOUBLE` | SÍ | - | - | Nota obtenida por el alumno tras la calificación. |
+| `is_delivered` | `BOOLEAN` | SÍ | - | `DEFAULT FALSE` | Indicador booleano de envío formal de la entrega. |
+
+#### 4. Tabla: `official_syllabi`
+Repositorio normalizado de sílabos rectores oficiales. Alimenta el motor de contexto del Copiloto IA y enriquece los eventos del horario.
+| Campo | Tipo | Nulo | Clave | Restricciones / Reglas | Descripción |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| `course_id` | `VARCHAR(100)` | NO | **PK** | `PRIMARY KEY` | Identificador unívoco del sílabo curricular. |
+| `course_code` | `VARCHAR(50)` | NO | **UK** | `UNIQUE, INDEX` | Código oficial del curso (ej. `100000SI60`). |
+| `course_name` | `VARCHAR(255)` | NO | - | - | Denominación completa de la asignatura rectora. |
+| `semester` | `VARCHAR(50)` | SÍ | - | - | Periodo académico de vigencia del sílabo. |
+| `credits` | `INT` | SÍ | - | `DEFAULT 3` | Valor crediticio académico del curso. |
+| `modality` | `VARCHAR(50)` | SÍ | - | `DEFAULT 'Presencial'` | Modalidad de dictado (`Presencial`, `Remoto Zoom`). |
+| `formula` | `TEXT` | SÍ | - | - | Fórmula matemática oficial de cálculo de promedio. |
+| `raw_json_data` | `LONGTEXT` | SÍ | - | Formato JSON UTF-8 | Estructura detallada de las 18 semanas y competencias. |
+
+#### 5. Tabla: `marketplace_items`
+Dominio de networking y colaboración estudiantil. Facilita el intercambio de guías de tesis, plantillas técnicas, libros y asesorías académicas entre pares.
+| Campo | Tipo | Nulo | Clave | Restricciones / Reglas | Descripción |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| `id` | `VARCHAR(64)` | NO | **PK** | `PRIMARY KEY` | Identificador de la publicación (`item-...`). |
+| `seller_student_code`| `VARCHAR(50)` | SÍ | **FK** | `FOREIGN KEY (students.student_code) ON DELETE SET NULL` | Alumno que publica el recurso o tutoría. |
+| `item_type` | `VARCHAR(32)` | SÍ | - | `INDEX` | Tipo de recurso: `MATERIAL`, `SERVICIO`, `ASESORIA`. |
+| `category` | `VARCHAR(64)` | NO | - | `INDEX` | Categoría temática: `TESIS`, `TUTORIA`, `LIBROS`. |
+| `service_type` | `VARCHAR(64)` | SÍ | - | - | Canal de atención: `RECURSO`, `ONLINE`, `PRESENCIAL`. |
+| `item_condition` | `VARCHAR(64)` | SÍ | - | - | Condición física/lógica: `DIGITAL`, `FISICO`. |
+| `price` | `VARCHAR(32)` | SÍ | - | - | Representación amigable (ej. `S/. 25.00`, `Gratis`). |
+| `numeric_price` | `DOUBLE` | SÍ | - | `DEFAULT 0.00` | Valor monetario decimal para transacciones y filtros. |
+| `original_price` | `DOUBLE` | SÍ | - | - | Precio referencial de mercado antes de descuento. |
+| `unit` | `VARCHAR(32)` | SÍ | - | - | Unidad de entrega: `PDF`, `Hora`, `Sesión`. |
+| `title` | `VARCHAR(255)` | NO | - | - | Encabezado o título descriptivo de la oferta. |
+| `description` | `TEXT` | SÍ | - | - | Detalle de los temas abarcados y contenido pedagógico. |
+| `image_url` | `TEXT` | SÍ | - | - | Imagen de portada o vista previa del material. |
+| `badge` | `VARCHAR(64)` | SÍ | - | - | Insignia de mérito: `POPULAR`, `TOP RATED`. |
+| `location` | `VARCHAR(128)` | SÍ | - | - | Lugar presencial o enlace de conexión remota. |
+| `rating` | `DOUBLE` | SÍ | - | `DEFAULT 5.0` | Calificación promedio de calidad otorgada por alumnos. |
+| `reviews_count` | `INT` | SÍ | - | `DEFAULT 0` | Número de estudiantes que han dejado reseña. |
+| `sales_count` | `INT` | SÍ | - | `DEFAULT 0` | Conteo de descargas o asesorías brindadas. |
+| `tutor_name` | `VARCHAR(128)` | SÍ | - | - | Nombre visible del estudiante tutor o autor. |
+| `tutor_career` | `VARCHAR(128)` | SÍ | - | - | Carrera profesional del tutor. |
+| `tutor_cycle` | `INT` | SÍ | - | - | Ciclo universitario del tutor. |
+| `reputation` | `INT` | SÍ | - | `DEFAULT 100` | Score de confianza estudiantil (0 a 100). |
+| `contact_method` | `VARCHAR(255)` | SÍ | - | - | Correo institucional o método de contacto verificado. |
+| `created_at` | `DATETIME` | SÍ | - | `DEFAULT CURRENT_TIMESTAMP` | Fecha y hora de creación de la publicación. |
 
 ---
 
@@ -813,7 +990,7 @@ Mediante una sesión de modelado de eventos, se identificaron los eventos de dom
 
 ## 4.3. Colaboradores o equipo involucrado en el desarrollo
 * **Joan Laurente (Líder / IA):** Arquitectura agéntica, integración de *Function Calling*, pasarela OpenRouter y orquestador ReAct.
-* **Integrante 2 (Backend):** Implementación de la Arquitectura Hexagonal en Spring Boot 3 y validación de seguridad.
+* **Integrante 2 (Backend):** Implementación de la Arquitectura Domain-Driven Design (DDD) y CQRS en Spring Boot 3 y persistencia relacional MySQL.
 * **Integrante 3 (Frontend):** Construcción de componentes Angular Standalone, Signals y diseño del Tema Oscuro.
 * **Integrante 4 (Base de Datos):** Mapeo relacional, optimización de consultas SQL en MySQL y soporte Local-First.
 * **Integrante 5 (QA / DevOps):** Pipeline de integración continua, configuración de despliegue en Heroku y validación de calidad.
@@ -900,7 +1077,7 @@ El flujo de uso de la aplicación se estructura en los siguientes pasos operativ
 ## 6.1. Potenciales beneficios y aplicaciones del proyecto
 * **Disminución del estrés académico:** Reduce la incertidumbre respecto a las fechas de evaluaciones y la localización de contenidos lectivos.
 * **Fomento de la preparación previa:** Al tener a la vista el tema de la sesión, los estudiantes pueden realizar lecturas anticipadas, elevando la calidad académica de las clases.
-* **Transferibilidad Institucional:** La arquitectura modular y hexagonal del sistema permite adaptar el conector de datos a cualquier universidad que provea horarios y sílabos normalizados.
+* **Transferibilidad Institucional:** La arquitectura modular basada en DDD y CQRS del sistema permite adaptar el conector de datos a cualquier universidad que provea horarios y sílabos normalizados.
 
 ---
 
@@ -937,8 +1114,8 @@ El proyecto cumplió con todos los objetivos trazados para esta segunda entrega 
 
 # 8. Referencias Bibliográficas
 
-1. Cockburn, A. (2005). *Hexagonal architecture (Ports and Adapters)*. Alistair.Cockburn.us.
-2. Evans, E. (2004). *Domain-Driven Design: Tackling Complexity in the Heart of Software*. Addison-Wesley Professional.
+1. Fowler, M. (2011). *CQRS (Command Query Responsibility Segregation)*. martinfowler.com/bliki/CQRS.html.
+2. Evans, E. (2003). *Domain-Driven Design: Tackling Complexity in the Heart of Software*. Addison-Wesley Professional.
 3. Fowler, M. (2018). *Refactoring: Improving the Design of Existing Code* (2nd ed.). Addison-Wesley Professional.
 4. Kleppmann, M., Wiggins, A., van Hardenberg, P., & McGranaghan, M. (2019). *Local-first software: you own your data, in spite of the cloud*. Proceedings of the ACM on Human-Computer Interaction, 3(Onward!), 1–21.
 5. Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., & Cao, Y. (2022). *ReAct: Synergizing Reasoning and Acting in Language Models*. arXiv preprint arXiv:2210.03629.
