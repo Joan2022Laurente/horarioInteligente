@@ -21,7 +21,7 @@ public class TaskController {
 
     private final SyncTaskCommandHandler taskCommandHandler;
     private final SecurityIdentityResolver identityResolver;
-    private final IUtpPortalGateway utpPortalGatewayPort;
+    private final IUtpPortalGateway utpPortalGateway;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TaskSyncItem>>> getTasks(
@@ -32,10 +32,10 @@ public class TaskController {
         if (tasks == null || tasks.isEmpty()) {
             String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
             if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-                effectiveToken = utpPortalGatewayPort.getStudentToken(studentId);
+                effectiveToken = utpPortalGateway.getStudentToken(studentId);
             }
             if (effectiveToken != null && !effectiveToken.isBlank()) {
-                List<UpcomingEvaluationDto> upcoming = utpPortalGatewayPort.fetchUpcomingEvaluations(effectiveToken, 15);
+                List<UpcomingEvaluationDto> upcoming = utpPortalGateway.fetchUpcomingEvaluations(effectiveToken, 15);
                 if (upcoming != null && !upcoming.isEmpty()) {
                     List<TaskSyncItem> mapped = upcoming.stream().map(u -> TaskSyncItem.builder()
                             .id(u.id() != null && !u.id().isBlank() ? u.id() : u.activityId())
@@ -65,9 +65,9 @@ public class TaskController {
             @RequestParam(required = false) Integer week) {
         String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
         if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-            effectiveToken = utpPortalGatewayPort.getStudentToken(studentId);
+            effectiveToken = utpPortalGateway.getStudentToken(studentId);
         }
-        List<TaskSyncItem> activities = utpPortalGatewayPort.fetchActivitiesByWeek(effectiveToken, week);
+        List<TaskSyncItem> activities = utpPortalGateway.fetchActivitiesByWeek(effectiveToken, week);
         return ResponseEntity.ok(ApiResponse.ok(activities));
     }
 
@@ -79,9 +79,9 @@ public class TaskController {
             @RequestParam(defaultValue = "15") int limit) {
         String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
         if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-            effectiveToken = utpPortalGatewayPort.getStudentToken(studentId);
+            effectiveToken = utpPortalGateway.getStudentToken(studentId);
         }
-        List<UpcomingEvaluationDto> upcoming = utpPortalGatewayPort.fetchUpcomingEvaluations(effectiveToken, limit);
+        List<UpcomingEvaluationDto> upcoming = utpPortalGateway.fetchUpcomingEvaluations(effectiveToken, limit);
         return ResponseEntity.ok(ApiResponse.ok(upcoming));
     }
 
@@ -100,7 +100,7 @@ public class TaskController {
                 .token(effectiveToken)
                 .sectionId(sectionId)
                 .build();
-        List<TaskSyncItem> synced = taskCommandHandler.syncTasksFromUtp(command.getStudentId(), command.getToken(), command.getSectionId());
+        List<TaskSyncItem> synced = taskCommandHandler.handle(command);
         return ResponseEntity.ok(ApiResponse.ok("Tareas sincronizadas", synced));
     }
 

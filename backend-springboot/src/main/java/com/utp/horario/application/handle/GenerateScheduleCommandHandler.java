@@ -19,8 +19,12 @@ public class GenerateScheduleCommandHandler {
     private final IUtpPortalGateway utpPortalGateway;
     private final ScheduleAssembler assembler;
 
-    public ScheduleDto handle(GenerateScheduleCommand command) {
-        ScheduleInterval interval = getStudentSchedule(command.getStudentId(), command.getPeriod(), command.getToken());
+    public ScheduleInterval handle(GenerateScheduleCommand command) {
+        return syncScheduleFromUtp(command.getStudentId(), command.getToken(), command.getPeriod());
+    }
+
+    public ScheduleDto handleAsDto(GenerateScheduleCommand command) {
+        ScheduleInterval interval = handle(command);
         return assembler.toDto(interval);
     }
 

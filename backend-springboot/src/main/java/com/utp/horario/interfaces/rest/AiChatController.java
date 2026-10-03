@@ -22,10 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AiChatController {
 
-    private final AiAssistantService aiAssistantServicePort;
-    private final DailyQuotaService dailyQuotaServicePort;
+    private final AiAssistantService aiAssistantService;
+    private final DailyQuotaService dailyQuotaService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGatewayPort;
+    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
     private final com.utp.horario.application.service.tool.AcademicToolService academicToolService;
     private final com.utp.horario.infraestructure.security.SecurityIdentityResolver securityIdentityResolver;
 
@@ -35,7 +35,7 @@ public class AiChatController {
             @RequestBody AiChatRequest request) {
         String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(studentId);
 
-        AiChatMessage response = aiAssistantServicePort.processUserQuery(
+        AiChatMessage response = aiAssistantService.processUserQuery(
                 effectiveStudentCode,
                 request.getMessage(),
                 null,
@@ -65,10 +65,10 @@ public class AiChatController {
         // Registrar el token del alumno para que AcademicToolService pueda llamar a la API externa
         if (effectiveStudentCode != null && !effectiveStudentCode.isBlank()) {
             if (tokenCandidate != null && !tokenCandidate.isBlank()) {
-                utpPortalGatewayPort.registerStudentToken(effectiveStudentCode, tokenCandidate);
+                utpPortalGateway.registerStudentToken(effectiveStudentCode, tokenCandidate);
                 log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
             } else if (request.getToken() != null && !request.getToken().isBlank()) {
-                utpPortalGatewayPort.registerStudentToken(effectiveStudentCode, request.getToken());
+                utpPortalGateway.registerStudentToken(effectiveStudentCode, request.getToken());
                 log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
             }
         }
@@ -97,7 +97,7 @@ public class AiChatController {
         emitter.onError(e -> log.info("[AiChatController] â„¹ï¸ ConexiÃ³n SSE cerrada por cliente"));
 
         java.util.concurrent.CompletableFuture.runAsync(() ->
-            aiAssistantServicePort.streamProcessUserQuery(
+            aiAssistantService.streamProcessUserQuery(
                 effectiveStudentCode,
                 message,
                 model,
@@ -144,7 +144,7 @@ public class AiChatController {
     public ResponseEntity<ApiResponse<DailyQuotaStatus>> getQuota(
             @CurrentStudent(required = false) String studentId) {
         String effectiveUserId = (studentId != null && !studentId.isBlank()) ? studentId : "anonymous_user";
-        DailyQuotaStatus status = dailyQuotaServicePort.checkQuota(effectiveUserId);
+        DailyQuotaStatus status = dailyQuotaService.checkQuota(effectiveUserId);
         return ResponseEntity.ok(ApiResponse.ok(status));
     }
 }

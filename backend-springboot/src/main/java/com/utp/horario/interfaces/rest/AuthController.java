@@ -1,7 +1,6 @@
 package com.utp.horario.interfaces.rest;
 
 import com.utp.horario.application.command.AuthenticateStudentCommand;
-import com.utp.horario.application.dtos.StudentDto;
 import com.utp.horario.application.handle.AuthenticateStudentCommandHandler;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
@@ -25,11 +24,7 @@ public class AuthController {
         if (request.getToken() != null && !request.getToken().isBlank()) {
             profile = authCommandHandler.authenticateWithToken(request.getToken());
         } else {
-            StudentDto dto = authCommandHandler.handle(new AuthenticateStudentCommand(request.getUsername(), request.getPassword()));
-            profile = authCommandHandler.getProfile(dto.getStudentCode());
-            if (profile != null && dto.getToken() != null) {
-                profile.setToken(dto.getToken());
-            }
+            profile = authCommandHandler.handle(new AuthenticateStudentCommand(request.getUsername(), request.getPassword()));
         }
         return ResponseEntity.ok(ApiResponse.ok("Autenticación exitosa", profile));
     }

@@ -219,7 +219,6 @@ export function clearAllLocalUserData(): void {
     removeStorageItem('utp_auth_profile');
     removeStorageItem('utp_current_student_code');
     removeStorageItem('utp_schedule_last_sync_date');
-    removeStorageItem('utp_community_posts_cache');
     removeStorageItem('utp_networking_matches_cache');
     removeStorageItem('utp_my_networking_profile');
     removeStorageItem('utp_networking_profile_hash');

@@ -1,4 +1,4 @@
-export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'community' | 'marketplace' | 'ai';
+export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'marketplace' | 'ai';
 
 export type AgentIntent =
   | { type: 'ANALYZE_COURSE'; courseName: string }

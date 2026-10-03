@@ -20,8 +20,12 @@ public class SyncTaskCommandHandler {
     private final IUtpPortalGateway utpPortalGateway;
     private final TaskAssembler assembler;
 
-    public List<TaskDto> handle(SyncTaskCommand command) {
-        List<TaskSyncItem> items = syncTasksFromUtp(command.getStudentId(), command.getToken(), command.getSectionId());
+    public List<TaskSyncItem> handle(SyncTaskCommand command) {
+        return syncTasksFromUtp(command.getStudentId(), command.getToken(), command.getSectionId());
+    }
+
+    public List<TaskDto> handleAsDto(SyncTaskCommand command) {
+        List<TaskSyncItem> items = handle(command);
         return items.stream().map(assembler::toDto).toList();
     }
 

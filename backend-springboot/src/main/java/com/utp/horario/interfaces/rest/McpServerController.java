@@ -31,7 +31,7 @@ public class McpServerController {
     private final AcademicToolService toolService;
     private final ObjectMapper objectMapper;
     private final com.utp.horario.infraestructure.security.SecurityIdentityResolver identityResolver;
-    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGatewayPort;
+    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
 
     public record McpSession(
             String sessionId,
@@ -42,7 +42,7 @@ public class McpServerController {
     private final Map<String, McpSession> activeSessions = new ConcurrentHashMap<>();
 
     /**
-     * Endpoint informativo para verificaciÃ³n rÃ¡pida desde el navegador o tests HTTP.
+     * Endpoint informativo para verificación rápida desde el navegador o tests HTTP.
      */
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> getMcpInfo() {
@@ -61,8 +61,8 @@ public class McpServerController {
 
     /**
      * 1. Handshake SSE: Gemini o cualquier cliente MCP remoto se conecta a esta URL.
-     * Requiere autenticaciÃ³n mediante Token JWT en Header Authorization o Query Param 'token' / 'studentCode'.
-     * La identidad del estudiante queda blindada e inmutable para toda la duraciÃ³n de la sesiÃ³n.
+     * Requiere autenticación mediante Token JWT en Header Authorization o Query Param 'token' / 'studentCode'.
+     * La identidad del estudiante queda blindada e inmutable para toda la duración de la sesión.
      */
     @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter handleSseConnection(
@@ -81,7 +81,7 @@ public class McpServerController {
         try {
             authenticatedStudentCode = identityResolver.resolveStudentCode(effectiveAuthHeader, effectiveStudentParam);
             if (effectiveAuthHeader != null && !effectiveAuthHeader.isBlank()) {
-                utpPortalGatewayPort.registerStudentToken(authenticatedStudentCode, effectiveAuthHeader);
+                utpPortalGateway.registerStudentToken(authenticatedStudentCode, effectiveAuthHeader);
             }
         } catch (Exception ex) {
             log.warn("[MCP-SSE] â›” ConexiÃ³n rechazada por falta de credenciales vÃ¡lidas: {}", ex.getMessage());

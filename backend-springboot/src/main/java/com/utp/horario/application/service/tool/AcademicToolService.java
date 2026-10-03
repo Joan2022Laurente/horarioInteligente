@@ -26,10 +26,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AcademicToolService {
 
-    private final IScheduleRepository scheduleRepositoryPort;
-    private final ISyllabusRepository syllabusRepositoryPort;
-    private final IStudentRepository studentRepositoryPort;
-    private final IUtpPortalGateway utpPortalGatewayPort;
+    private final IScheduleRepository scheduleRepository;
+    private final ISyllabusRepository syllabusRepository;
+    private final IStudentRepository studentRepository;
+    private final IUtpPortalGateway utpPortalGateway;
     private final ObjectMapper objectMapper;
 
 
@@ -63,7 +63,7 @@ public class AcademicToolService {
         List<ClassSessionDto> dayClasses = new ArrayList<>();
 
         // 1. Intento desde repositorio local MySQL / L1 Cache
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
 
 
 
@@ -106,14 +106,14 @@ public class AcademicToolService {
     private String resolveStudentToken(String studentCode) {
         studentCode = resolveEffectiveStudentCode(studentCode);
         // 1. Caché en memoria del gateway (registrado en cada request SSE)
-        String token = utpPortalGatewayPort.getStudentToken(studentCode);
+        String token = utpPortalGateway.getStudentToken(studentCode);
         if (token != null && !token.isBlank()) {
             log.debug("[AcademicTool] 🔑 Token resuelto desde caché gateway para [{}] (len={})", studentCode, token.length());
             return token;
         }
         // 2. BD MySQL (via StudentRepository)
         if (studentCode != null && !studentCode.isBlank()) {
-            String dbToken = studentRepositoryPort.findByStudentCode(studentCode)
+            String dbToken = studentRepository.findByStudentCode(studentCode)
                     .map(StudentProfile::getToken)
                     .filter(t -> t != null && !t.isBlank())
                     .orElse(null);
@@ -142,7 +142,7 @@ public class AcademicToolService {
         String token = resolveStudentToken(studentCode);
         if (token != null && !token.isBlank()) {
             try {
-                List<CourseSummaryDto> summaries = utpPortalGatewayPort.fetchCoursesSummary(token);
+                List<CourseSummaryDto> summaries = utpPortalGateway.fetchCoursesSummary(token);
                 if (summaries != null && !summaries.isEmpty()) {
                     List<EnrolledCourseDto> courses = summaries.stream()
                             .map(s -> new EnrolledCourseDto(
@@ -160,7 +160,7 @@ public class AcademicToolService {
         }
 
         // 2. Base de datos (MySQL / Caché local)
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
 
         List<EnrolledCourseDto> courses = new ArrayList<>();
         if (scheduleOpt.isPresent()) {
@@ -232,12 +232,12 @@ public class AcademicToolService {
         // 2. Buscar por código resuelto en repositorio (MySQL)
         Optional<Syllabus> syllabusOpt = Optional.empty();
         if (resolvedCourseCode != null) {
-            syllabusOpt = syllabusRepositoryPort.findByCourseCode(resolvedCourseCode.toUpperCase());
+            syllabusOpt = syllabusRepository.findByCourseCode(resolvedCourseCode.toUpperCase());
         }
 
         // 3. Fallback: buscar por query original en repositorio (MySQL)
         if (syllabusOpt.isEmpty()) {
-            syllabusOpt = syllabusRepositoryPort.findByCourseCode(cleanQuery.toUpperCase());
+            syllabusOpt = syllabusRepository.findByCourseCode(cleanQuery.toUpperCase());
         }
 
         String courseCode = syllabusOpt.map(Syllabus::getCourseCode)
@@ -258,7 +258,7 @@ public class AcademicToolService {
         try {
             if (tokenForExternalApi != null && !tokenForExternalApi.isBlank() && courseCode != null && !courseCode.isBlank()) {
                 log.info("[AcademicTool] 📶 [PASO 4a] Intentando Markdown desde API Externa para [{}]...", courseCode);
-                markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(tokenForExternalApi, courseCode);
+                markdown = utpPortalGateway.fetchSyllabusMarkdown(tokenForExternalApi, courseCode);
                 if (markdown != null && !markdown.isBlank()) {
                     log.info("[AcademicTool] ✅ [PASO 4a HIT] Markdown obtenido para [{}] ({} caracteres)", courseCode, markdown.length());
                 } else {
@@ -277,7 +277,7 @@ public class AcademicToolService {
                 if (tokenForExternalApi != null && !tokenForExternalApi.isBlank()) {
                     String codeToTry = resolvedCourseCode != null ? resolvedCourseCode : cleanQuery;
                     log.info("[AcademicTool] 🔄 [PASO 4b] fetchSyllabus() JSON para [{}]...", codeToTry);
-                    Syllabus apiSyllabus = utpPortalGatewayPort.fetchSyllabus(tokenForExternalApi, codeToTry, null, null);
+                    Syllabus apiSyllabus = utpPortalGateway.fetchSyllabus(tokenForExternalApi, codeToTry, null, null);
                     if (apiSyllabus != null) {
                         syllabusOpt = Optional.of(apiSyllabus);
                         log.info("[AcademicTool] ✅ [PASO 4b HIT] fetchSyllabus() exitoso para [{}]. Semanas={}, Evals={}",
@@ -285,7 +285,7 @@ public class AcademicToolService {
                                 apiSyllabus.getWeeklySchedule() != null ? apiSyllabus.getWeeklySchedule().size() : 0,
                                 apiSyllabus.getEvaluations() != null ? apiSyllabus.getEvaluations().size() : 0);
                         try {
-                            syllabusRepositoryPort.save(apiSyllabus);
+                            syllabusRepository.save(apiSyllabus);
                             log.info("[AcademicTool] 💾 Sílabo [{}] persistido en base de datos (MySQL)", codeToTry);
                         } catch (Exception persistEx) {
                             log.debug("[AcademicTool] No se pudo persistir sílabo en base de datos: {}", persistEx.getMessage());
@@ -379,7 +379,7 @@ public class AcademicToolService {
         String token = resolveStudentToken(studentCode);
         if (token != null && !token.isBlank()) {
             try {
-                List<UpcomingEvaluationDto> externalUpcoming = utpPortalGatewayPort.fetchUpcomingEvaluations(token, 5);
+                List<UpcomingEvaluationDto> externalUpcoming = utpPortalGateway.fetchUpcomingEvaluations(token, 5);
                 if (externalUpcoming != null && !externalUpcoming.isEmpty()) {
                     List<EvaluationSummaryDto> mapped = new ArrayList<>();
                     for (UpcomingEvaluationDto u : externalUpcoming) {
@@ -418,7 +418,7 @@ public class AcademicToolService {
 
         for (EnrolledCourseDto course : courseList) {
             String code = course.courseCode();
-            Optional<Syllabus> sylOpt = syllabusRepositoryPort.findByCourseCode(code);
+            Optional<Syllabus> sylOpt = syllabusRepository.findByCourseCode(code);
 
             if (sylOpt.isPresent() && sylOpt.get().getEvaluations() != null) {
                 sylOpt.get().getEvaluations().stream()

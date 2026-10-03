@@ -23,9 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SyllabusController {
 
-    private final SyllabusService syllabusServicePort;
+    private final SyllabusService syllabusService;
     private final SecurityIdentityResolver identityResolver;
-    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGatewayPort;
+    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
 
     @GetMapping("/{courseCode}")
     public ResponseEntity<ApiResponse<Syllabus>> getSyllabus(
@@ -34,7 +34,7 @@ public class SyllabusController {
             @RequestParam(required = false) String pdfUrl,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         String token = identityResolver.extractBearerToken(authHeader);
-        Syllabus syllabus = syllabusServicePort.getSyllabus(courseCode, sectionId, pdfUrl, token);
+        Syllabus syllabus = syllabusService.getSyllabus(courseCode, sectionId, pdfUrl, token);
         return ResponseEntity.ok(ApiResponse.ok(syllabus));
     }
 
@@ -43,13 +43,13 @@ public class SyllabusController {
             @PathVariable String courseCode,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         String token = identityResolver.extractBearerToken(authHeader);
-        String markdown = utpPortalGatewayPort.fetchSyllabusMarkdown(token, courseCode);
+        String markdown = utpPortalGateway.fetchSyllabusMarkdown(token, courseCode);
         return ResponseEntity.ok(markdown != null ? markdown : "");
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Syllabus>>> getAllSyllabi(@CurrentStudent String studentId) {
-        List<Syllabus> list = syllabusServicePort.getAllSyllabiForStudent(studentId);
+        List<Syllabus> list = syllabusService.getAllSyllabiForStudent(studentId);
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
@@ -61,7 +61,7 @@ public class SyllabusController {
         if (token == null || token.isBlank()) {
             throw new SecurityException("Acceso no autorizado: Se requiere token de sesión para persistir sílabos.");
         }
-        Syllabus saved = syllabusServicePort.saveSyllabus(syllabus);
+        Syllabus saved = syllabusService.saveSyllabus(syllabus);
         return ResponseEntity.ok(ApiResponse.ok("Sílabo guardado exitosamente en base de datos", saved));
     }
 }

@@ -27,14 +27,18 @@ public class AuthenticateStudentCommandHandler {
     private final StudentAssembler assembler;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public StudentDto handle(AuthenticateStudentCommand command) {
+    public StudentProfile handle(AuthenticateStudentCommand command) {
         StudentProfile profile = utpPortalGateway.login(command.getUsername(), command.getPassword());
         String token = profile != null ? profile.getToken() : null;
         StudentProfile saved = repository.save(profile);
         if (saved != null && token != null) {
             saved.setToken(token);
         }
-        return assembler.toDto(saved != null ? saved : profile);
+        return saved != null ? saved : profile;
+    }
+
+    public StudentDto handleAsDto(AuthenticateStudentCommand command) {
+        return assembler.toDto(handle(command));
     }
 
     public StudentProfile authenticateWithToken(String token) {
