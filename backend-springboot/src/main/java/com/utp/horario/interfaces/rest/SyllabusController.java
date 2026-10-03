@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/syllabus")
+@RequestMapping({"/syllabus", "/api/v1/syllabus"})
 @RequiredArgsConstructor
 public class SyllabusController {
 

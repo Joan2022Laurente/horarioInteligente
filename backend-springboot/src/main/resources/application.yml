@@ -12,12 +12,7 @@ spring:
     driver-class-name: ${MYSQL_DRIVER:com.mysql.cj.jdbc.Driver}
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:}
-  h2:
-    console:
-      enabled: false
-      path: /h2-console
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
     show-sql: false

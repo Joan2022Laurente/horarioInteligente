@@ -34,7 +34,7 @@ public class SyllabusEntity {
     private String formula;
 
     @Lob
-    @Column(length = 65536)
+    @Column(name = "raw_json_data", columnDefinition = "LONGTEXT")
     private String rawJsonData;
 }
 

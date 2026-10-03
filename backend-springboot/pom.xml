@@ -42,12 +42,6 @@
         </dependency>
 
 
-        <!-- Base de datos H2 de respaldo para desarrollo local -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- Driver Oficial MySQL para MySQL Workbench y Evaluacion de Cátedra -->
         <dependency>

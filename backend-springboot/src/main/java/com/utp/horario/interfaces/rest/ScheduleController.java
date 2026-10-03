@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/schedule")
+@RequestMapping({"/schedule", "/api/v1/schedule"})
 @RequiredArgsConstructor
 public class ScheduleController {
 

@@ -45,7 +45,7 @@ public class StudentScheduleEntity {
     private Integer totalWeeks;
 
     @Lob
-    @Column(name = "schedule_data", columnDefinition = "TEXT")
+    @Column(name = "schedule_data", columnDefinition = "LONGTEXT")
     private String scheduleData;
 
     @Column(name = "last_synced_date", nullable = false)
