@@ -29,7 +29,7 @@ Esta guía detalla los pasos para configurar, ejecutar y sustentar la base de da
 4. En la pestaña **SSL**:
    * **Use SSL:** Seleccionar `Require` o `If Available`.
 5. Haz clic en **Test Connection**, introduce tu contraseña y pulsa **OK**.
-6. *(Opcional)* Como la base de datos ya fue desplegada y poblada en la nube, al ingresar verás inmediatamente las 5 tablas creadas (`students`, `student_schedules`, `student_tasks`, `syllabuses`, `marketplace_items`) con los datos de prueba.
+6. *(Opcional)* Como la base de datos ya fue desplegada y poblada en la nube, al ingresar verás inmediatamente las 5 tablas creadas (`students`, `student_schedules`, `tasks`, `official_syllabi`, `marketplace_items`) con los datos de prueba.
 
 ---
 
@@ -45,8 +45,8 @@ Esta guía detalla los pasos para configurar, ejecutar y sustentar la base de da
 7. Verás la base de datos **`horariodb`** con las 5 tablas del dominio:
    * `students`: Información del estudiante y ciclo académico.
    * `student_schedules`: Horario del ciclo con asignaturas y bloques.
-   * `student_tasks`: Tareas, entregas y evaluaciones ponderadas.
-   * `syllabuses`: Sílabos oficiales con fórmulas y créditos.
+   * `tasks`: Tareas, entregas y evaluaciones ponderadas.
+   * `official_syllabi`: Sílabos oficiales con fórmulas y créditos.
    * `marketplace_items`: Publicaciones de apoyo y apuntes estudiantiles.
 
 ---
@@ -93,11 +93,11 @@ USE horariodb;
 SELECT id, student_code, full_name, career, current_cycle FROM students;
 
 -- 2. Ver tareas y evaluaciones sincronizadas
-SELECT course_name, title, due_date, priority, status FROM student_tasks;
+SELECT course_name, title, due_date, homework_status, is_delivered FROM tasks;
 
 -- 3. Ver fórmulas de evaluación de sílabos
-SELECT course_code, course_name, credits, formula FROM syllabuses;
+SELECT course_code, course_name, credits, formula FROM official_syllabi;
 
 -- 4. Ver artículos del Marketplace
-SELECT title, seller_name, category, price FROM marketplace_items;
+SELECT title, tutor_name, category, price FROM marketplace_items;
 ```
