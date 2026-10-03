@@ -14,8 +14,8 @@
 
 | Apellidos y nombres | % de participación |
 |---|---:|
-| Laurente, Joan (Líder - Ingeniero de Inteligencia Artificial & Agentes Autónomos) | 100% |
-| Integrante 2 (Arquitecto de Software & Backend Lead) | 100% |
+| Laurente, Joan (Ingeniero de Inteligencia Artificial & Agentes Autónomos) | 100% |
+| Integrante 2 (Arquitecto de Software & Backend) | 100% |
 | Integrante 3 (Desarrollador Frontend Angular - UI/UX) | 100% |
 | Integrante 4 (Ingeniero de Base de Datos & Persistencia Cloud) | 100% |
 | Integrante 5 (Ingeniero de Calidad QA & DevOps) | 100% |
@@ -156,7 +156,7 @@ El equipo de trabajo está compuesto por 5 estudiantes de Ingeniería de Sistema
    * Integración del cliente OpenRouter para el modelo LLaMA 3.3 70B y anclaje de datos (*grounding*) para evitar alucinaciones.
    * Gestión de streaming de respuestas vía Server-Sent Events (SSE).
 
-2. **Arquitecto de Software & Backend Lead:**
+2. **Arquitecto de Software & Backend:**
    * Estructuración de la Arquitectura DDD y CQRS en Spring Boot 3.3.
    * Aislamiento del dominio académico y diseño de los contratos REST de la API Externa v1.2.0.
    * Implementación de filtros de seguridad, resolución de identidad de estudiantes y configuración de CORS.
@@ -989,7 +989,7 @@ Mediante una sesión de modelado de eventos, se identificaron los eventos de dom
 ---
 
 ## 4.3. Colaboradores o equipo involucrado en el desarrollo
-* **Joan Laurente (Líder / IA):** Arquitectura agéntica, integración de *Function Calling*, pasarela OpenRouter y orquestador ReAct.
+* **Joan Laurente (Inteligencia Artificial):** Arquitectura agéntica, integración de *Function Calling*, pasarela OpenRouter y orquestador ReAct.
 * **Integrante 2 (Backend):** Implementación de la Arquitectura Domain-Driven Design (DDD) y CQRS en Spring Boot 3 y persistencia relacional MySQL.
 * **Integrante 3 (Frontend):** Construcción de componentes Angular Standalone, Signals y diseño del Tema Oscuro.
 * **Integrante 4 (Base de Datos):** Mapeo relacional, optimización de consultas SQL en MySQL y soporte Local-First.
