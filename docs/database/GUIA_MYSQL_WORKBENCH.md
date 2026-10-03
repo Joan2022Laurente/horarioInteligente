@@ -14,8 +14,26 @@ Esta guía detalla los pasos para configurar, ejecutar y sustentar la base de da
 
 ---
 
-## 2. Paso a Paso: Importar la Base de Datos en MySQL Workbench
+## 2. Paso a Paso: Conexión en MySQL Workbench
 
+### Opción A: Conexión a Base de Datos en la Nube (Aiven Cloud)
+1. Abre **MySQL Workbench**.
+2. En la pantalla de inicio, haz clic en el botón **`+`** (junto a *MySQL Connections*).
+3. Configura los parámetros:
+   * **Connection Name:** `Aiven Cloud - Horario UTP`
+   * **Connection Method:** `Standard (TCP/IP)`
+   * **Hostname:** `mysql-horario-utp-horario.k.aivencloud.com`
+   * **Port:** `26871`
+   * **Username:** `horario_admin` (o `avnadmin`)
+   * **Default Schema:** `horariodb`
+4. En la pestaña **SSL**:
+   * **Use SSL:** Seleccionar `Require` o `If Available`.
+5. Haz clic en **Test Connection**, introduce tu contraseña y pulsa **OK**.
+6. *(Opcional)* Como la base de datos ya fue desplegada y poblada en la nube, al ingresar verás inmediatamente las 5 tablas creadas (`students`, `student_schedules`, `student_tasks`, `syllabuses`, `marketplace_items`) con los datos de prueba.
+
+---
+
+### Opción B: Conexión Local (XAMPP / MySQL Server Local)
 1. Abre **MySQL Workbench**.
 2. Haz clic en tu conexión local (generalmente **Local instance MySQL** en el puerto 3306, usuario `root`).
 3. Ve al menú superior:
@@ -48,20 +66,16 @@ Los docentes suelen solicitar el diagrama visual de la base de datos:
 
 Para que el backend Spring Boot guarde y consulte directamente desde MySQL:
 
-### Opción 1: Con Maven Wrapper (Recomendada)
-```bash
-cd backend-springboot
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=mysql
-```
-
-### Opción 2: Con el archivo JAR compilado
+### Opción 1: Con MySQL Local (XAMPP / Puerto 3306)
 ```bash
 cd backend-springboot
 java -jar target/horario-backend-1.0.0.jar --spring.profiles.active=mysql
 ```
 
-*Si tu usuario de MySQL tiene contraseña distinta a la vacía, pásala por variable de entorno:*
+### Opción 2: Con Aiven Cloud MySQL
 ```powershell
+$env:MYSQL_URL="jdbc:mysql://mysql-horario-utp-horario.k.aivencloud.com:26871/horariodb?sslMode=REQUIRED"
+$env:MYSQL_USER="horario_admin"
 $env:MYSQL_PASSWORD="tu_password"
 java -jar target/horario-backend-1.0.0.jar --spring.profiles.active=mysql
 ```
