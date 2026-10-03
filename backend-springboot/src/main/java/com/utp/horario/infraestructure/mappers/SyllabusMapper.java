@@ -16,22 +16,27 @@ public class SyllabusMapper {
 
     public Syllabus toDomain(SyllabusEntity entity) {
         if (entity == null) return null;
+        Syllabus domain = null;
         try {
             if (entity.getRawJsonData() != null && !entity.getRawJsonData().isBlank()) {
-                return objectMapper.readValue(entity.getRawJsonData(), Syllabus.class);
+                domain = objectMapper.readValue(entity.getRawJsonData(), Syllabus.class);
             }
         } catch (Exception e) {
             log.warn("Error parseando rawJsonData para silabo [{}]: {}", entity.getCourseCode(), e.getMessage());
         }
-        return Syllabus.builder()
-                .id(entity.getId())
-                .courseCode(entity.getCourseCode())
-                .courseName(entity.getCourseName())
-                .semester(entity.getSemester())
-                .credits(entity.getCredits())
-                .modality(entity.getModality())
-                .formula(entity.getFormula())
-                .build();
+
+        if (domain == null) {
+            domain = Syllabus.builder().build();
+        }
+        if (domain.getId() == null) domain.setId(entity.getId());
+        if (domain.getCourseCode() == null) domain.setCourseCode(entity.getCourseCode());
+        if (domain.getCourseName() == null) domain.setCourseName(entity.getCourseName());
+        if (domain.getSemester() == null) domain.setSemester(entity.getSemester());
+        if (domain.getCredits() == null) domain.setCredits(entity.getCredits());
+        if (domain.getModality() == null) domain.setModality(entity.getModality());
+        if (domain.getFormula() == null) domain.setFormula(entity.getFormula());
+
+        return domain;
     }
 
     public SyllabusEntity toEntity(Syllabus syllabus) {

@@ -32,7 +32,7 @@ public class SyllabusServiceImpl implements SyllabusService {
     @Override
     public Syllabus getSyllabus(String courseCode, String sectionId, String pdfUrl, String token) {
         return syllabusRepository.findByCourseCode(courseCode)
-                .filter(s -> s.getFormula() != null && !s.getFormula().isBlank() && s.getWeeklySchedule() != null && !s.getWeeklySchedule().isEmpty())
+                .filter(s -> (s.getFormula() != null && !s.getFormula().isBlank()) || (s.getCourseName() != null && !s.getCourseName().isBlank() && !s.getCourseName().equals(courseCode)))
                 .orElseGet(() -> {
                     log.info("[SyllabusServiceImpl] Solicitando sílabo oficial v1.2.0 para courseCode='{}' (sectionId='{}', pdfUrl='{}')",
                             courseCode, sectionId, pdfUrl);
