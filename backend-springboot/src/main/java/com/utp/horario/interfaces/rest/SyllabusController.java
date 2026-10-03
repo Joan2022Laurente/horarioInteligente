@@ -54,9 +54,15 @@ public class SyllabusController {
     }
 
     @PostMapping("/save")
-    public ResponseEntity<ApiResponse<Syllabus>> saveSyllabus(@RequestBody Syllabus syllabus) {
+    public ResponseEntity<ApiResponse<Syllabus>> saveSyllabus(
+            @RequestBody Syllabus syllabus,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String token = identityResolver.extractBearerToken(authHeader);
+        if (token == null || token.isBlank()) {
+            throw new SecurityException("Acceso no autorizado: Se requiere token de sesión para persistir sílabos.");
+        }
         Syllabus saved = syllabusServicePort.saveSyllabus(syllabus);
-        return ResponseEntity.ok(ApiResponse.ok("SÃ­labo guardado exitosamente en base de datos", saved));
+        return ResponseEntity.ok(ApiResponse.ok("Sílabo guardado exitosamente en base de datos", saved));
     }
 }
 

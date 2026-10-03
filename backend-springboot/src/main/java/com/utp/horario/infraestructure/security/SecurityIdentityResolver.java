@@ -97,32 +97,42 @@ public class SecurityIdentityResolver {
     }
 
     /**
-     * Resuelve de forma autoritativa el cÃ³digo del estudiante.
-     * Si existe un token Bearer en el request, el cÃ³digo extraÃ­do del token TIENE PRIORIDAD ABSOLUTA
-     * sobre cualquier parÃ¡metro studentId enviado en query o body, neutralizando ataques IDOR/BOLA.
+     * Resuelve de forma autoritativa el código del estudiante.
+     * Si existe un token Bearer en el request, el código extraído del token TIENE PRIORIDAD ABSOLUTA
+     * sobre cualquier parámetro studentId enviado en query o body, neutralizando ataques IDOR/BOLA.
      */
-    public String resolveStudentCode(String authHeader, String paramStudentId) {
+    public String resolveStudentCode(String authHeader, String xUserIdHeader, String paramStudentId) {
         String token = extractBearerToken(authHeader);
-        if (token != null) {
+        if (token != null && !token.isBlank()) {
             String tokenStudentCode = extractStudentCodeFromToken(token);
             if (tokenStudentCode != null && !tokenStudentCode.isBlank()) {
                 if (paramStudentId != null && !paramStudentId.isBlank()
                         && !paramStudentId.equalsIgnoreCase(tokenStudentCode)
                         && !"current-student".equalsIgnoreCase(paramStudentId)) {
-                    log.warn("[SecurityIdentityResolver] âš ï¸ Posible intento BOLA/IDOR detectado: Token pertenece a [{}] pero el request intentÃ³ consultar [{}]. Enforzando identidad del token.",
+                    log.warn("[SecurityIdentityResolver] ⚠️ Intento BOLA/IDOR bloqueado: Token pertenece a [{}] pero el request intentó consultar [{}].",
                             tokenStudentCode, paramStudentId);
+                    throw new SecurityException("Acceso prohibido (403): Intento de consulta cruzada no autorizada al recurso del estudiante [" + paramStudentId + "].");
                 }
                 return tokenStudentCode;
             }
+
+            // Si el token no expone claims legibles en claro pero está presente,
+            // verificar si el cliente adjuntó una identidad con formato oficial (ej. x-user-id)
+            if (xUserIdHeader != null && xUserIdHeader.trim().toUpperCase().matches("^[Uu]\\d{8}$")) {
+                return xUserIdHeader.trim().toUpperCase();
+            }
+
+            if (paramStudentId != null && paramStudentId.trim().toUpperCase().matches("^[Uu]\\d{8}$")) {
+                return paramStudentId.trim().toUpperCase();
+            }
         }
 
-        // Si no hay token o no se pudo extraer identidad del token
-        if (paramStudentId != null && !paramStudentId.isBlank() && !"current-student".equalsIgnoreCase(paramStudentId)) {
-            return paramStudentId.trim().toUpperCase();
-        }
+        // Si NO hay token legítimo, rechazo terminante para evitar acceso no autenticado o IDOR
+        throw new SecurityException("Acceso no autorizado: Se requiere un token de sesión legítimo de UTP.");
+    }
 
-        // Rechazo terminante de identidades genÃ©ricas no seguras
-        throw new SecurityException("Acceso no autorizado: Se requiere un token de sesiÃ³n o un cÃ³digo de estudiante legÃ­timo.");
+    public String resolveStudentCode(String authHeader, String paramStudentId) {
+        return resolveStudentCode(authHeader, null, paramStudentId);
     }
 }
 

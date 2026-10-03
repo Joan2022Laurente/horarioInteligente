@@ -33,10 +33,7 @@ public class AiChatController {
     public ResponseEntity<ApiResponse<AiChatMessage>> chat(
             @CurrentStudent(required = false) String studentId,
             @RequestBody AiChatRequest request) {
-        String codeCandidate = (studentId != null && !studentId.isBlank() && !"current-student".equalsIgnoreCase(studentId)) 
-                ? studentId 
-                : (request.getUserId() != null && !request.getUserId().isBlank() && !"current-student".equalsIgnoreCase(request.getUserId()) ? request.getUserId() : null);
-        String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(codeCandidate);
+        String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(studentId);
 
         AiChatMessage response = aiAssistantServicePort.processUserQuery(
                 effectiveStudentCode,
@@ -52,26 +49,28 @@ public class AiChatController {
     @PostMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter streamChatPost(
             @CurrentStudent(required = false) String studentId,
-            @org.springframework.web.bind.annotation.RequestParam(name = "studentId", required = false) String queryStudentId,
             @RequestBody com.utp.horario.interfaces.rest.dto.AiChatStreamRequest request) {
         
-        String codeCandidate = null;
-        if (studentId != null && !studentId.isBlank() && !"current-student".equalsIgnoreCase(studentId)) {
-            codeCandidate = studentId;
-        } else if (queryStudentId != null && !queryStudentId.isBlank() && !"current-student".equalsIgnoreCase(queryStudentId)) {
-            codeCandidate = queryStudentId;
-        } else if (request.getStudentCode() != null && !request.getStudentCode().isBlank() && !"current-student".equalsIgnoreCase(request.getStudentCode())) {
-            codeCandidate = request.getStudentCode();
-        } else if (request.getToken() != null && !request.getToken().isBlank()) {
-            codeCandidate = securityIdentityResolver.extractStudentCodeFromToken(request.getToken());
+        String codeCandidate = studentId;
+        String tokenCandidate = null;
+        if (codeCandidate == null || codeCandidate.isBlank() || "current-student".equalsIgnoreCase(codeCandidate)) {
+            if (request.getToken() != null && !request.getToken().isBlank()) {
+                codeCandidate = securityIdentityResolver.extractStudentCodeFromToken(request.getToken());
+                tokenCandidate = request.getToken();
+            }
         }
 
         String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(codeCandidate);
 
         // Registrar el token del alumno para que AcademicToolService pueda llamar a la API externa
-        if (request.getToken() != null && !request.getToken().isBlank()) {
-            utpPortalGatewayPort.registerStudentToken(effectiveStudentCode, request.getToken());
-            log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
+        if (effectiveStudentCode != null && !effectiveStudentCode.isBlank()) {
+            if (tokenCandidate != null && !tokenCandidate.isBlank()) {
+                utpPortalGatewayPort.registerStudentToken(effectiveStudentCode, tokenCandidate);
+                log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
+            } else if (request.getToken() != null && !request.getToken().isBlank()) {
+                utpPortalGatewayPort.registerStudentToken(effectiveStudentCode, request.getToken());
+                log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
+            }
         }
         return executeStreamEmitter(effectiveStudentCode, request.getMessage(), request.getModel(), request.getHistory());
     }
@@ -79,12 +78,8 @@ public class AiChatController {
     @GetMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter streamChatGet(
             @CurrentStudent(required = false) String studentId,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String studentCode,
             @org.springframework.web.bind.annotation.RequestParam String message) {
-        String codeCandidate = (studentId != null && !studentId.isBlank() && !"current-student".equalsIgnoreCase(studentId)) 
-                ? studentId 
-                : (studentCode != null && !studentCode.isBlank() && !"current-student".equalsIgnoreCase(studentCode) ? studentCode : null);
-        String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(codeCandidate);
+        String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(studentId);
         return executeStreamEmitter(effectiveStudentCode, message, null, null);
     }
 

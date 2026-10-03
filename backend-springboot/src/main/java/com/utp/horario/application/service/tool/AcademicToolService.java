@@ -38,19 +38,7 @@ public class AcademicToolService {
         if (studentCode != null && !studentCode.isBlank() && !"current-student".equalsIgnoreCase(studentCode)) {
             return studentCode.trim().toUpperCase();
         }
-        try {
-            List<StudentProfile> students = studentRepositoryPort.list();
-            if (students != null && !students.isEmpty()) {
-                String resolved = students.get(students.size() - 1).getStudentCode();
-                if (resolved != null && !resolved.isBlank()) {
-                    log.info("[AcademicTool] 💡 studentCode 'current-student' resuelto automáticamente a [{}] desde BD local", resolved);
-                    return resolved.trim().toUpperCase();
-                }
-            }
-        } catch (Exception e) {
-            log.warn("[AcademicTool] Error al resolver estudiante fallback: {}", e.getMessage());
-        }
-        return "U23307609";
+        return null;
     }
 
     /**
@@ -59,17 +47,22 @@ public class AcademicToolService {
      */
     public DayScheduleResult getTodaySchedule(String studentCode, String dateIso) {
         studentCode = resolveEffectiveStudentCode(studentCode);
-        // Fijar zona horaria de Perú para evitar inconsistencias en Heroku (que corre en UTC)
         java.time.ZoneId LIMA = java.time.ZoneId.of("America/Lima");
         LocalDate today = (dateIso != null && !dateIso.isBlank())
                 ? LocalDate.parse(dateIso)
                 : LocalDate.now(LIMA);
+
+        if (studentCode == null || studentCode.isBlank()) {
+            return new DayScheduleResult("", today.toString(), 0, List.of(),
+                    "No se identificó una sesión de estudiante activa. Inicia sesión para consultar tu horario personal.");
+        }
+
         DayOfWeek dayOfWeek = today.getDayOfWeek();
         log.info("[AcademicTool] 📅 Consultando horario de hoy: fecha={}, día={}, studentCode={}", today, dayOfWeek, studentCode);
 
         List<ClassSessionDto> dayClasses = new ArrayList<>();
 
-        // 1. Intento desde repositorio local H2 / L1 Cache
+        // 1. Intento desde repositorio local MySQL / L1 Cache
         Optional<ScheduleInterval> scheduleOpt = scheduleRepositoryPort.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
 
 
@@ -139,6 +132,10 @@ public class AcademicToolService {
      */
     public EnrolledCoursesResult getEnrolledCourses(String studentCode) {
         studentCode = resolveEffectiveStudentCode(studentCode);
+        if (studentCode == null || studentCode.isBlank()) {
+            return new EnrolledCoursesResult("", 0, List.of(),
+                    "No se identificó una sesión de estudiante activa. Inicia sesión para consultar tus asignaturas.");
+        }
         log.info("[AcademicTool] 🎓 Consultando cursos matriculados para alumno {}", studentCode);
 
         // 1. Fuente Primaria Institucional: API Externa Gateway /courses/summary
@@ -373,6 +370,9 @@ public class AcademicToolService {
      */
     public List<EvaluationSummaryDto> getUpcomingEvaluations(String studentCode, int currentWeek) {
         studentCode = resolveEffectiveStudentCode(studentCode);
+        if (studentCode == null || studentCode.isBlank()) {
+            return List.of();
+        }
         log.info("[AcademicTool] 🎯 Consultando evaluaciones próximas para alumno {} desde semana {}", studentCode, currentWeek);
 
         // 1. Fuente Prioritaria Institucional: API Externa Gateway /tasks/upcoming?limit=5

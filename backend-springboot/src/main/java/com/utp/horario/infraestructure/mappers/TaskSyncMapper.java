@@ -9,9 +9,10 @@ public class TaskSyncMapper {
 
     public TaskSyncEntity toEntity(TaskSyncItem d) {
         if (d == null) return null;
+        String sid = (d.getStudentId() != null && !d.getStudentId().isBlank()) ? d.getStudentId() : "current-student";
         return TaskSyncEntity.builder()
                 .id(d.getId())
-                .studentId("current-student")
+                .studentId(sid)
                 .courseName(d.getCourseName())
                 .sectionId(d.getSectionId())
                 .homeworkId(d.getHomeworkId())
@@ -32,6 +33,7 @@ public class TaskSyncMapper {
         if (e == null) return null;
         return TaskSyncItem.builder()
                 .id(e.getId())
+                .studentId(e.getStudentId())
                 .courseName(e.getCourseName())
                 .sectionId(e.getSectionId())
                 .homeworkId(e.getHomeworkId())

@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TaskSyncItem {
     private String id;
+    private String studentId;
     private String courseName;
     private String sectionId;
     private String homeworkId;

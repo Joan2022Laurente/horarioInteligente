@@ -30,21 +30,22 @@ public class CurrentStudentArgumentResolver implements HandlerMethodArgumentReso
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
         String authHeader = webRequest.getHeader("Authorization");
+        String xUserId = webRequest.getHeader("x-user-id");
         String paramStudentId = webRequest.getParameter("studentId");
         CurrentStudent annotation = parameter.getParameterAnnotation(CurrentStudent.class);
         boolean required = annotation == null || annotation.required();
 
         String resolved = null;
         try {
-            resolved = identityResolver.resolveStudentCode(authHeader, paramStudentId);
+            resolved = identityResolver.resolveStudentCode(authHeader, xUserId, paramStudentId);
         } catch (Exception e) {
             if (required) {
-                throw new SecurityException("Acceso no autorizado: Se requiere un token de sesiÃ³n o un cÃ³digo de estudiante legÃ­timo.");
+                throw new SecurityException("Acceso no autorizado: Se requiere un token de sesión legítimo de UTP.");
             }
         }
 
         if (required && (resolved == null || resolved.isBlank())) {
-            throw new SecurityException("Acceso no autorizado: Se requiere un token de sesiÃ³n o un cÃ³digo de estudiante legÃ­timo.");
+            throw new SecurityException("Acceso no autorizado: Se requiere un token de sesión legítimo de UTP.");
         }
 
         return resolved;

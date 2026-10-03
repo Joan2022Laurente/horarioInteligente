@@ -21,7 +21,7 @@ public class SyncTaskCommandHandler {
     private final TaskAssembler assembler;
 
     public List<TaskDto> handle(SyncTaskCommand command) {
-        List<TaskSyncItem> items = syncTasksFromUtp(command.getToken(), command.getSectionId());
+        List<TaskSyncItem> items = syncTasksFromUtp(command.getStudentId(), command.getToken(), command.getSectionId());
         return items.stream().map(assembler::toDto).toList();
     }
 
@@ -32,17 +32,39 @@ public class SyncTaskCommandHandler {
         return repository.findByStudentId(studentId);
     }
 
-    public List<TaskSyncItem> syncTasksFromUtp(String token, String sectionId) {
+    public List<TaskSyncItem> syncTasksFromUtp(String studentId, String token, String sectionId) {
         List<TaskSyncItem> fetched = utpPortalGateway.fetchTasks(token, sectionId);
+        if (fetched != null && studentId != null && !studentId.isBlank()) {
+            for (TaskSyncItem item : fetched) {
+                item.setStudentId(studentId);
+            }
+        }
         return repository.saveAll(fetched);
+    }
+
+    public List<TaskSyncItem> syncTasksFromUtp(String token, String sectionId) {
+        return syncTasksFromUtp(null, token, sectionId);
     }
 
     public TaskSyncItem markTaskAsDelivered(String taskId, String studentId) {
         TaskSyncItem item = repository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Tarea no encontrada: " + taskId));
 
+        // Control de acceso y aislamiento de datos: el estudiante solo puede modificar sus propias tareas
+        if (item.getStudentId() != null && !item.getStudentId().isBlank()
+                && studentId != null && !studentId.isBlank()
+                && !item.getStudentId().equalsIgnoreCase(studentId)
+                && !"current-student".equalsIgnoreCase(item.getStudentId())) {
+            throw new SecurityException("Acceso denegado: No tienes autorización para modificar tareas de otro estudiante");
+        }
+
+        String effectiveStudentId = (item.getStudentId() != null && !"current-student".equalsIgnoreCase(item.getStudentId()))
+                ? item.getStudentId()
+                : studentId;
+
         TaskSyncItem updated = TaskSyncItem.builder()
                 .id(item.getId())
+                .studentId(effectiveStudentId)
                 .courseName(item.getCourseName())
                 .sectionId(item.getSectionId())
                 .homeworkId(item.getHomeworkId())

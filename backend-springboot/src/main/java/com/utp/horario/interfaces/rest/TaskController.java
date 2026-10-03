@@ -100,7 +100,7 @@ public class TaskController {
                 .token(effectiveToken)
                 .sectionId(sectionId)
                 .build();
-        List<TaskSyncItem> synced = taskCommandHandler.syncTasksFromUtp(command.getToken(), command.getSectionId());
+        List<TaskSyncItem> synced = taskCommandHandler.syncTasksFromUtp(command.getStudentId(), command.getToken(), command.getSectionId());
         return ResponseEntity.ok(ApiResponse.ok("Tareas sincronizadas", synced));
     }
 

@@ -81,8 +81,13 @@ public class AcademicToolDto {
     public record EnrolledCoursesResult(
             String studentCode,
             int totalCourses,
-            List<EnrolledCourseDto> courses
-    ) {}
+            List<EnrolledCourseDto> courses,
+            String message
+    ) {
+        public EnrolledCoursesResult(String studentCode, int totalCourses, List<EnrolledCourseDto> courses) {
+            this(studentCode, totalCourses, courses, null);
+        }
+    }
 
     public record CourseEvaluationDetailDto(
             String shortName,
