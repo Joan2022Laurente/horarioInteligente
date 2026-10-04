@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProcessedCourse, CourseEvaluation } from '@domain/models/utp.model';
@@ -47,17 +47,17 @@ import { SyllabusService } from '@data/services/syllabus.service';
                 <div class="flex flex-wrap items-center gap-1.5">
                   @for (m of course.modalities; track m) {
                     @if (m === 'P') {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[#00e676] bg-[rgba(0,200,83,0.14)] border border-[rgba(0,200,83,0.32)] px-2.5 py-0.5 rounded-full">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded-full">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                         Presencial
                       </span>
                     } @else if (m === 'R') {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[#ff7043] bg-[rgba(255,87,34,0.14)] border border-[rgba(255,87,34,0.32)] px-2.5 py-0.5 rounded-full">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-950/40 border border-amber-800/40 px-2.5 py-0.5 rounded-full">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                         Remoto Zoom
                       </span>
                     } @else {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[#a5a8ff] bg-[rgba(112,117,255,0.14)] border border-[rgba(112,117,255,0.32)] px-2.5 py-0.5 rounded-full">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-400 bg-sky-950/40 border border-sky-800/40 px-2.5 py-0.5 rounded-full">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                         Virtual
                       </span>
@@ -71,7 +71,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
                 </span>
               </div>
 
-              <h3 class="text-base font-black text-white leading-snug tracking-tight group-hover:text-[var(--accent-yellow)] transition-colors">
+              <h3 class="text-base font-bold text-white leading-snug tracking-tight group-hover:text-neutral-200 transition-colors">
                 {{ course.name }}
               </h3>
             </div>
@@ -80,9 +80,9 @@ import { SyllabusService } from '@data/services/syllabus.service';
             <div class="flex items-center gap-2 pt-3 border-t border-[var(--border-subtle)]">
               <button
                 (click)="openSyllabus(course.name)"
-                class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--accent-yellow)] hover:bg-[var(--accent-yellow-hover)] py-2.5 px-3 text-xs font-black text-black transition active:scale-95 shadow-none border-none cursor-pointer"
+                class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700/90 text-neutral-100 hover:text-white border border-neutral-700/70 hover:border-neutral-600 py-2.5 px-3 text-xs font-semibold transition active:scale-95 shadow-sm cursor-pointer"
               >
-                <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+                <svg class="h-4 w-4 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
                 <span>Sílabo & Rúbricas</span>
               </button>
 
@@ -92,7 +92,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Entrar a sala Zoom de la clase"
-                  class="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-[var(--accent-blue)] hover:bg-[var(--accent-blue-hover)] text-white transition active:scale-95 shrink-0 shadow-none no-underline"
+                  class="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-neutral-300 hover:text-sky-400 border border-neutral-700/50 transition active:scale-95 shrink-0 shadow-none no-underline"
                 >
                   <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                 </a>
@@ -101,9 +101,9 @@ import { SyllabusService } from '@data/services/syllabus.service';
               <button
                 (click)="onAskAi('Analiza el curso ' + course.name + ', su fórmula de evaluación y qué tips necesito para aprobar con 20')"
                 title="Consultar al Agente sobre este curso"
-                class="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] text-neutral-300 hover:text-white transition active:scale-95 shrink-0 shadow-none border-none cursor-pointer"
+                class="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-neutral-300 hover:text-amber-300 border border-neutral-700/50 transition active:scale-95 shrink-0 shadow-none cursor-pointer"
               >
-                <svg class="h-4 w-4 text-[var(--accent-orange)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <svg class="h-4 w-4 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
               </button>
             </div>
 
@@ -364,6 +364,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
   `
 })
 export class SyllabusViewComponent implements OnInit {
+  @Input() initialCourseToOpen?: string;
   @Output() askAi = new EventEmitter<string>();
 
   isSyllabusModalOpen = false;
@@ -395,7 +396,15 @@ export class SyllabusViewComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.scheduleService.currentInterval() || this.scheduleService.processedCourses().length === 0) {
-      this.scheduleService.getSchedule().subscribe();
+      this.scheduleService.getSchedule().subscribe({
+        next: () => {
+          if (this.initialCourseToOpen) {
+            this.openSyllabus(this.initialCourseToOpen);
+          }
+        }
+      });
+    } else if (this.initialCourseToOpen) {
+      this.openSyllabus(this.initialCourseToOpen);
     }
   }
 
@@ -428,8 +437,9 @@ export class SyllabusViewComponent implements OnInit {
     this.isSyncing = true;
     this.syncStep = `Cargando sílabo oficial de ${courseName}...`;
 
+    const identifier = course?.courseId || courseName;
     this.syllabusService.getSyllabus(
-      courseName,
+      identifier,
       course?.sectionId || course?.sectionCode,
       course?.syllabusUrl
     ).subscribe({

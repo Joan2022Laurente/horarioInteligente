@@ -4,6 +4,7 @@ import { Observable, tap, of, catchError, map } from 'rxjs';
 import { ApiResponse } from '@domain/models/utp.model';
 import { ParsedSyllabus } from '@data/syllabus/types';
 import { getCachedSyllabus, saveCachedSyllabus, getAllCachedSyllabi, getCachedStudentProfile } from '@data/syllabus/client-storage';
+import { getSyllabusForCourse } from '@data/syllabus/official-registry';
 import { UiFeedbackService } from '@core/services/ui-feedback.service';
 import { environment } from '@env/environment';
 
@@ -23,12 +24,9 @@ export class SyllabusService {
 
   /**
    * Pipeline de Sílabos v1.2.0:
-   * 1. Caché Local First: Si existe en LocalStorage y es válido, retorna inmediatamente (0 latencia).
-   * 2. Gateway API v1.2.0: Consume GET /syllabus/{courseCode}. La API externa se encarga internamente de:
-   *    - Descargar PDF de S3/PAO si hay miss.
-   *    - Parsear con flota de modelos OpenRouter y validar con Quality Gate determinista.
-   *    - Retornar el objeto estructurado.
-   * 3. Fallback: Manejo de contingencia local si el gateway presenta fallos temporales de red.
+   * 1. Caché Local First: Si existe en LocalStorage o Registro Oficial, retorna inmediatamente (0 latencia).
+   * 2. Gateway API v1.2.0: Consume GET /syllabus/{courseCode}.
+   * 3. Fallback: Si la respuesta remota está incompleta o falla la red, resuelve desde el registro oficial.
    */
   getSyllabus(courseCodeOrName: string, sectionId?: string, pdfUrl?: string, forceRefresh = false): Observable<ApiResponse<ParsedSyllabus | null>> {
     const cleanKey = courseCodeOrName?.trim();
@@ -36,14 +34,14 @@ export class SyllabusService {
       return of({ success: false, message: 'Identificador de curso inválido', data: null });
     }
 
-    // 1. Caché First: LocalStorage (adaptable a ciclos regulares, de verano o modulares)
+    // 1. Caché First: LocalStorage o Registro Oficial
     if (!forceRefresh) {
-      const localCached = getCachedSyllabus(cleanKey);
+      const localCached = getCachedSyllabus(cleanKey) || getSyllabusForCourse(cleanKey);
       if (localCached && localCached.formula && localCached.weeklySchedule && localCached.weeklySchedule.length > 0) {
-        console.log(`[SyllabusService] ⚡ Sílabo obtenido instantáneamente desde LocalStorage (0 llamadas): ${cleanKey}`);
+        console.log(`[SyllabusService] ⚡ Sílabo obtenido instantáneamente desde Caché / Registro Oficial: ${cleanKey}`);
         return of({
           success: true,
-          message: 'Sílabo obtenido de caché local sincronizada',
+          message: 'Sílabo obtenido de caché sincronizada',
           data: localCached,
         });
       }
@@ -72,18 +70,42 @@ export class SyllabusService {
       map((res) => {
         if (res && res.success && res.data) {
           const adapted = this.adaptApiResponseToParsedSyllabus(res.data, cleanKey);
-          this.persistLocal(cleanKey, adapted);
-          console.log(`[SyllabusService] ✅ Sílabo sincronizado desde API Externa: ${adapted.generalInfo.courseName} (${adapted.weeklySchedule.length} semanas)`);
+          if (adapted.formula && adapted.weeklySchedule && adapted.weeklySchedule.length > 0) {
+            this.persistLocal(cleanKey, adapted);
+            console.log(`[SyllabusService] ✅ Sílabo sincronizado desde API Externa: ${adapted.generalInfo.courseName} (${adapted.weeklySchedule.length} semanas)`);
+            return {
+              success: true,
+              message: res.message || 'Sílabo obtenido exitosamente',
+              data: adapted,
+            };
+          }
+        }
+
+        // Si la respuesta remota es vacía o incompleta, resolver con catálogo oficial
+        const fallback = getSyllabusForCourse(cleanKey);
+        if (fallback) {
+          this.persistLocal(cleanKey, fallback);
           return {
             success: true,
-            message: res.message || 'Sílabo obtenido exitosamente',
-            data: adapted,
+            message: 'Sílabo resuelto desde catálogo oficial UTP',
+            data: fallback,
           };
         }
+
         throw new Error(res?.message || 'Respuesta vacía de la API externa');
       }),
       catchError((apiErr) => {
         console.warn(`[SyllabusService] ⚠️ Fallo en llamada a API Externa para ${cleanKey}: ${apiErr.message}`);
+        const fallback = getSyllabusForCourse(cleanKey);
+        if (fallback) {
+          this.persistLocal(cleanKey, fallback);
+          return of({
+            success: true,
+            message: 'Sílabo obtenido de catálogo oficial UTP',
+            data: fallback,
+          });
+        }
+
         this.feedback.show(`No fue posible recuperar el sílabo de ${cleanKey}`, 'warning');
         return of({
           success: false,

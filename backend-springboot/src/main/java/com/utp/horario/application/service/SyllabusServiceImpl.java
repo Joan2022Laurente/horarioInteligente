@@ -1,10 +1,12 @@
 package com.utp.horario.application.service;
 
 import com.utp.horario.domain.model.aggregate.Syllabus;
+import com.utp.horario.domain.model.catalog.OfficialSyllabusCatalog;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,21 @@ public class SyllabusServiceImpl implements SyllabusService {
     private final IScheduleRepository scheduleRepository;
     private final IUtpPortalGateway utpPortalGateway;
 
+    @PostConstruct
+    public void seedOfficialCatalog() {
+        log.info("[SyllabusServiceImpl] Sincronizando catálogo oficial de sílabos UTP en base de datos...");
+        for (Syllabus s : OfficialSyllabusCatalog.getAll()) {
+            try {
+                Optional<Syllabus> existing = syllabusRepository.findByCourseCode(s.getCourseCode());
+                if (existing.isEmpty() || existing.get().getWeeklySchedule() == null || existing.get().getWeeklySchedule().isEmpty()) {
+                    syllabusRepository.save(s);
+                }
+            } catch (Exception e) {
+                log.warn("[SyllabusServiceImpl] No se pudo inicializar sílabo {}: {}", s.getCourseCode(), e.getMessage());
+            }
+        }
+    }
+
     @Override
     public Syllabus getSyllabusByCourseCode(String courseCode) {
         return getSyllabus(courseCode, null, null, null);
@@ -31,18 +48,41 @@ public class SyllabusServiceImpl implements SyllabusService {
 
     @Override
     public Syllabus getSyllabus(String courseCode, String sectionId, String pdfUrl, String token) {
-        return syllabusRepository.findByCourseCode(courseCode)
-                .filter(s -> (s.getFormula() != null && !s.getFormula().isBlank()) || (s.getCourseName() != null && !s.getCourseName().isBlank() && !s.getCourseName().equals(courseCode)))
-                .orElseGet(() -> {
-                    log.info("[SyllabusServiceImpl] Solicitando sílabo oficial v1.2.0 para courseCode='{}' (sectionId='{}', pdfUrl='{}')",
-                            courseCode, sectionId, pdfUrl);
-                    Syllabus fetched = utpPortalGateway.fetchSyllabus(token, courseCode, sectionId, pdfUrl);
-                    if (fetched != null && fetched.getWeeklySchedule() != null && !fetched.getWeeklySchedule().isEmpty()) {
-                        log.info("[SyllabusServiceImpl] Guardando en repositorio local sílabo de [{}] obtenido de API externa", courseCode);
-                        return syllabusRepository.save(fetched);
-                    }
-                    return buildEmptySyllabus(courseCode);
-                });
+        if (courseCode == null || courseCode.isBlank()) {
+            return buildEmptySyllabus("UNKNOWN");
+        }
+
+        // 1. Repositorio local con contenido estructurado válido
+        Optional<Syllabus> localOpt = syllabusRepository.findByCourseCode(courseCode)
+                .filter(s -> s.getWeeklySchedule() != null && !s.getWeeklySchedule().isEmpty()
+                        && s.getFormula() != null && !s.getFormula().isBlank());
+        if (localOpt.isPresent()) {
+            return localOpt.get();
+        }
+
+        // 2. Gateway hacia portal externo
+        log.info("[SyllabusServiceImpl] Solicitando sílabo oficial v1.2.0 para courseCode='{}' (sectionId='{}', pdfUrl='{}')",
+                courseCode, sectionId, pdfUrl);
+        Syllabus fetched = utpPortalGateway.fetchSyllabus(token, courseCode, sectionId, pdfUrl);
+        if (fetched != null && fetched.getWeeklySchedule() != null && !fetched.getWeeklySchedule().isEmpty()) {
+            log.info("[SyllabusServiceImpl] Guardando en repositorio local sílabo de [{}] obtenido de API externa", courseCode);
+            return syllabusRepository.save(fetched);
+        }
+
+        // 3. Fallback canónico oficial: buscar en catálogo canónico oficial UTP
+        Optional<Syllabus> catalogOpt = OfficialSyllabusCatalog.find(courseCode);
+        if (catalogOpt.isPresent()) {
+            Syllabus canonical = catalogOpt.get();
+            log.info("[SyllabusServiceImpl] Sílabo oficial recuperado de catálogo canónico para [{}]", courseCode);
+            try {
+                return syllabusRepository.save(canonical);
+            } catch (Exception e) {
+                log.warn("[SyllabusServiceImpl] No se pudo persistir sílabo canónico en BD: {}", e.getMessage());
+                return canonical;
+            }
+        }
+
+        return buildEmptySyllabus(courseCode);
     }
 
     @Override

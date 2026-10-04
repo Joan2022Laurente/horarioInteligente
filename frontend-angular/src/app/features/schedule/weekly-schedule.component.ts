@@ -238,35 +238,38 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
             </span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="flex flex-col gap-2.5">
             @for (course of virtual247Courses; track course.courseId) {
-              <div class="flex flex-col justify-between rounded-2xl bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border border-[var(--border-subtle)] hover:border-neutral-500 transition-all p-4 space-y-3.5 shadow-none">
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--badge-purple-text)] bg-[var(--badge-purple-bg)] border border-[var(--badge-purple-border)] px-2 py-0.5 rounded-full">
-                      <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
-                      Virtual 24/7
-                    </span>
-                    <span class="text-[10px] font-mono text-neutral-400">
-                      {{ course.sectionCode ? 'Sección ' + course.sectionCode : 'Autoaprendizaje' }}
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 sm:px-5 sm:py-3.5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-neutral-700/80 transition-all backdrop-blur-md">
+                <div class="flex items-center gap-3.5 min-w-0">
+                  <div class="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                   </div>
 
-                  <h4 class="text-xs font-bold text-white leading-snug line-clamp-2">
-                    {{ formatCourseName(course.name) }}
-                  </h4>
-
-                  <p class="text-[11px] text-neutral-400 leading-relaxed">
-                    Autoaprendizaje continuo • Entregas y evaluaciones por semana en Canvas
-                  </p>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h4 class="text-xs sm:text-sm font-semibold text-white tracking-tight truncate">
+                        {{ formatCourseName(course.name) }}
+                      </h4>
+                      <span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full shrink-0">
+                        24/7 Asíncrono
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-neutral-400 font-mono mt-0.5 truncate">
+                      {{ course.sectionCode ? 'Sección ' + course.sectionCode + ' • ' : '' }}Autoaprendizaje continuo en Canvas • Sin horario semanal fijo
+                    </p>
+                  </div>
                 </div>
 
-                <div class="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
+                <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-800/60 w-full sm:w-auto justify-end">
                   <button
                     (click)="onOpenSyllabus(course.name)"
-                    class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-yellow)] hover:bg-[var(--accent-yellow-hover)] py-2 px-3 text-xs font-bold text-black transition active:scale-95 shadow-none border-none cursor-pointer"
+                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-neutral-200 hover:text-white text-xs font-medium transition cursor-pointer"
                   >
-                    <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="8" r="6"/>
                       <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
                     </svg>
@@ -279,7 +282,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Descargar Sílabo Oficial PDF"
-                      class="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--surface-elevated)] border border-[var(--border-medium)] text-white transition active:scale-95 shrink-0 shadow-none no-underline cursor-pointer"
+                      class="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-white transition cursor-pointer no-underline"
                     >
                       <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -291,12 +294,22 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                     </a>
                   }
 
+                  <a
+                    [href]="getCourseCanvasUrl(course.courseId)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-transparent hover:bg-neutral-800/60 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white text-xs font-medium transition no-underline cursor-pointer"
+                  >
+                    <svg class="h-3.5 w-3.5 shrink-0 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    <span>Abrir Canvas</span>
+                  </a>
+
                   <button
                     (click)="onAskAiClick('Explícame la metodología, evaluaciones y rúbricas del curso ' + course.name)"
                     title="Consultar al Agente sobre este curso"
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-[var(--accent-orange)] hover:bg-[var(--accent-orange-hover)] text-white transition active:scale-95 shrink-0 shadow-none border-none cursor-pointer"
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-amber-300 transition cursor-pointer"
                   >
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="h-3.5 w-3.5 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
                     </svg>
                   </button>
@@ -530,10 +543,19 @@ export class WeeklyScheduleComponent implements OnInit {
       ? weekEvents 
       : weekEvents.filter(e => e.modality === this.selectedModality);
 
-    // 5. Filtrar por día específico de la semana
+    // 5. Filtrar por día específico de la semana (excluyendo asignaturas virtuales 24/7 asíncronas)
     return filtered.filter(evt => {
       const d = parseDate(evt.startAt);
-      return d.getDay() === dayNum;
+      if (d.getDay() !== dayNum) return false;
+
+      // Excluir asignaturas 24/7 asíncronas de la cuadrícula de horas
+      if (evt.modality === 'VT') return false;
+      const cleanTitle = normalizeKey(parseEventTitle(evt.title).cleanTitle);
+      const is247 = this.virtual247Courses.some(v => {
+        const vName = normalizeKey((v.name || '').replace(/-\s*\d{4,6}$/g, ''));
+        return vName === cleanTitle || cleanTitle.includes(vName) || vName.includes(cleanTitle);
+      });
+      return !is247;
     });
   }
 
@@ -581,5 +603,12 @@ export class WeeklyScheduleComponent implements OnInit {
 
   onAskAiClick(prompt: string): void {
     this.openAi.emit(prompt);
+  }
+
+  getCourseCanvasUrl(courseId?: string): string {
+    if (courseId && /^\d+$/.test(courseId.trim())) {
+      return `https://canvas.utp.edu.pe/courses/${courseId.trim()}`;
+    }
+    return 'https://canvas.utp.edu.pe';
   }
 }

@@ -23,6 +23,42 @@ public class StudentRepositoryAdapter implements IStudentRepository {
 
     @Override
     public StudentProfile save(StudentProfile studentProfile) {
+        if (studentProfile == null) return null;
+
+        if (studentProfile.getStudentCode() != null && !studentProfile.getStudentCode().isBlank()) {
+            String code = studentProfile.getStudentCode().trim();
+            Optional<StudentEntity> existingOpt = jpa.findByStudentCode(code);
+            if (existingOpt.isEmpty()) {
+                existingOpt = jpa.findByStudentCode(code.toUpperCase());
+            }
+            if (existingOpt.isEmpty()) {
+                existingOpt = jpa.findByStudentCode(code.toLowerCase());
+            }
+
+            if (existingOpt.isPresent()) {
+                StudentEntity existing = existingOpt.get();
+                if (studentProfile.getFullName() != null && !studentProfile.getFullName().isBlank()) {
+                    existing.setFullName(studentProfile.getFullName());
+                }
+                if (studentProfile.getEmail() != null && !studentProfile.getEmail().isBlank()) {
+                    existing.setEmail(studentProfile.getEmail());
+                }
+                if (studentProfile.getCareer() != null && !studentProfile.getCareer().isBlank()) {
+                    existing.setCareer(studentProfile.getCareer());
+                }
+                if (studentProfile.getCampus() != null && !studentProfile.getCampus().isBlank()) {
+                    existing.setCampus(studentProfile.getCampus());
+                }
+                if (studentProfile.getCurrentCycle() != null && studentProfile.getCurrentCycle() > 0) {
+                    existing.setCurrentCycle(studentProfile.getCurrentCycle());
+                }
+                return mapper.toDomain(jpa.save(existing));
+            }
+        }
+
+        if (studentProfile.getId() == null || studentProfile.getId().isBlank()) {
+            studentProfile.setId("usr-" + (studentProfile.getStudentCode() != null ? studentProfile.getStudentCode().toLowerCase() : java.util.UUID.randomUUID().toString()));
+        }
         StudentEntity entity = mapper.toEntity(studentProfile);
         return mapper.toDomain(jpa.save(entity));
     }

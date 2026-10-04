@@ -47,10 +47,10 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
           } @else if (activeTab === 'weekly') {
             <app-weekly-schedule 
               (openAi)="openAiWithPrompt($event)"
-              (openSyllabus)="activeTab = 'courses'">
+              (openSyllabus)="openSyllabusForCourse($event)">
             </app-weekly-schedule>
           } @else if (activeTab === 'courses') {
-            <app-syllabus-view (askAi)="openAiWithPrompt($event)"></app-syllabus-view>
+            <app-syllabus-view [initialCourseToOpen]="selectedCourseForSyllabus" (askAi)="openAiWithPrompt($event)"></app-syllabus-view>
           }
         </main>
 
@@ -93,6 +93,7 @@ export class AppComponent implements OnInit {
   isAiModalOpen = false;
   isSettingsModalOpen = false;
   aiPrompt = '';
+  selectedCourseForSyllabus = '';
 
   constructor(
     public authService: AuthService,
@@ -110,6 +111,11 @@ export class AppComponent implements OnInit {
   openAiWithPrompt(prompt: string): void {
     this.aiPrompt = prompt;
     this.isAiModalOpen = true;
+  }
+
+  openSyllabusForCourse(courseName: string): void {
+    this.selectedCourseForSyllabus = courseName;
+    this.activeTab = 'courses';
   }
 }
 
