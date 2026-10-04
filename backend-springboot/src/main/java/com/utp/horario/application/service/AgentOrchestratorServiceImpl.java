@@ -339,6 +339,10 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                                 String token = delta.path("content").asText("");
                                 if (!token.isEmpty()) {
                                     contentBuilder.append(token);
+                                    if (isDegenerateRepetition(contentBuilder)) {
+                                        log.warn("[AgentOrchestrator] ⚠️ Bucle degenerativo detectado en stream ('{}'). Cortando respuesta de forma segura.", token);
+                                        break;
+                                    }
                                     onToken.accept(token);
                                 }
                             }
@@ -430,7 +434,10 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         payload.put("messages", messages);
         payload.put("tools", AcademicToolRegistry.getOpenAiToolDefinitions());
         payload.put("tool_choice", "auto");
-        payload.put("temperature", 0.2);
+        payload.put("temperature", 0.3);
+        payload.put("max_tokens", 1800);
+        payload.put("frequency_penalty", 0.25);
+        payload.put("repetition_penalty", 1.08);
         payload.put("stream", stream);
         // session_id para sticky routing → mayor hit de prompt cache en el proveedor
         if (studentCode != null && !studentCode.isBlank()) {
@@ -582,5 +589,24 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         }
         evt.put("label", label);
         return evt;
+    }
+
+    private boolean isDegenerateRepetition(StringBuilder sb) {
+        if (sb.length() < 20) return false;
+        // 1. Repetición del mismo carácter (ej. !!!!!!!!!!!!!!)
+        char lastChar = sb.charAt(sb.length() - 1);
+        int consecutive = 0;
+        for (int i = sb.length() - 1; i >= 0 && sb.charAt(i) == lastChar; i--) {
+            consecutive++;
+            if (consecutive >= 12) return true;
+        }
+        // 2. Repetición de patrón de 2 o 3 caracteres al final
+        if (sb.length() >= 30) {
+            String tail = sb.substring(sb.length() - 20);
+            if (tail.matches("^(..)\\1{5,}$") || tail.matches("^(...)\\1{4,}$")) {
+                return true;
+            }
+        }
+        return false;
     }
 }

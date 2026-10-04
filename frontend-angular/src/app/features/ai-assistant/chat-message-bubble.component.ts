@@ -110,9 +110,9 @@ const TOOL_MAP: Record<string, ToolBadge> = {
         }
 
         <!-- Contenido conversacional del Asistente -->
-        @if (msg.content) {
+        @if (assistantContent) {
           <div class="w-full text-neutral-200 block pt-0.5">
-            <app-markdown-renderer [content]="msg.content"></app-markdown-renderer>
+            <app-markdown-renderer [content]="assistantContent"></app-markdown-renderer>
           </div>
         }
 
@@ -248,9 +248,16 @@ export class ChatMessageBubbleComponent {
     return cleaned || (this.userSticker ? '' : this.msg.content);
   }
 
+  get assistantContent(): string {
+    if (!this.msg.content) return '';
+    // Colapsar cualquier bucle degenerativo de repetición infinita del LLM
+    return this.msg.content.replace(/(.)\1{10,}/g, '$1$1$1');
+  }
+
   handleCopy(): void {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(this.msg.content).then(() => {
+      const textToCopy = this.msg.role === 'user' ? this.userTextClean : this.assistantContent;
+      navigator.clipboard.writeText(textToCopy).then(() => {
         this.copied = true;
         setTimeout(() => this.copied = false, 2000);
       }).catch(() => {});
