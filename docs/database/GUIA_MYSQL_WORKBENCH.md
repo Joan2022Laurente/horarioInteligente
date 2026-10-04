@@ -18,7 +18,7 @@ Al utilizar la base de datos en la nube:
 | **Hostname / Servidor** | `mysql-horario-utp-horario.k.aivencloud.com` |
 | **Port / Puerto** | `26871` |
 | **Username / Usuario** | `horario_admin` |
-| **Password / Contraseña** | *(Solicitar internamente al equipo o ejecutar `heroku config:get MYSQL_PASSWORD`)* |
+| **Password / Contraseña** | *(Solicitar por el chat interno del equipo — omitida por seguridad de GitHub)* |
 | **Default Schema** | `horariodb` |
 | **Modo SSL** | `Require` (Obligatorio por seguridad en la nube) |
 
@@ -115,7 +115,7 @@ Para que tu backend local en Spring Boot utilice la misma base de datos en la nu
 ```powershell
 $env:MYSQL_URL="jdbc:mysql://mysql-horario-utp-horario.k.aivencloud.com:26871/horariodb?sslMode=REQUIRED"
 $env:MYSQL_USER="horario_admin"
-$env:MYSQL_PASSWORD=(heroku config:get MYSQL_PASSWORD -a horario-inteligente-utp)
+$env:MYSQL_PASSWORD="<pegar_aqui_la_contrasena_compartida>"
 $env:PORT="8080"
 
 cd backend-springboot

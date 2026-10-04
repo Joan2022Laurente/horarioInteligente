@@ -58,7 +58,7 @@ El sistema opera con **MySQL 8.4** conectado a una base de datos centralizada en
 * **Host:** `mysql-horario-utp-horario.k.aivencloud.com`
 * **Puerto:** `26871`
 * **Usuario:** `horario_admin`
-* **Contraseña:** *(Solicitar internamente al equipo o consultar `heroku config:get MYSQL_PASSWORD`)*
+* **Contraseña:** *(Solicitar por el grupo interno del equipo — omitida en el repositorio por seguridad de GitHub)*
 * **Esquema predeterminado:** `horariodb`
 * **SSL:** `Require`
 
