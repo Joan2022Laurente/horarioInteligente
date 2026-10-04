@@ -18,6 +18,8 @@ public interface IUtpPortalGateway {
     List<CourseSummaryDto> fetchCoursesSummary(String token);
     List<UpcomingEvaluationDto> fetchUpcomingEvaluations(String token, int limit);
     List<TaskSyncItem> fetchActivitiesByWeek(String token, Integer week);
+    List<TaskSyncItem> fetchActivities(String token, String intervalMode, Integer week, String status, Boolean onlyGraded, String type);
+    com.fasterxml.jackson.databind.JsonNode fetchTaskDetail(String token, String sectionId, String activityId);
     String fetchSyllabusMarkdown(String token, String courseCode);
     String exportCalendarIcs(String token, String period);
 

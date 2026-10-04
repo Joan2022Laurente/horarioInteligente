@@ -23,6 +23,7 @@ public class TaskSyncEntity {
     private String id;
     private String studentId;
     private String courseName;
+    private String courseCode;
     private String sectionId;
     private String homeworkId;
     private String title;
@@ -35,5 +36,16 @@ public class TaskSyncEntity {
     private Double maxScore;
     private Double score;
     private Boolean isDelivered;
+
+    // Campos de correlación con el sílabo oficial
+    private String evaluationType;
+    private Integer weightPercent;
+    private String evaluationDescription;
+    private Integer syllabusWeek;
+    private String syllabusUnit;
+    private String syllabusTopic;
+    private Boolean isSyllabusMatched;
+    private String syllabusUrl;
+    private String syllabusMarkdownUrl;
 }
 

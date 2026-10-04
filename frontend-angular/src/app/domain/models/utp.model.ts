@@ -105,6 +105,7 @@ export interface ProcessedCourse {
   sectionId?: string;
   modalities: string[];
   zoomLink?: string;
+  classLink?: string;
   syllabusUrl?: string;
   totalSessions: number;
   upcomingSessions: UTPEvent[];
@@ -203,6 +204,8 @@ export interface CourseAssignment {
   evaluationSystem?: string | null;
   urgency?: string;
   daysRemaining?: number;
+  courseCode?: string;
+  syllabusCorrelation?: import('./task.model').SyllabusCorrelation;
 }
 
 export interface SyllabusWeekSyncContext {

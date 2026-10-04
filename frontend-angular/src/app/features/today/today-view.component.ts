@@ -465,17 +465,49 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
                   @if (expandedTaskIds[item.task.id]) {
                     <div class="mt-4 pt-4 border-t border-[var(--border-subtle)] text-xs space-y-2 text-neutral-300">
-                      <div class="flex items-center gap-2 text-neutral-400">
-                        <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
-                        </svg>
-                        <span class="font-bold text-white">Contexto del Sílabo:</span>
-                        <span>{{ item.syllabusContext.unitTitle }}</span>
-                      </div>
-                      @if (item.syllabusContext.sessionTopics.length > 0) {
-                        <p class="text-neutral-400 pl-5">
-                          • Tema de la semana: {{ item.syllabusContext.sessionTopics[0] }}
-                        </p>
+                      @if (item.task.syllabusCorrelation; as sc) {
+                        <div class="flex flex-wrap items-center gap-2 text-neutral-400">
+                          <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
+                          </svg>
+                          <span class="font-bold text-white">Contexto del Sílabo:</span>
+                          <span>{{ sc.syllabusUnit || item.syllabusContext.unitTitle }}</span>
+                          @if (sc.weightPercent) {
+                            <span class="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-[10.5px]">
+                              {{ sc.evaluationType }} ({{ sc.weightPercent }}%)
+                            </span>
+                          }
+                          @if (item.task.courseCode) {
+                            <span class="text-neutral-500 font-mono text-[10.5px]">({{ item.task.courseCode }})</span>
+                          }
+                        </div>
+                        @if (sc.syllabusTopic) {
+                          <p class="text-neutral-400 pl-5">
+                            • Tema del sílabo: <span class="text-neutral-200">{{ sc.syllabusTopic }}</span>
+                          </p>
+                        } @else if (item.syllabusContext.sessionTopics.length > 0) {
+                          <p class="text-neutral-400 pl-5">
+                            • Tema de la semana: <span class="text-neutral-200">{{ item.syllabusContext.sessionTopics[0] }}</span>
+                          </p>
+                        }
+                        @if (sc.evaluationDescription) {
+                          <p class="text-neutral-400 pl-5">
+                            • Evaluación oficial: <span class="text-neutral-300">{{ sc.evaluationDescription }}</span>
+                          </p>
+                        }
+                      } @else {
+                        <div class="flex items-center gap-2 text-neutral-400">
+                          <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
+                          </svg>
+                          <span class="font-bold text-white">Contexto del Sílabo:</span>
+                          <span>{{ item.syllabusContext.unitTitle }}</span>
+                        </div>
+                        @if (item.syllabusContext.sessionTopics.length > 0) {
+                          <p class="text-neutral-400 pl-5">
+                            • Tema de la semana: {{ item.syllabusContext.sessionTopics[0] }}
+                          </p>
+                        }
                       }
                     </div>
                   }
@@ -748,9 +780,16 @@ export class TodayViewComponent implements OnInit, OnDestroy {
             const courseTitle = u.courseName || '';
             const week = u.week || u.weekNumber || targetWeek;
             const syllabusContext = getSyllabusWeekContext(courseTitle, week);
+            const correlation = u.syllabusCorrelation;
+
+            if (correlation && correlation.isSyllabusMatched) {
+              if (correlation.syllabusUnit) syllabusContext.unitTitle = correlation.syllabusUnit;
+              if (correlation.syllabusTopic) syllabusContext.sessionTopics = [correlation.syllabusTopic];
+              if (correlation.weightPercent) syllabusContext.formulaWeight = correlation.weightPercent;
+            }
 
             const actType = (u.type || u.activityType || '').toUpperCase().includes('FORUM') ? 'FORUM' : 'HOMEWORK';
-            const evalSys = u.evaluationSystem || null;
+            const evalSys = correlation?.evaluationType || u.evaluationSystem || null;
             const isGraded = Boolean(u.isQualified || evalSys || (u.classificationCategory && u.classificationCategory.includes('WEIGHTED')));
 
             const task: CourseAssignment = {
@@ -772,7 +811,9 @@ export class TodayViewComponent implements OnInit, OnDestroy {
               evaluationSystem: evalSys,
               classificationCategory: u.classificationCategory,
               urgency: u.urgency,
-              daysRemaining: u.daysRemaining
+              daysRemaining: u.daysRemaining,
+              courseCode: u.courseCode || correlation?.courseCode,
+              syllabusCorrelation: correlation
             };
 
             return { task, syllabusContext };
@@ -797,6 +838,12 @@ export class TodayViewComponent implements OnInit, OnDestroy {
                 this.synchronizedTasks = taskRes.data.map((t: any) => {
                   const week = t.week || this.currentWeek || 1;
                   const syllabusContext = getSyllabusWeekContext(t.courseName, week);
+                  const correlation = t.syllabusCorrelation;
+                  if (correlation && correlation.isSyllabusMatched) {
+                    if (correlation.syllabusUnit) syllabusContext.unitTitle = correlation.syllabusUnit;
+                    if (correlation.syllabusTopic) syllabusContext.sessionTopics = [correlation.syllabusTopic];
+                    if (correlation.weightPercent) syllabusContext.formulaWeight = correlation.weightPercent;
+                  }
                   const isDelivered = t.isDelivered || t.homeworkStatus === 'DELIVERED';
                   const task: CourseAssignment = {
                     id: t.id || `task-${Math.random()}`,
@@ -809,7 +856,9 @@ export class TodayViewComponent implements OnInit, OnDestroy {
                     dueDate: t.dueDate,
                     isGraded: true,
                     status: isDelivered ? 'submitted' : 'pending',
-                    homeworkStatus: t.homeworkStatus || 'PENDING'
+                    homeworkStatus: t.homeworkStatus || 'PENDING',
+                    courseCode: t.courseCode || correlation?.courseCode,
+                    syllabusCorrelation: correlation
                   };
                   return { task, syllabusContext };
                 });

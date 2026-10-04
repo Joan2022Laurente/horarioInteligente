@@ -53,17 +53,50 @@ export class TaskService {
   }
 
   getActivitiesByWeek(week?: number): Observable<ApiResponse<TaskSyncItem[]>> {
+    return this.getActivities({ week });
+  }
+
+  getActivities(filters?: {
+    intervalMode?: string;
+    week?: number;
+    status?: string;
+    onlyGraded?: boolean;
+    type?: string;
+  }): Observable<ApiResponse<TaskSyncItem[]>> {
     const profile = getCachedStudentProfile();
     const token = profile?.token;
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     }
-    const query = (week !== undefined && week !== null) ? `?week=${week}` : '';
-    return this.http.get<ApiResponse<TaskSyncItem[]>>(`${this.baseUrl}/activities${query}`, { headers }).pipe(
+
+    const params = new URLSearchParams();
+    if (filters?.intervalMode) params.set('intervalMode', filters.intervalMode);
+    if (filters?.week !== undefined && filters.week !== null) params.set('week', filters.week.toString());
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.onlyGraded !== undefined && filters.onlyGraded !== null) params.set('onlyGraded', filters.onlyGraded.toString());
+    if (filters?.type) params.set('type', filters.type);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.http.get<ApiResponse<TaskSyncItem[]>>(`${this.baseUrl}/activities${queryString}`, { headers }).pipe(
       catchError((err) => {
         console.warn('[TaskService] ℹ️ Error en /tasks/activities:', err.message);
-        return of({ success: false, message: 'Error consultando actividades semanales', data: [] });
+        return of({ success: false, message: 'Error consultando actividades', data: [] });
+      })
+    );
+  }
+
+  getTaskDetail(sectionId: string, activityId: string): Observable<ApiResponse<any>> {
+    const profile = getCachedStudentProfile();
+    const token = profile?.token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/${encodeURIComponent(sectionId)}/${encodeURIComponent(activityId)}`, { headers }).pipe(
+      catchError((err) => {
+        console.warn('[TaskService] ℹ️ Error consultando detalle de tarea:', err.message);
+        return of({ success: false, message: 'No se pudo obtener detalle de la tarea', data: null });
       })
     );
   }

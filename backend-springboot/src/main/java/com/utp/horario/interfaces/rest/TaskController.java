@@ -62,13 +62,35 @@ public class TaskController {
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token,
-            @RequestParam(required = false) Integer week) {
+            @RequestParam(required = false) String intervalMode,
+            @RequestParam(required = false) Integer week,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean onlyGraded,
+            @RequestParam(required = false) String type) {
         String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
         if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
             effectiveToken = utpPortalGateway.getStudentToken(studentId);
         }
-        List<TaskSyncItem> activities = utpPortalGateway.fetchActivitiesByWeek(effectiveToken, week);
+        List<TaskSyncItem> activities = utpPortalGateway.fetchActivities(effectiveToken, intervalMode, week, status, onlyGraded, type);
         return ResponseEntity.ok(ApiResponse.ok(activities));
+    }
+
+    @GetMapping("/{sectionId}/{activityId}")
+    public ResponseEntity<ApiResponse<com.fasterxml.jackson.databind.JsonNode>> getTaskDetail(
+            @PathVariable String sectionId,
+            @PathVariable String activityId,
+            @CurrentStudent(required = false) String studentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String token) {
+        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
+            effectiveToken = utpPortalGateway.getStudentToken(studentId);
+        }
+        com.fasterxml.jackson.databind.JsonNode detail = utpPortalGateway.fetchTaskDetail(effectiveToken, sectionId, activityId);
+        if (detail == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(ApiResponse.ok(detail));
     }
 
     @GetMapping("/upcoming")

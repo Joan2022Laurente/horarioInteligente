@@ -294,15 +294,18 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                     </a>
                   }
 
-                  <a
-                    [href]="getCourseCanvasUrl(course.courseId)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-transparent hover:bg-neutral-800/60 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white text-xs font-medium transition no-underline cursor-pointer"
-                  >
-                    <svg class="h-3.5 w-3.5 shrink-0 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    <span>Abrir Canvas</span>
-                  </a>
+                  @if (course.zoomLink || course.classLink) {
+                    <a
+                      [href]="course.zoomLink || course.classLink"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Aula Virtual / Enlace de Clase"
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-transparent hover:bg-neutral-800/60 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white text-xs font-medium transition no-underline cursor-pointer"
+                    >
+                      <svg class="h-3.5 w-3.5 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      <span>Aula Virtual</span>
+                    </a>
+                  }
 
                   <button
                     (click)="onAskAiClick('Explícame la metodología, evaluaciones y rúbricas del curso ' + course.name)"
@@ -603,12 +606,5 @@ export class WeeklyScheduleComponent implements OnInit {
 
   onAskAiClick(prompt: string): void {
     this.openAi.emit(prompt);
-  }
-
-  getCourseCanvasUrl(courseId?: string): string {
-    if (courseId && /^\d+$/.test(courseId.trim())) {
-      return `https://canvas.utp.edu.pe/courses/${courseId.trim()}`;
-    }
-    return 'https://canvas.utp.edu.pe';
   }
 }

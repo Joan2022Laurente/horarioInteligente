@@ -24,6 +24,8 @@ public class TaskAssembler {
                 .maxScore(item.getMaxScore())
                 .score(item.getScore())
                 .isDelivered(item.getIsDelivered())
+                .courseCode(item.getCourseCode())
+                .syllabusCorrelation(item.getSyllabusCorrelation())
                 .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.utp.horario.application.dtos;
 
+import com.utp.horario.domain.model.value_objets.SyllabusCorrelation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 public class TaskDto {
     private String id;
     private String courseName;
+    private String courseCode;
     private String sectionId;
     private String homeworkId;
     private String title;
@@ -26,4 +28,5 @@ public class TaskDto {
     private Double maxScore;
     private Double score;
     private Boolean isDelivered;
+    private SyllabusCorrelation syllabusCorrelation;
 }

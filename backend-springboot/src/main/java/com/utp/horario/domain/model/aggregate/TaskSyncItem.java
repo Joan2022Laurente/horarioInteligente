@@ -1,6 +1,7 @@
 package com.utp.horario.domain.model.aggregate;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.utp.horario.domain.model.value_objets.SyllabusCorrelation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,6 +20,7 @@ public class TaskSyncItem {
     private String id;
     private String studentId;
     private String courseName;
+    private String courseCode;
     private String sectionId;
     private String homeworkId;
     private String title;
@@ -38,4 +40,5 @@ public class TaskSyncItem {
     private String classificationCategory;
     private String urgency;
     private Integer daysRemaining;
+    private SyllabusCorrelation syllabusCorrelation;
 }

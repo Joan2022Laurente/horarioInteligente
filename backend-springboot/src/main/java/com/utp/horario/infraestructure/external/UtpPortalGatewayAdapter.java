@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.utp.horario.domain.model.value_objets.ClassSession;
 import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objets.SyllabusCorrelation;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
@@ -159,19 +160,42 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
 
     @Override
     public List<TaskSyncItem> fetchTasks(String token, String sectionId) {
-        return fetchActivitiesByWeek(token, null);
+        return fetchActivities(token, null, null, null, null, null);
     }
 
     @Override
     public List<TaskSyncItem> fetchActivitiesByWeek(String token, Integer week) {
+        return fetchActivities(token, null, week, null, null, null);
+    }
+
+    @Override
+    public List<TaskSyncItem> fetchActivities(String token, String intervalMode, Integer week, String status, Boolean onlyGraded, String type) {
         if (token == null || token.isBlank()) {
             return new ArrayList<>();
         }
-        String query = (week != null && week > 0) ? "?week=" + week : "";
-        log.info("[UtpPortalGatewayAdapter] Consultando actividades a API Externa (/tasks/activities{})...", query);
+
+        List<String> queryParams = new ArrayList<>();
+        if (intervalMode != null && !intervalMode.isBlank()) {
+            queryParams.add("intervalMode=" + URLEncoder.encode(intervalMode.trim(), StandardCharsets.UTF_8));
+        }
+        if (week != null && week > 0) {
+            queryParams.add("week=" + week);
+        }
+        if (status != null && !status.isBlank()) {
+            queryParams.add("status=" + URLEncoder.encode(status.trim(), StandardCharsets.UTF_8));
+        }
+        if (onlyGraded != null) {
+            queryParams.add("onlyGraded=" + onlyGraded);
+        }
+        if (type != null && !type.isBlank()) {
+            queryParams.add("type=" + URLEncoder.encode(type.trim(), StandardCharsets.UTF_8));
+        }
+
+        String queryString = queryParams.isEmpty() ? "" : "?" + String.join("&", queryParams);
+        log.info("[UtpPortalGatewayAdapter] Consultando actividades a API Externa (/tasks/activities{})...", queryString);
         try {
             HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(gatewayBaseUrl + "/tasks/activities" + query))
+                    .uri(URI.create(gatewayBaseUrl + "/tasks/activities" + queryString))
                     .timeout(Duration.ofSeconds(15))
                     .header("Accept", "application/json")
                     .header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token)
@@ -185,32 +209,55 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
                     List<TaskSyncItem> items = new ArrayList<>();
                     for (JsonNode n : data) {
                         String rawFinishAt = n.path("finishAt").asText(null);
+                        if (rawFinishAt == null) {
+                            rawFinishAt = n.path("dueAt").asText(null);
+                        }
                         LocalDateTime due = ClassSession.parseDateTimeSafely(rawFinishAt);
-                        String status = n.path("studentStatus").asText("PENDING");
-                        boolean isDelivered = "DELIVERED".equalsIgnoreCase(status) || "DELIVERED_ON_TIME".equalsIgnoreCase(status) || "SUBMITTED".equalsIgnoreCase(status);
+                        String itemStatus = n.path("studentStatus").asText(n.path("status").asText("PENDING"));
+                        boolean isDelivered = "DELIVERED".equalsIgnoreCase(itemStatus) || "DELIVERED_ON_TIME".equalsIgnoreCase(itemStatus) || "SUBMITTED".equalsIgnoreCase(itemStatus);
 
                         String evalSystem = n.hasNonNull("evaluationSystem") ? n.path("evaluationSystem").asText() : null;
                         boolean isQualified = n.path("isQualified").asBoolean(false);
                         String category = n.path("classificationCategory").asText("");
                         String urgency = n.path("urgency").asText("");
                         Integer daysRem = n.hasNonNull("daysRemaining") ? n.path("daysRemaining").asInt() : null;
-                        String actType = n.path("activityType").asText("HOMEWORK");
+                        String actType = n.path("activityType").asText(n.path("type").asText("HOMEWORK"));
+
+                        String courseCode = n.hasNonNull("courseCode") ? n.path("courseCode").asText() : n.path("courseId").asText("");
+
+                        SyllabusCorrelation correlation = null;
+                        if (n.hasNonNull("syllabusCorrelation")) {
+                            JsonNode sc = n.get("syllabusCorrelation");
+                            correlation = SyllabusCorrelation.builder()
+                                    .courseCode(sc.path("courseCode").asText(courseCode))
+                                    .evaluationType(sc.path("evaluationType").asText(null))
+                                    .weightPercent(sc.hasNonNull("weightPercent") ? sc.path("weightPercent").asInt() : null)
+                                    .evaluationDescription(sc.path("evaluationDescription").asText(null))
+                                    .syllabusWeek(sc.hasNonNull("syllabusWeek") ? sc.path("syllabusWeek").asInt() : null)
+                                    .syllabusUnit(sc.path("syllabusUnit").asText(null))
+                                    .syllabusTopic(sc.path("syllabusTopic").asText(null))
+                                    .isSyllabusMatched(sc.path("isSyllabusMatched").asBoolean(false))
+                                    .syllabusUrl(sc.path("syllabusUrl").asText(null))
+                                    .syllabusMarkdownUrl(sc.path("syllabusMarkdownUrl").asText(null))
+                                    .build();
+                        }
 
                         items.add(TaskSyncItem.builder()
                                 .id(n.path("id").asText(n.path("activityId").asText()))
                                 .courseName(n.path("courseName").asText(""))
+                                .courseCode(courseCode)
                                 .courseId(n.path("courseId").asText(""))
                                 .sectionId(n.path("sectionId").asText(""))
                                 .contentId(n.path("contentId").asText(""))
-                                .homeworkId(n.path("activityId").asText())
+                                .homeworkId(n.path("activityId").asText(n.path("id").asText()))
                                 .title(n.path("title").asText())
                                 .type(actType)
-                                .week(n.path("weekNumber").asInt(week != null ? week : 1))
-                                .homeworkStatus(status)
+                                .week(n.path("weekNumber").asInt(n.path("week").asInt(week != null ? week : 1)))
+                                .homeworkStatus(itemStatus)
                                 .assignmentProgress(isDelivered ? "FINISHED" : "NOT_STARTED")
                                 .dueDate(due)
                                 .deliveredDate(null)
-                                .maxScore(20.0)
+                                .maxScore(n.path("evaluationTopScore").asDouble(20.0))
                                 .score(null)
                                 .isDelivered(isDelivered)
                                 .evaluationSystem(evalSystem)
@@ -218,18 +265,50 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
                                 .classificationCategory(category)
                                 .urgency(urgency)
                                 .daysRemaining(daysRem)
+                                .syllabusCorrelation(correlation)
                                 .build());
                     }
-                    log.info("[UtpPortalGatewayAdapter] âœ… {} tareas/actividades de semana {} obtenidas de API Externa", items.size(), week);
+                    log.info("[UtpPortalGatewayAdapter] ✅ {} tareas/actividades obtenidas de API Externa", items.size());
                     return items;
                 }
             } else {
-                log.warn("[UtpPortalGatewayAdapter] âš ï¸ /tasks/activities{} respondiÃ³ HTTP {}", query, response.statusCode());
+                log.warn("[UtpPortalGatewayAdapter] ⚠️ /tasks/activities{} respondió HTTP {}", queryString, response.statusCode());
             }
         } catch (Exception e) {
             log.error("[UtpPortalGatewayAdapter] Error consultando /tasks/activities: {}", e.getMessage());
         }
         return new ArrayList<>();
+    }
+
+    @Override
+    public JsonNode fetchTaskDetail(String token, String sectionId, String activityId) {
+        log.info("[UtpPortalGatewayAdapter] Consultando detalle de tarea v2.0.0 a API Externa (/tasks/{}/{})...", sectionId, activityId);
+        try {
+            String path = "/tasks/" + URLEncoder.encode(sectionId != null ? sectionId.trim() : "", StandardCharsets.UTF_8)
+                    + "/" + URLEncoder.encode(activityId != null ? activityId.trim() : "", StandardCharsets.UTF_8);
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(gatewayBaseUrl + path))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Accept", "application/json")
+                    .GET();
+
+            if (token != null && !token.isBlank()) {
+                reqBuilder.header("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token);
+            }
+
+            HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                if (root.path("success").asBoolean(true) && root.hasNonNull("data")) {
+                    return root.get("data");
+                }
+            } else {
+                log.warn("[UtpPortalGatewayAdapter] /tasks/{}/{} respondió HTTP {}", sectionId, activityId, response.statusCode());
+            }
+        } catch (Exception e) {
+            log.error("[UtpPortalGatewayAdapter] Error consultando /tasks/{}/{}: {}", sectionId, activityId, e.getMessage());
+        }
+        return null;
     }
 
     @Override

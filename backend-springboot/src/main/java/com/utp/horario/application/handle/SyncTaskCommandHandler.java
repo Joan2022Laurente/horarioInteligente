@@ -82,6 +82,8 @@ public class SyncTaskCommandHandler {
                 .maxScore(item.getMaxScore())
                 .score(item.getScore())
                 .isDelivered(true)
+                .courseCode(item.getCourseCode())
+                .syllabusCorrelation(item.getSyllabusCorrelation())
                 .build();
 
         return repository.save(updated);
