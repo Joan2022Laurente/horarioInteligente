@@ -135,6 +135,15 @@ export interface AcademicMilestone {
   courseEvaluations?: CourseEvaluation[];
 }
 
+export interface AgentActivity {
+  id: string;
+  phase: 'start' | 'done' | 'error';
+  tool: string;
+  detail?: string;
+  label: string;
+  durationMs?: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -149,6 +158,8 @@ export interface ChatMessage {
     zoomLink?: string;
   };
   metadata?: Record<string, unknown>;
+  activities?: AgentActivity[];
+  currentActivity?: AgentActivity | null;
 }
 
 export interface RubricLevel {

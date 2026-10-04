@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of, tap } from 'rxjs';
-import { ChatMessage, DailyQuotaStatus, AiChatRequest } from '@domain/models/ai.model';
+import { ChatMessage, DailyQuotaStatus, AiChatRequest, AgentActivity } from '@domain/models/ai.model';
 import { ApiResponse } from '@domain/models/utp.model';
 import { getCachedStudentProfile } from '@data/syllabus/client-storage';
 import { environment } from '@env/environment';
@@ -93,7 +93,8 @@ export class AiAssistantService {
     onDelta: (word: string) => void,
     onTool: (toolName: string) => void,
     onToolResult?: (toolResult: any) => void,
-    history?: { role: string; content: string }[]
+    history?: { role: string; content: string }[],
+    onActivity?: (activity: AgentActivity) => void
   ): Promise<void> {
     this.isThinkingSignal.set(true);
     try {
@@ -186,20 +187,36 @@ export class AiAssistantService {
               return;
             }
 
-            if (currentEvent === 'tool') {
+            if (currentEvent === 'activity') {
+              try {
+                const act = JSON.parse(data) as AgentActivity;
+                console.log('[AiChat] ⚡ Actividad en tiempo real:', act);
+                if (onActivity) onActivity(act);
+                if (act.tool && onTool && !act.tool.startsWith('{')) {
+                  onTool(act.tool);
+                }
+              } catch (e) {
+                console.warn('[AiChat] Error decodificando activity:', e);
+              }
+            } else if (currentEvent === 'tool') {
               let toolName = data.trim();
               let toolArgs: Record<string, any> = {};
               try {
                 const parsed = JSON.parse(data);
                 if (parsed && typeof parsed === 'object') {
-                  toolName = parsed.name || toolName;
+                  if (parsed.phase && onActivity) {
+                    onActivity(parsed as AgentActivity);
+                  }
+                  toolName = parsed.tool || parsed.name || toolName;
                   toolArgs = parsed.args || {};
                 }
               } catch {
                 // Nombre en texto plano
               }
               console.log('[AiChat] 🛠️ Herramienta detectada:', toolName, 'Parámetros:', toolArgs);
-              onTool(toolName);
+              if (toolName && !toolName.startsWith('{')) {
+                onTool(toolName);
+              }
             } else if (currentEvent === 'tool_result') {
               let toolResult: any = data;
               try {

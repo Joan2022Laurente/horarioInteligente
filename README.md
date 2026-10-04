@@ -50,17 +50,19 @@ horario-inteligente-fullstack/
 
 ---
 
-## 2. Base de Datos y MySQL Workbench
+## 2. Base de Datos Centralizada y MySQL Workbench
 
-El backend opera con **MySQL 8.4** para la sustentación docente con **MySQL Workbench**, soportando conexión tanto a base de datos en la nube (**Aiven Cloud**) como local (**XAMPP / MySQL Server**).
+El sistema opera con **MySQL 8.4** conectado a una base de datos centralizada en la nube (**Aiven Cloud MySQL**), lo que permite que todo el equipo trabaje sincronizado sobre los mismos datos sin necesidad de configurar MySQL local ni XAMPP.
 
-### Guía de Uso en MySQL Workbench
-1. Abre **MySQL Workbench** y conéctate a tu servidor MySQL local (puerto 3306).
-2. Abre y ejecuta el script:
-   [`docs/database/schema_mysql_workbench.sql`](docs/database/schema_mysql_workbench.sql)
-3. Esto crea la base de datos `horariodb` con las 5 tablas del dominio y registros reales de prueba.
-4. Para ver la guía completa con capturas e instrucciones para generar el **Diagrama EER**, consulta:
-   👉 [**GUÍA OFICIAL MYSQL WORKBENCH**](docs/database/GUIA_MYSQL_WORKBENCH.md)
+### Parámetros de Conexión para el Equipo (MySQL Workbench)
+* **Host:** `mysql-horario-utp-horario.k.aivencloud.com`
+* **Puerto:** `26871`
+* **Usuario:** `horario_admin`
+* **Contraseña:** *(Solicitar internamente al equipo o consultar `heroku config:get MYSQL_PASSWORD`)*
+* **Esquema predeterminado:** `horariodb`
+* **SSL:** `Require`
+
+👉 [**GUÍA OFICIAL PASO A PASO MYSQL WORKBENCH**](docs/database/GUIA_MYSQL_WORKBENCH.md) (Incluye generación de Diagrama EER en 3 clics y consultas SQL de validación).
 
 ---
 

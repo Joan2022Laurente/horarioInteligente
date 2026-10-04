@@ -231,13 +231,31 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
                     for (ToolCallAccumulator acc : result.toolCalls()) {
                         log.info("[AgentOrchestrator] 🔧 Ejecutando tool: {} args={}", acc.name, acc.arguments);
+                        JsonNode argsNode;
                         try {
-                            JsonNode argsNode = objectMapper.readTree(
+                            argsNode = objectMapper.readTree(
                                     acc.arguments.isEmpty() ? "{}" : acc.arguments.toString());
+                        } catch (Exception ex) {
+                            argsNode = objectMapper.createObjectNode();
+                        }
+
+                        long startMs = System.currentTimeMillis();
+                        if (onToolEvent != null) {
+                            onToolEvent.accept(buildFriendlyActivityEvent(acc.id, "start", acc.name, argsNode, null));
+                        }
+
+                        try {
                             String toolResult = executeTool(acc.name, argsNode, studentCode);
+                            long duration = System.currentTimeMillis() - startMs;
+                            if (onToolEvent != null) {
+                                onToolEvent.accept(buildFriendlyActivityEvent(acc.id, "done", acc.name, argsNode, duration));
+                            }
                             messages.add(Map.of("role", "tool", "tool_call_id", acc.id, "content", toolResult));
                         } catch (Exception te) {
                             log.warn("[AgentOrchestrator] ⚠️ Error ejecutando {}: {}", acc.name, te.getMessage());
+                            if (onToolEvent != null) {
+                                onToolEvent.accept(buildFriendlyActivityEvent(acc.id, "error", acc.name, argsNode, null));
+                            }
                             messages.add(Map.of("role", "tool", "tool_call_id", acc.id,
                                     "content", "{\"error\":\"" + te.getMessage() + "\"}"));
                         }
@@ -522,5 +540,47 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 .id(UUID.randomUUID().toString()).role("assistant")
                 .content("### Copiloto Académico UTP\n" + note + "\nPuedes consultar directamente tu horario en la pestaña **Horario Semanal**.")
                 .timestamp(LocalDateTime.now()).metadata(Map.of("fallback", true)).build();
+    }
+
+    private Map<String, Object> buildFriendlyActivityEvent(String id, String phase, String toolName, JsonNode args, Long durationMs) {
+        Map<String, Object> evt = new LinkedHashMap<>();
+        evt.put("id", id != null ? id : "act-" + System.currentTimeMillis());
+        evt.put("phase", phase); // "start", "done", "error"
+        evt.put("tool", toolName);
+        if (durationMs != null) evt.put("durationMs", durationMs);
+
+        String detail = "";
+        if (args != null) {
+            if (args.hasNonNull("courseName")) detail = args.get("courseName").asText();
+            else if (args.hasNonNull("courseCode")) detail = args.get("courseCode").asText();
+            else if (args.hasNonNull("day")) detail = "Día " + args.get("day").asText();
+            else if (args.hasNonNull("period")) detail = args.get("period").asText();
+        }
+        evt.put("detail", detail);
+
+        String label;
+        if ("start".equals(phase)) {
+            label = switch (toolName) {
+                case "get_syllabus_details" -> detail.isBlank() ? "Consultando sílabo y rúbricas rectoras..." : "Analizando sílabo de " + detail + "...";
+                case "get_today_schedule" -> "Consultando horario de clases y aulas...";
+                case "get_upcoming_evaluations" -> "Verificando evaluaciones y entregas pendientes...";
+                case "get_enrolled_courses" -> "Sincronizando asignaturas y secciones activas...";
+                case "simulate_target_grade" -> "Calculando simulación de notas aprobatorias...";
+                default -> "Ejecutando consulta académica...";
+            };
+        } else if ("done".equals(phase)) {
+            label = switch (toolName) {
+                case "get_syllabus_details" -> detail.isBlank() ? "Sílabo y fórmulas analizadas" : "Sílabo de " + detail + " analizado";
+                case "get_today_schedule" -> "Horario y sesiones recuperadas";
+                case "get_upcoming_evaluations" -> "Próximas evaluaciones identificadas";
+                case "get_enrolled_courses" -> "Asignaturas sincronizadas con éxito";
+                case "simulate_target_grade" -> "Simulación de notas completada";
+                default -> "Acción completada con éxito";
+            };
+        } else {
+            label = "Error en consulta académica";
+        }
+        evt.put("label", label);
+        return evt;
     }
 }

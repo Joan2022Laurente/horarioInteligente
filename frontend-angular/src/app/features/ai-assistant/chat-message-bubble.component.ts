@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChatMessage } from '@domain/models/utp.model';
+import { ChatMessage, AgentActivity } from '@domain/models/utp.model';
 import { MatrixOrbComponent } from './matrix-orb.component';
 import { MarkdownRendererComponent } from './markdown-renderer.component';
 import { getStickerById, MemeSticker } from '@data/constants/stickers.config';
@@ -53,48 +53,74 @@ const TOOL_MAP: Record<string, ToolBadge> = {
 
         <!-- Cabecera sutil del Asistente -->
         <div class="flex items-center gap-2 select-none">
-          <app-matrix-orb [size]="26" [state]="'idle'" [colorMode]="'monochrome'"></app-matrix-orb>
+          <app-matrix-orb [size]="26" [state]="msg.currentActivity ? 'thinking' : 'idle'" [colorMode]="'monochrome'"></app-matrix-orb>
           <span class="text-[11px] font-bold text-neutral-400">Copiloto UTP</span>
         </div>
 
-        <!-- Contenido conversacional del Asistente -->
-        <div class="w-full text-neutral-200 block pt-0.5">
-          <app-markdown-renderer [content]="msg.content"></app-markdown-renderer>
-        </div>
+        <!-- Indicador en tiempo real de actividad del agente (Píldora brillante dinámica) -->
+        @if (msg.currentActivity) {
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/25 backdrop-blur-sm animate-pulse w-fit my-0.5">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <span class="tracking-wide">{{ msg.currentActivity.label }}</span>
+          </div>
+        }
 
-        <!-- Badges de herramientas: inline, después del contenido, no antes -->
+        <!-- Resumen colapsable de acciones completadas (Drawer moderno estilo Gemini/ChatGPT) -->
+        @if (completedActivities.length > 0) {
+          <div class="my-0.5">
+            <button
+              type="button"
+              (click)="toggleActivities()"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-neutral-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition cursor-pointer select-none"
+            >
+              <svg class="h-3 w-3 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>{{ completedActivities.length }} {{ completedActivities.length === 1 ? 'acción completada' : 'acciones completadas' }}</span>
+              <svg class="h-3 w-3 opacity-60 transition-transform duration-200" [class.rotate-180]="activitiesOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+
+            @if (activitiesOpen) {
+              <div class="mt-2 pl-2.5 border-l border-neutral-700/60 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                @for (act of completedActivities; track act.id) {
+                  <div class="flex items-center gap-2 text-[11px] text-neutral-300 py-0.5">
+                    @if (act.phase === 'done') {
+                      <svg class="h-2.5 w-2.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    } @else if (act.phase === 'error') {
+                      <span class="text-rose-400 font-bold text-[10px]">✕</span>
+                    } @else {
+                      <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                    }
+                    <span>{{ act.label }}</span>
+                    @if (act.durationMs) {
+                      <span class="text-[10px] text-neutral-500 font-mono">({{ act.durationMs }}ms)</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Contenido conversacional del Asistente -->
+        @if (msg.content) {
+          <div class="w-full text-neutral-200 block pt-0.5">
+            <app-markdown-renderer [content]="msg.content"></app-markdown-renderer>
+          </div>
+        }
+
+        <!-- Badges de herramientas fallback si no hay drawer de actividades -->
         @if (toolBadges().length > 0) {
           <div class="flex flex-wrap gap-1.5 mt-0.5">
             @for (badge of toolBadges(); track badge.label) {
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800/50 text-neutral-500 border border-neutral-700/40 select-none tracking-wide">
-                <!-- Icono SVG profesional por tipo de herramienta -->
-                @switch (badge.icon) {
-                  @case ('calendar') {
-                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>
-                    </svg>
-                  }
-                  @case ('book') {
-                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                    </svg>
-                  }
-                  @case ('list') {
-                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>
-                    </svg>
-                  }
-                  @case ('check') {
-                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                    </svg>
-                  }
-                  @default {
-                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                    </svg>
-                  }
-                }
                 {{ badge.label }}
               </span>
             }
@@ -173,6 +199,15 @@ export class ChatMessageBubbleComponent {
   @Output() retry = new EventEmitter<void>();
 
   copied = false;
+  activitiesOpen = false;
+
+  toggleActivities(): void {
+    this.activitiesOpen = !this.activitiesOpen;
+  }
+
+  get completedActivities(): AgentActivity[] {
+    return (this.msg.activities || []).filter(a => a.phase === 'done' || a.phase === 'error');
+  }
 
   get isWelcome(): boolean {
     return this.msg.id === 'welcome' || this.msg.id === 'init-class-ai' || this.msg.id.startsWith('init-');
@@ -184,13 +219,20 @@ export class ChatMessageBubbleComponent {
 
   get toolsUsedList(): string[] {
     const raw = this.msg.metadata?.['toolsUsed'];
-    if (Array.isArray(raw)) return raw.map(t => String(t));
+    if (Array.isArray(raw)) {
+      return raw
+        .map(t => String(t))
+        .filter(t => !t.startsWith('{') && !t.includes('"phase"'));
+    }
     return [];
   }
 
-  /** Mapea los nombres de funciones a badges con icono y etiqueta legible */
+  /** Mapea los nombres de funciones a badges con icono y etiqueta legible solo si no hay drawer de actividades */
   toolBadges(): ToolBadge[] {
-    return this.toolsUsedList.map(name => TOOL_MAP[name] ?? { label: name, icon: 'tool' as const });
+    if (this.completedActivities.length > 0) return [];
+    return this.toolsUsedList
+      .filter(name => !name.startsWith('{') && !name.includes('"phase"'))
+      .map(name => TOOL_MAP[name] ?? { label: name, icon: 'tool' as const });
   }
 
   get userSticker(): MemeSticker | undefined {

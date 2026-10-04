@@ -1,7 +1,7 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ChatMessage, ScheduleInterval, UTPCurrentInterval } from '@domain/models/utp.model';
+import { ChatMessage, ScheduleInterval, UTPCurrentInterval, AgentActivity } from '@domain/models/utp.model';
 import { DailyLimitStatus, getClientDailyLimitStatus, incrementClientDailyUsage } from '@data/rate-limit/daily-limiter';
 import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
@@ -468,6 +468,7 @@ export class AiAssistantModalComponent implements OnChanges {
     // Preparar mensaje de respuesta reactivo en el chat
     const assistantMsgId = (Date.now() + 1).toString();
     const toolsUsed: string[] = [];
+    const activities: AgentActivity[] = [];
     let streamedContent = '';
 
     const assistantMsg: ChatMessage = {
@@ -475,7 +476,9 @@ export class AiAssistantModalComponent implements OnChanges {
       role: 'assistant',
       content: '',
       timestamp: this.getFormattedTime(),
-      metadata: { toolsUsed }
+      metadata: { toolsUsed },
+      activities: activities,
+      currentActivity: null
     };
 
     let msgAdded = false;
@@ -499,7 +502,7 @@ export class AiAssistantModalComponent implements OnChanges {
         this.scrollToBottom('smooth');
       },
       (toolName: string) => {
-        if (!toolsUsed.includes(toolName)) {
+        if (!toolsUsed.includes(toolName) && !toolName.startsWith('{')) {
           toolsUsed.push(toolName);
           assistantMsg.metadata = { ...assistantMsg.metadata, toolsUsed: [...toolsUsed] };
         }
@@ -511,9 +514,35 @@ export class AiAssistantModalComponent implements OnChanges {
         this.scrollToBottom('smooth');
       },
       undefined,
-      historyPayload
+      historyPayload,
+      (act: AgentActivity) => {
+        if (!msgAdded) {
+          this.isLoading = false;
+          this.messages.push(assistantMsg);
+          msgAdded = true;
+        }
+
+        const idx = activities.findIndex(a => a.id === act.id);
+        if (idx >= 0) {
+          activities[idx] = { ...activities[idx], ...act };
+        } else {
+          activities.push(act);
+        }
+
+        if (act.phase === 'start') {
+          assistantMsg.currentActivity = act;
+        } else if (act.phase === 'done' || act.phase === 'error') {
+          if (assistantMsg.currentActivity?.id === act.id) {
+            assistantMsg.currentActivity = null;
+          }
+        }
+
+        assistantMsg.activities = [...activities];
+        this.scrollToBottom('smooth');
+      }
     ).then(() => {
       this.isLoading = false;
+      assistantMsg.currentActivity = null;
       this.quota = incrementClientDailyUsage(userId);
       this.scrollToBottom('smooth');
     }).catch((err) => {

@@ -111,11 +111,15 @@ public class AiChatController {
                         log.debug("[AiChatController] Token drop (cliente desconectado): {}", ex.getMessage());
                     }
                 },
-                // onToolEvent: emitir nombre de herramienta tan pronto como se detecta
+                // onToolEvent: emitir actividad enriquecida y evento tool sanitizado
                 toolEvt -> {
                     try {
                         String payload = objectMapper.writeValueAsString(toolEvt);
-                        emitter.send("event: tool\ndata: " + payload + "\n\n");
+                        emitter.send("event: activity\ndata: " + payload + "\n\n");
+                        if (toolEvt != null && toolEvt.containsKey("tool")) {
+                            String legacyPayload = objectMapper.writeValueAsString(java.util.Map.of("name", toolEvt.get("tool")));
+                            emitter.send("event: tool\ndata: " + legacyPayload + "\n\n");
+                        }
                     } catch (Exception ex) {
                         log.debug("[AiChatController] Tool event drop: {}", ex.getMessage());
                     }
