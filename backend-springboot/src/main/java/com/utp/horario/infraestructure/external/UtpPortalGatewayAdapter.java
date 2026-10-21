@@ -67,14 +67,17 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
 
     @Override
     public String getStudentToken(String studentCode) {
+        // Nunca se devuelve el token de otro estudiante: la identidad es inmutable por diseño.
+        // Ante la ausencia de sesión propia se devuelve null para que la capa de aplicación
+        // degrade al Read Model persistido en lugar de exhibir datos ajenos.
         if (studentCode == null || studentCode.isBlank()) {
-            return tokenCache.values().stream().findFirst().orElse(null);
+            return null;
         }
         String found = tokenCache.get(studentCode.trim().toUpperCase());
         if (found != null && !found.isBlank()) {
             return found;
         }
-        return tokenCache.values().stream().findFirst().orElse(null);
+        return null;
     }
 
     @Override

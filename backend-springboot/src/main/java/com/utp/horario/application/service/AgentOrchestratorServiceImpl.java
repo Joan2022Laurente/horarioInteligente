@@ -456,8 +456,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 yield objectMapper.writeValueAsString(toolService.getTodaySchedule(studentCode, date));
             }
             case "get_syllabus_details" -> {
-                String query = args.has("course_query") ? args.path("course_query").asText()
-                        : (args.has("course_code") ? args.path("course_code").asText() : "");
+                String query = AcademicToolRegistry.resolveCourseQuery(args);
                 yield objectMapper.writeValueAsString(toolService.getSyllabusDetails(studentCode, query));
             }
             case "get_upcoming_evaluations" -> {
@@ -558,10 +557,11 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
         String detail = "";
         if (args != null) {
-            if (args.hasNonNull("courseName")) detail = args.get("courseName").asText();
-            else if (args.hasNonNull("courseCode")) detail = args.get("courseCode").asText();
-            else if (args.hasNonNull("day")) detail = "Día " + args.get("day").asText();
-            else if (args.hasNonNull("period")) detail = args.get("period").asText();
+            // Las claves deben coincidir con los esquemas reales declarados en AcademicToolRegistry.
+            if (args.hasNonNull("course_query")) detail = args.get("course_query").asText();
+            else if (args.hasNonNull("course_code")) detail = args.get("course_code").asText();
+            else if (args.hasNonNull("date")) detail = "Fecha " + args.get("date").asText();
+            else if (args.hasNonNull("current_week")) detail = "Semana " + args.get("current_week").asText();
         }
         evt.put("detail", detail);
 
@@ -572,7 +572,6 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 case "get_today_schedule" -> "Consultando horario de clases y aulas...";
                 case "get_upcoming_evaluations" -> "Verificando evaluaciones y entregas pendientes...";
                 case "get_enrolled_courses" -> "Sincronizando asignaturas y secciones activas...";
-                case "simulate_target_grade" -> "Calculando simulación de notas aprobatorias...";
                 default -> "Ejecutando consulta académica...";
             };
         } else if ("done".equals(phase)) {
@@ -581,7 +580,6 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 case "get_today_schedule" -> "Horario y sesiones recuperadas";
                 case "get_upcoming_evaluations" -> "Próximas evaluaciones identificadas";
                 case "get_enrolled_courses" -> "Asignaturas sincronizadas con éxito";
-                case "simulate_target_grade" -> "Simulación de notas completada";
                 default -> "Acción completada con éxito";
             };
         } else {

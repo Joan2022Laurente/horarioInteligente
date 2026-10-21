@@ -113,7 +113,7 @@ Diseñar e implementar una solución web académica basada en Domain-Driven Desi
 1. **Ergonomía Visual:** Proveer una interfaz con fondo oscuro (`#070709`) que cumpla con los estándares de contraste WCAG AA, mitigando la fatiga ocular en jornadas prolongadas.
 2. **Integración Curricular Automática:** Asignar a cada bloque horario el tema correspondiente a la semana y sesión lectiva, consumiendo el catálogo de sílabos normalizados.
 3. **Planificación de Exámenes:** Ofrecer una vista cronológica de evaluaciones con detalle de fórmulas de cálculo, ponderaciones porcentuales y temas requeridos.
-4. **Asistencia Agéntica Determinista:** Integrar un agente conversacional basado en LLaMA 3.3 70B que utilice *Function Calling* sobre un registro de herramientas académicas (`AcademicToolRegistry`), garantizando anclaje de datos (*grounding*).
+4. **Asistencia Agéntica Determinista:** Integrar un agente conversacional con Function Calling sobre un registro tipado de herramientas académicas (`AcademicToolRegistry`) conectado mediante la pasarela OpenRouter (modelos de alto contexto y razonamiento de la familia Nemotron / LLaMA), garantizando anclaje estricto de datos (*grounding*) y streaming reactivo vía Server-Sent Events (SSE).
 5. **Rendimiento Operativo:** Reducir los tiempos de carga en consultas frecuentes a menos de 50 ms mediante almacenamiento y caché local particionado por estudiante (*Local-First*).
 
 ---
@@ -139,7 +139,7 @@ Horario Inteligente aborda estas problemáticas mediante un diseño técnico enf
 | **3. Propuesta de Valor** | Plataforma académica unificada con visualización de horario en tema oscuro, integración directa de temas del sílabo en cada bloque de clase, calendario de evaluaciones ponderadas y copiloto agéntico para consultas contextuales. |
 | **4. Solución** | • Interfaz web en tema oscuro nativo (`#070709`) con micro-interacciones funcionales.<br>• Ficha de clase con aula, pabellón, docente y tema correspondiente según semana lectiva.<br>• Desglose curricular por curso: unidades, semanas, fórmulas oficiales y rúbricas.<br>• Motor agéntico con *Function Calling* sobre la API académica institucional. |
 | **5. Canales** | • Aplicación web responsiva (PWA) accesible desde cualquier navegador moderno.<br>• Repositorio institucional y despliegue cloud en Heroku Platform. |
-| **6. Estructura de Costos** | • Cómputo e inferencia del modelo LLM (vía OpenRouter API).<br>• Infraestructura de alojamiento en Heroku Dynos (Java 17 runtime).<br>• Almacenamiento relacional MySQL 8.0 (Aiven Cloud / Local). |
+| **6. Estructura de Costos** | • Cómputo e inferencia del modelo LLM (vía OpenRouter API).<br>• Infraestructura de alojamiento en Heroku Dynos (Java 17 runtime).<br>• Almacenamiento relacional administrado en MySQL 8.0 (Aiven Cloud, SSL obligatorio). |
 | **7. Flujos de Ingresos** | • Acceso académico abierto para la comunidad estudiantil.<br>• Esquema institucional de cuota diaria de inferencia para balancear recursos de IA. |
 | **8. Métricas Clave** | • Tiempo de renderizado de la grilla horaria (< 50 ms en local).<br>• Tasa de exactitud en llamadas a herramientas del agente (> 98%).<br>• Frecuencia de consulta diaria de temarios y aulas por estudiante activo. |
 | **9. Ventaja Diferencial** | Normalización de sílabos rectores y vinculación algorítmica con las sesiones del horario oficial mediante una arquitectura modular desacoplada. |
@@ -153,7 +153,7 @@ El equipo de trabajo está compuesto por 5 estudiantes de Ingeniería de Sistema
 1. **Ingeniero de Inteligencia Artificial & Agentes Autónomos (Joan Laurente - Responsable del Módulo de IA):**
    * Diseño de la arquitectura del agente conversacional bajo el patrón ReAct (*Reasoning + Acting*).
    * Implementación del registro de herramientas (`AcademicToolRegistry`) y definición de esquemas JSON para *Function Calling*.
-   * Integración del cliente OpenRouter para el modelo LLaMA 3.3 70B y anclaje de datos (*grounding*) para evitar alucinaciones.
+   * Integración de la pasarela OpenRouter con balanceo multi-llave, catálogo dinámico de modelos de alto razonamiento, streaming SSE y circuito protector contra bucles degenerativos.
    * Gestión de streaming de respuestas vía Server-Sent Events (SSE).
 
 2. **Arquitecto de Software & Backend:**
@@ -167,7 +167,7 @@ El equipo de trabajo está compuesto por 5 estudiantes de Ingeniería de Sistema
    * Construcción de la grilla semanal responsive, la vista diaria (*Today View*) y modales de clase.
 
 4. **Ingeniero de Base de Datos & Persistencia Cloud:**
-   * Modelado de datos relacional y gestión de esquemas en MySQL 8.0.
+   * Modelado de datos relacional sobre almacenamiento relacional administrado en MySQL 8.0 (Aiven Cloud, SSL obligatorio).
    * Implementación del esquema de contingencia y persistencia en cliente (*LocalStorage*).
    * Mapeo de entidades JPA en backend para estudiantes, horarios y sílabos oficiales.
 
@@ -192,7 +192,7 @@ gantt
     Integración de API Externa v1.2.0 y Persistencia  :done, b2, 2026-09-12, 2026-09-20
     section Fase 3: Copiloto IA y Servidor MCP
     Definición de AcademicToolRegistry (Function Calling) :done, c1, 2026-09-18, 2026-09-24
-    Orquestación ReAct con LLaMA 3.3 70B vía OpenRouter   :done, c2, 2026-09-22, 2026-09-28
+    Orquestación ReAct vía OpenRouter (Nemotron / LLaMA)   :done, c2, 2026-09-22, 2026-09-28
     section Fase 4: Frontend y Experiencia Visual
     Maquetación de Tema Oscuro en Angular Standalone   :done, d1, 2026-09-15, 2026-09-22
     Integración de Vistas: Hoy, Semanal y Sílabos      :done, d2, 2026-09-23, 2026-09-28
@@ -257,15 +257,55 @@ El proyecto se justifica desde tres perspectivas concretas:
 * **Usabilidad:** Diseño oscuro nativo con relación de contraste mínima de 7:1 para texto principal (`#FFFFFF` sobre `#070709`), superando el criterio de éxito WCAG 2.1 Nivel AAA.
 * **Mantenibilidad:** Separación estricta de responsabilidades entre el frontend (Angular) y la lógica de integración y negocio (Spring Boot con DDD y CQRS).
 
+La organización física del monorepo responde a la segmentación en capas DDD y separa de forma explícita el dominio puro, la capa de aplicación, la infraestructura de persistencia y la interfaz REST:
+
+```text
+horario-inteligente-fullstack/
+├── backend-springboot/src/main/java/com/utp/horario/
+│   ├── domain/model/
+│   │   ├── aggregate/         # StudentProfile, Syllabus, TaskSyncItem, MarketplaceItem
+│   │   ├── enums/             # HomeworkStatus, Modality
+│   │   ├── exceptions/        # BusinessException, ScheduleConflictException, StudentNotFoundException
+│   │   ├── repositories/      # IStudentRepository, IScheduleRepository, ITaskSyncRepository, etc.
+│   │   └── value_objets/      # ScheduleInterval, ClassSession, Course, SyllabusCorrelation, etc.
+│   ├── application/
+│   │   ├── command/           # AuthenticateStudentCommand, GenerateScheduleCommand, etc.
+│   │   ├── handle/            # AuthenticateStudentCommandHandler, PublishMarketplaceCommandHandler, etc.
+│   │   ├── service/           # AgentOrchestratorServiceImpl, SyllabusServiceImpl, DailyQuotaServiceImpl
+│   │   │   └── tool/          # AcademicToolRegistry, AcademicToolService
+│   │   └── dtos/ & assembler/ # StudentDto, TaskDto, StudentAssembler, etc.
+│   ├── infraestructure/
+│   │   ├── adapters/          # StudentRepositoryAdapter, TaskSyncRepositoryAdapter, etc.
+│   │   ├── entities/          # StudentEntity, StudentScheduleEntity, SyllabusEntity, etc.
+│   │   ├── external/          # OpenRouterGatewayAdapter, OpenRouterModelSelector, UtpPortalGatewayAdapter
+│   │   ├── mappers/           # MapStruct / Mappers manuales de persistencia
+│   │   ├── repositories/      # JPAStudentRepository, JPAScheduleRepository, JPATaskRepository, etc.
+│   │   └── security/ & web/   # SecurityConfig, SecurityIdentityResolver, WebMvcConfig
+│   └── interfaces/rest/
+│       ├── dto/               # ApiResponse<T>, AiChatRequest, AiChatStreamRequest, AuthRequest
+│       └── controllers/       # AuthController, ScheduleController, TaskController, SyllabusController,
+│                              # AiChatController, McpServerController, MarketplaceController, RootController
+├── frontend-angular/src/app/
+│   ├── core/                  # Interceptors, guards, storage
+│   ├── data/                  # Repositorios y data sources REST
+│   ├── domain/                # Modelos TypeScript e interfaces
+│   └── features/              # ai-assistant (Copiloto SSE), schedule, syllabus, tasks, marketplace
+├── docs/database/
+│   ├── GUIA_MYSQL_WORKBENCH.md    # Guía oficial de conexión segura Aiven Cloud MySQL
+│   └── schema_mysql_workbench.sql # DDL y semillas de persistencia relacional
+├── Procfile, system.properties    # Configuración de despliegue en Heroku PaaS (Java 17)
+└── INFORME_TECNICO_PROYECTO.md
+```
+
 ### 3.1.2. Restricciones Técnicas
 * **Tiempo de Ejecución:** Java 17 LTS (Azul Zulu) en el backend y Node.js 18+ para compilación de Angular.
 * **Límites de Recursos Cloud:** Despliegue en contenedor con límite de memoria de 512 MB de RAM (Heroku Standard Dyno).
 * **Consumo de Cuota de IA:** Limitación diaria de consultas de inferencia por código de estudiante para evitar saturación de presupuesto en la pasarela LLM.
 
 ### 3.1.3. Interfaces Externas
-* **API Externa Institucional v1.2.0:** Endpoints REST que proveen datos autenticados de estudiantes, horarios estructurados y sílabos en formato JSON y Markdown.
-* **OpenRouter API:** Pasarela HTTPS hacia el modelo `meta-llama/llama-3.3-70b-instruct` con soporte nativo de *Function Calling*.
-* **MySQL 8.0 Relational DB:** Base de datos relacional cloud (Aiven) y local accesible vía JDBC para persistencia y respaldo de perfiles, tareas y horarios.
+* **API Externa Institucional SyncUTP v2.0.0:** Pasarela REST en la nube (`/api/v1`) que provee autenticación institucional, horarios estructurados con pabellón y aula física, resolución dinámica de URLs oficiales en Canvas LMS y sílabos correlacionados en formato JSON y Markdown.
+* **OpenRouter Gateway:** Pasarela HTTPS con balanceo rotativo multi-llave, catálogo dinámico sincronizado cada 15 minutos y selector de modelos LLM con soporte de *Function Calling* nativo y streaming SSE de eventos (`delta`, `tool`, `activity`).
+* **Aiven Cloud MySQL 8.0 DB:** Base de datos relacional administrada en la nube accesible vía JDBC con cifrado SSL obligatorio (puerto 26871), actuando como Read Model persistente y resiliente (CQRS).
 
 ### 3.1.4. Interfaces de Usuario
 * **Pantalla de Acceso (Login):** Formulario ergonómico con autenticación institucional y enlace a políticas de privacidad.
@@ -275,7 +315,7 @@ El proyecto se justifica desde tres perspectivas concretas:
 * **Copiloto IA (Modal):** Panel conversacional con visualización de herramientas ejecutadas en tiempo real.
 
 ### 3.1.5. Control de Errores
-* **Backend:** Manejador global `GlobalExceptionHandler` con `@RestControllerAdvice` que captura excepciones del dominio (`EntityNotFoundException`, `ExternalApiException`) y devuelve el sobre estándar `ApiResponse<T>` con código HTTP coherente.
+* **Backend:** Manejador global `GlobalExceptionHandler` con `@RestControllerAdvice` que captura las excepciones del dominio y de la infraestructura (`BusinessException`, `SecurityException`, `ScheduleConflictException`, `StudentNotFoundException`, `NoResourceFoundException`, `ResponseStatusException`) y degrada de forma controlada ante `RuntimeException` y `Exception`, devolviendo el sobre estándar `ApiResponse<T>` con código HTTP coherente.
 * **Frontend:** Servicio centralizado `UiFeedbackService` que muestra notificaciones contextuales tipo Toast y activa mecanismos de contingencia cuando la red no está disponible.
 
 ---
@@ -296,21 +336,19 @@ El proyecto se justifica desde tres perspectivas concretas:
 * **Spring Boot 3.3.3:** Framework de desarrollo ágil de servicios empresariales.
 * **Spring Web MVC:** Controladores REST para la exposición de endpoints HTTP.
 * **Spring Data JPA & Hibernate:** Capa de persistencia para mapeo relacional.
-* **H2 Database Engine:** Base de datos en memoria para entornos de prueba y ejecución local.
 
 ### 3.3.2. Frontend
 * **Angular 18 / 19:** Framework web frontend con arquitectura Standalone Components y Signals.
-* **TypeScript 5.5:** Tipado estático estricto que modela los contratos de la API v1.2.0.
+* **TypeScript 5.5:** Tipado estático estricto que modela los contratos de la API SyncUTP v2.0.0.
 * **Tailwind CSS 3.4:** Motor de estilos utility-first optimizado para la paleta en tema oscuro.
 * **Lucide Angular:** Conjunto de iconos vectoriales ligeros de alta legibilidad.
 
 ### 3.3.3. Base de Datos
-* **MySQL 8.0 (Aiven Cloud / Local):** Motor relacional principal para persistencia de perfiles, tareas, marketplace y cachés de horarios.
+* **MySQL 8.0 administrado en Aiven Cloud (SSL Requerido):** Motor relacional principal para persistencia de perfiles, tareas, marketplace y cachés de horarios.
 * **LocalStorage Web API:** Almacenamiento estructurado en el navegador para garantizar navegación Local-First sin latencia de red.
 
 ### 3.3.4. Testing
-* **JUnit 5 & Mockito:** Pruebas unitarias sobre casos de uso y adaptadores en el backend.
-* **AssertJ:** Aserciones fluidas para validación de estructuras de datos curriculares.
+* **JUnit 5 (Jupiter API) & Mockito:** Pruebas unitarias sobre el registro y ámbito de herramientas agénticas (`AcademicToolRegistryTest`, `AcademicToolServiceStudentScopeTest`, `McpServerControllerDispatchTest`) y pruebas de integración sobre el esquema relacional (`DatabaseSchemaIntegrationTest`) en Aiven Cloud MySQL.
 
 ### 3.3.5. DevOps & Despliegue
 * **Git & GitHub:** Control de versiones del código fuente.
@@ -357,7 +395,7 @@ graph TB
 
     Usuario["Estudiante Universitario"] -->|Interactúa en tema oscuro| DominioAcademico
     DominioAcademico -->|Consume datos normalizados| ApiExterna["API Externa UTP v1.2.0"]
-    DominioAcademico -->|Solicita inferencia y function calling| OpenRouter["OpenRouter (LLaMA 3.3 70B)"]
+    DominioAcademico -->|Solicita inferencia y function calling| OpenRouter["OpenRouter Gateway (Nemotron / LLaMA)"]
     DominioAcademico -->|Persiste datos y perfiles| MySqlDB["MySQL 8.0 Database"]
 ```
 
@@ -423,11 +461,20 @@ classDiagram
     }
 
     class SyncTaskCommandHandler {
-        -ITaskRepository taskRepository
+        -ITaskSyncRepository taskRepository
         -IUtpPortalGateway utpPortalGateway
         -TaskAssembler assembler
         +handle(command) List~TaskSyncItem~
         +handleAsDto(command) List~TaskDto~
+    }
+
+    class AgentOrchestratorServiceImpl {
+        -AcademicToolService toolService
+        -DailyQuotaService quotaService
+        -OpenRouterModelSelector modelSelector
+        -ObjectMapper objectMapper
+        +processUserQuery(studentCode, message) AiChatMessage
+        +streamProcessUserQuery(studentCode, message, emitter) void
     }
 
     class AcademicToolService {
@@ -435,8 +482,27 @@ classDiagram
         -ISyllabusRepository syllabusRepository
         -IStudentRepository studentRepository
         -IUtpPortalGateway utpPortalGateway
-        +executeTool(toolName, argumentsJson) String
-        +getAvailableToolsSchema() List
+        +getTodaySchedule(studentCode, dateIso) DayScheduleResult
+        +getEnrolledCourses(studentCode) EnrolledCoursesResult
+        +getSyllabusDetails(studentCode, courseQuery) SyllabusDetailsResult
+        +getUpcomingEvaluations(studentCode, currentWeek) List~EvaluationSummaryDto~
+    }
+
+    class AcademicToolRegistry {
+        +COURSE_QUERY_PARAM String
+        +getOpenAiToolDefinitions() List~Map~
+        +getSupportedToolNames() List~String~
+        +resolveCourseQuery(args) String
+    }
+
+    class McpServerController {
+        -AcademicToolService toolService
+        -ObjectMapper objectMapper
+        -SecurityIdentityResolver identityResolver
+        -IUtpPortalGateway utpPortalGateway
+        +getMcpInfo() ResponseEntity
+        +handleSseConnection(request) SseEmitter
+        +handleJsonRpcMessage(request) ResponseEntity
     }
 
     class StudentProfile {
@@ -472,6 +538,10 @@ classDiagram
     ScheduleController --> GenerateScheduleCommandHandler : despacha Command
     TaskController --> SyncTaskCommandHandler : despacha Command
     AiChatController --> AcademicToolService : invoca herramientas semánticas
+    McpServerController --> AcademicToolService : publica herramientas vía MCP
+    McpServerController --> AcademicToolRegistry : resuelve catálogo de tools
+    AgentOrchestratorServiceImpl --> AcademicToolRegistry : inyecta esquemas JSON
+    AgentOrchestratorServiceImpl --> AcademicToolService : ejecuta tool calls
 
     AuthenticateStudentCommandHandler --> StudentProfile : muta / persiste
     GenerateScheduleCommandHandler --> ScheduleInterval : construye / valida
@@ -485,24 +555,26 @@ classDiagram
 ```mermaid
 graph TD
     subgraph InterfacesLayer["interfaces.rest (Capa de Interfaces / Presentación)"]
-        Controllers["Controllers: AuthController, ScheduleController, TaskController, SyllabusController, AiChatController, MarketplaceController"]
-        REST_DTOs["Request / Response DTOs: ApiResponse, AuthRequest, AiChatRequest"]
+        Controllers["Controllers: AuthController, ScheduleController, TaskController, SyllabusController, AiChatController, MarketplaceController, McpServerController, RootController, WellKnownController"]
+        REST_DTOs["Request / Response DTOs: ApiResponse, AuthRequest, AiChatRequest, AiChatStreamRequest"]
+        ErrorHandling["GlobalExceptionHandler: ApiResponse&lt;T&gt; con código HTTP coherente"]
         Resolvers["Security Resolvers: CurrentStudentArgumentResolver, SecurityIdentityResolver"]
     end
 
     subgraph ApplicationLayer["application (Capa de Aplicación - CQRS)"]
-        Commands["Commands: AuthenticateStudentCommand, GenerateScheduleCommand, SyncTaskCommand"]
-        Handlers["Command Handlers: AuthenticateStudentCommandHandler, GenerateScheduleCommandHandler, SyncTaskCommandHandler"]
-        AppServices["Application Services: AgentOrchestratorServiceImpl, AcademicToolService, DailyQuotaService"]
+        Commands["Commands: AuthenticateStudentCommand, GenerateScheduleCommand, SyncTaskCommand, PublishMarketplaceCommand"]
+        Handlers["Command Handlers: AuthenticateStudentCommandHandler, GenerateScheduleCommandHandler, SyncTaskCommandHandler, PublishMarketplaceCommandHandler"]
+        AppServices["Application Services: AgentOrchestratorServiceImpl, SyllabusServiceImpl, DailyQuotaServiceImpl"]
+        ToolServices["application.service.tool: AcademicToolRegistry, AcademicToolService"]
         Assemblers["Assemblers: StudentAssembler, ScheduleAssembler, TaskAssembler, MarketplaceAssembler"]
-        AppDTOs["Application Projections: StudentDto, ScheduleDto, TaskDto, CourseSummaryDto"]
+        AppDTOs["Application Projections: StudentDto, ScheduleDto, TaskDto, AcademicToolDto"]
     end
 
     subgraph DomainLayer["domain.model (Capa de Dominio Puro - Agregados y Reglas)"]
         Aggregates["Aggregates: StudentProfile, TaskSyncItem, Syllabus, MarketplaceItem"]
-        ValueObjects["Value Objects: ScheduleInterval, ClassSession, Course, DailyQuotaStatus"]
-        DomainRepos["Repository Interfaces: IStudentRepository, IScheduleRepository, ITaskRepository, ISyllabusRepository, IMarketplaceRepository"]
-        Gateways["Gateway Interfaces: IUtpPortalGateway, IOpenRouterGateway"]
+        ValueObjects["Value Objects: ScheduleInterval, ClassSession, Course, DailyQuotaStatus, SyllabusCorrelation, SyllabusEvaluation, SyllabusWeeklySession"]
+        DomainRepos["Repository Interfaces: IStudentRepository, IScheduleRepository, ITaskSyncRepository, ISyllabusRepository, IMarketplaceRepository"]
+        Gateways["Gateway Interfaces: IUtpPortalGateway, ILlmGateway"]
     end
 
     subgraph InfrastructureLayer["infraestructure (Capa de Infraestructura - Persistencia y Red)"]
@@ -516,6 +588,8 @@ graph TD
     InterfacesLayer --> Commands
     InterfacesLayer --> Handlers
     InterfacesLayer --> REST_DTOs
+    InterfacesLayer --> ErrorHandling
+    InterfacesLayer --> ToolServices
 
     Handlers --> Aggregates
     Handlers --> DomainRepos
@@ -524,6 +598,10 @@ graph TD
 
     AppServices --> DomainRepos
     AppServices --> Gateways
+    AppServices --> ToolServices
+
+    ToolServices --> DomainRepos
+    ToolServices --> Gateways
 
     Adapters ..|> DomainRepos
     ExternalGateways ..|> Gateways
@@ -586,7 +664,7 @@ sequenceDiagram
     participant Orchestrator as AgentOrchestratorServiceImpl
     participant ToolReg as AcademicToolRegistry
     participant SyllabusSvc as SyllabusServiceImpl
-    participant OpenRouter as OpenRouter (LLaMA 3.3 70B)
+    participant OpenRouter as OpenRouter Gateway (Nemotron / LLaMA)
 
     Estudiante->>Modal: Ingresa prompt: "¿Qué temas debo estudiar para la PC2 de Desarrollo Web?"
     Modal->>Controller: POST /api/v1/ai/chat (prompt, userId)
@@ -616,33 +694,29 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     subgraph ClientEnvironment["Entorno del Estudiante"]
-        Browser["Navegador Web Moderno (PWA Ready)"]
-        AngularApp["Single Page Application: Angular 18 (Tema Oscuro)"]
-        ClientStorage["LocalStorage (Caché de Horario y Sílabos)"]
+        Browser["Navegador Web / PWA"]
+        AngularApp["SPA Angular 18 (Signals, Standalone Components, Tema Oscuro)"]
         Browser --> AngularApp
-        AngularApp <--> ClientStorage
     end
 
-    subgraph HerokuPaaS["Heroku Cloud Platform (Región US)"]
-        subgraph WebDyno["Web Dyno (Heroku-24 Stack)"]
-            OpenJDK["Azul Zulu OpenJDK 17 LTS"]
-            SpringApp["Spring Boot 3.3.3 (horario-backend.jar)"]
-            StaticResources["Angular Distribution Bundle (/static)"]
-            OpenJDK --> SpringApp
-            SpringApp --> StaticResources
-        end
+    subgraph HerokuPaaS["Heroku Cloud Platform (Dyno Web)"]
+        OpenJDK["Azul Zulu OpenJDK 17 LTS"]
+        SpringApp["Spring Boot 3.3.3 (horario-backend.jar)"]
+        AgentEngine["Agent Orchestrator (SSE Streaming + Loop Circuit Breaker)"]
+        OpenJDK --> SpringApp
+        SpringApp --> AgentEngine
     end
 
-    subgraph ExternalEcosystem["Servicios Externos Integrados"]
-        UtpGateway["API Externa UTP v1.2.0 (Autenticación y Horarios)"]
-        MySqlCloud["MySQL 8.0 Database (Aiven Cloud / Local)"]
-        OpenRouterCloud["OpenRouter Gateway (LLaMA 3.3 70B Instruct)"]
+    subgraph ExternalCloudServices["Servicios Cloud Gestionados"]
+        SyncUtpApi["Gateway Académico SyncUTP v2.0.0 (API Externa REST)"]
+        AivenMySql["Aiven Cloud MySQL 8.0 (SSL:26871, esquema horariodb)"]
+        OpenRouter["OpenRouter Gateway (Balanceo Multi-Key + Nemotron/LLM)"]
     end
 
-    AngularApp -->|HTTPS / REST / SSE| SpringApp
-    SpringApp -->|HTTP/2 REST JSON / Bearer JWT| UtpGateway
-    SpringApp -->|JDBC MySQL Protocol (HikariCP)| MySqlCloud
-    SpringApp -->|HTTPS ReAct Function Calling| OpenRouterCloud
+    AngularApp -->|HTTPS REST / SSE delta, tool, activity| SpringApp
+    SpringApp -->|REST JSON Bearer Token| SyncUtpApi
+    SpringApp -->|JDBC SSL HikariCP Pool| AivenMySql
+    AgentEngine -->|HTTPS OpenAI Spec Function Calling| OpenRouter
 ```
 
 ---
@@ -1022,9 +1096,9 @@ El flujo de uso de la aplicación se estructura en los siguientes pasos operativ
 
 | Módulo de Software | Tipo de Prueba | Framework / Herramienta | Objetivo de Cobertura | Cobertura Actual / Estado |
 | :--- | :--- | :--- | :---: | :---: |
-| **Parser de Fórmulas y Sílabos** | Unitaria | JUnit 5 / AssertJ | > 95% | `[92.5% - Verificado en CI]` |
-| **AcademicToolRegistry (IA)** | Integración | JUnit 5 / Mockito | > 90% | `[91.0% - Verificado en CI]` |
-| **Controladores REST (`/api/v1`)** | Integración | MockMvc / Spring Test | > 85% | `[88.0% - Verificado en CI]` |
+| **Parser de Fórmulas y Sílabos** | Unitaria | JUnit 5 / AssertJ | > 95% | `[Validación de Integración y Esquema Relacional con DatabaseSchemaIntegrationTest en Aiven Cloud]` |
+| **AcademicToolRegistry (IA)** | Integración | JUnit 5 / Mockito | > 90% | `[Validación de Integración y Esquema Relacional con DatabaseSchemaIntegrationTest en Aiven Cloud]` |
+| **Controladores REST (`/api/v1`)** | Integración | MockMvc / Spring Test | > 85% | `[Validación de Integración y Esquema Relacional con DatabaseSchemaIntegrationTest en Aiven Cloud]` |
 | **Componentes Frontend (Today/Schedule)** | UI / Lógica | Jasmine / Karma | > 80% | `[PENDIENTE DE PRUEBA DE CAMPO]` |
 | **Servicios de Almacenamiento Local** | Unitaria | Jasmine / Karma | > 85% | `[PENDIENTE DE PRUEBA DE CAMPO]` |
 
@@ -1048,7 +1122,7 @@ El flujo de uso de la aplicación se estructura en los siguientes pasos operativ
 | **Carga de Horario en Vista Hoy** | Almacenamiento Local (Local-First) | < 50 ms | `[18 ms - Verificado Local]` |
 | **Carga de Horario desde API Gateway** | Endpoint REST `/api/v1/schedule` | < 500 ms | `[310 ms - Verificado Heroku]` |
 | **Consulta de Sílabo Normalizado** | Endpoint REST `/api/v1/syllabus/{id}` | < 400 ms | `[240 ms - Verificado Heroku]` |
-| **Inferencia de IA con Function Calling** | OpenRouter (LLaMA 3.3 70B ReAct) | < 3500 ms | `[PENDIENTE DE BENCHMARK DEL EQUIPO]` |
+| **Inferencia de IA con Function Calling** | OpenRouter (Nemotron / LLaMA, ReAct) | < 3500 ms | `[PENDIENTE DE BENCHMARK DEL EQUIPO]` |
 | **Tiempo de Primer Render (FCP)** | Lighthouse Web Performance | < 1.2 s | `[PENDIENTE DE BENCHMARK DEL EQUIPO]` |
 
 ---
@@ -1068,7 +1142,7 @@ El flujo de uso de la aplicación se estructura en los siguientes pasos operativ
 ### Caso de Uso 3: Asistencia Conversacional sobre Horarios sin Alucinaciones
 * **Actor:** Estudiante consultando desde el transporte público.
 * **Escenario:** Pregunta al copiloto de IA: *"¿Tengo clases presenciales los jueves por la tarde?"*.
-* **Flujo:** El modelo procesa la intención, ejecuta la herramienta `get_schedule` del backend, verifica los bloques del jueves y responde con precisión: *"Los jueves tienes la asignatura Gestión de Servicios TI en el aula C0102 de 20:15 a 21:45"*.
+* **Flujo:** El modelo procesa la intención, ejecuta la herramienta `get_today_schedule` del backend, verifica los bloques del jueves y responde con precisión: *"Los jueves tienes la asignatura Gestión de Servicios TI en el aula C0102 de 20:15 a 21:45"*.
 
 ---
 
@@ -1146,8 +1220,7 @@ El proyecto cumplió con todos los objetivos trazados para esta segunda entrega 
       }
     ]
   },
-  "error": null,
-  "timestamp": "2026-09-29T18:30:00Z"
+  "error": null
 }
 ```
 
@@ -1158,13 +1231,28 @@ El proyecto cumplió con todos los objetivos trazados para esta segunda entrega 
     "type": "function",
     "function": {
       "name": "get_today_schedule",
-      "description": "Obtiene las clases del día actual para el estudiante con aula física, docente y tema del sílabo.",
+      "description": "Obtiene las clases del día actual para el estudiante autenticado, incluyendo aula física, pabellón, docente y tema del sílabo. La fecha es opcional (formato YYYY-MM-DD).",
       "parameters": {
         "type": "object",
         "properties": {
-          "studentCode": { "type": "string", "description": "Código de alumno institucional" }
+          "date": {
+            "type": "string",
+            "description": "Fecha en formato ISO YYYY-MM-DD. Si se omite, se usa la fecha actual en zona horaria America/Lima."
+          }
         },
-        "required": ["studentCode"]
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_enrolled_courses",
+      "description": "Lista las asignaturas oficiales en las que el estudiante se encuentra matriculado en el periodo académico vigente.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
       }
     }
   },
@@ -1172,13 +1260,33 @@ El proyecto cumplió con todos los objetivos trazados para esta segunda entrega 
     "type": "function",
     "function": {
       "name": "get_syllabus_details",
-      "description": "Obtiene las unidades, temario semana a semana y fórmulas de evaluación del sílabo oficial de un curso.",
+      "description": "Obtiene las unidades de aprendizaje, cronograma semana a semana y fórmulas de evaluación del sílabo oficial de un curso.",
       "parameters": {
         "type": "object",
         "properties": {
-          "courseQuery": { "type": "string", "description": "Nombre o código de la asignatura" }
+          "course_query": {
+            "type": "string",
+            "description": "Código oficial de la asignatura (ej. 100000SI58) o nombre natural del curso."
+          }
         },
-        "required": ["courseQuery"]
+        "required": ["course_query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_upcoming_evaluations",
+      "description": "Obtiene las evaluaciones y entregables programados para las próximas semanas lectivas a partir de la semana actual indicada.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "current_week": {
+            "type": "integer",
+            "description": "Número de semana lectiva actual (1 a 18)."
+          }
+        },
+        "required": ["current_week"]
       }
     }
   }

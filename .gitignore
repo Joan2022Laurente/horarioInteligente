@@ -68,6 +68,8 @@ labs/
 *.pdf
 api_externa_plan.md
 *_plan.md
+peticion.md
+responde.md
 
 # Frontend build outputs in backend resources (incluidos para despliegue monolítico en Heroku)
 # backend-springboot/src/main/resources/static/

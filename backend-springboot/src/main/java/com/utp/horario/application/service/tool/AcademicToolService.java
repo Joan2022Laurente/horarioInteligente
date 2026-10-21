@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,20 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class AcademicToolService {
+
+    /**
+     * Periodo lectivo por defecto. Es la misma etiqueta que la capa de persistencia escribe en
+     * {@code student_schedules.period_name}, de modo que la lectura del Read Model y la escritura
+     * del Command Model permanecen simetricas.
+     */
+    public static final String DEFAULT_PERIOD_NAME = "2026 - Ciclo 2 Agosto";
+
+    /** Zona horaria institucional de la universidad. */
+    public static final ZoneId LIMA_ZONE = ZoneId.of("America/Lima");
+
+    /** Rango lectivo valido de semanas (1 a 18). */
+    public static final int MIN_CURRENT_WEEK = 1;
+    public static final int MAX_CURRENT_WEEK = 18;
 
     private final IScheduleRepository scheduleRepository;
     private final ISyllabusRepository syllabusRepository;
@@ -47,10 +63,19 @@ public class AcademicToolService {
      */
     public DayScheduleResult getTodaySchedule(String studentCode, String dateIso) {
         studentCode = resolveEffectiveStudentCode(studentCode);
-        java.time.ZoneId LIMA = java.time.ZoneId.of("America/Lima");
-        LocalDate today = (dateIso != null && !dateIso.isBlank())
-                ? LocalDate.parse(dateIso)
-                : LocalDate.now(LIMA);
+
+        LocalDate today;
+        try {
+            today = (dateIso != null && !dateIso.isBlank())
+                    ? LocalDate.parse(dateIso.trim(), DateTimeFormatter.ISO_LOCAL_DATE)
+                    : LocalDate.now(LIMA_ZONE);
+        } catch (DateTimeParseException e) {
+            log.warn("[AcademicTool] Formato de fecha invalido '{}'. Se espera YYYY-MM-DD.", dateIso);
+            return new DayScheduleResult(studentCode == null ? "" : studentCode,
+                    dateIso == null ? "" : dateIso.trim(),
+                    0, List.of(),
+                    "Formato de fecha invalido: '" + dateIso + "'. Se espera una fecha ISO en formato YYYY-MM-DD.");
+        }
 
         if (studentCode == null || studentCode.isBlank()) {
             return new DayScheduleResult("", today.toString(), 0, List.of(),
@@ -63,7 +88,7 @@ public class AcademicToolService {
         List<ClassSessionDto> dayClasses = new ArrayList<>();
 
         // 1. Intento desde repositorio local MySQL / L1 Cache
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
 
 
 
@@ -160,7 +185,7 @@ public class AcademicToolService {
         }
 
         // 2. Base de datos (MySQL / Caché local)
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, "2026 - Ciclo 2 Agosto");
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
 
         List<EnrolledCourseDto> courses = new ArrayList<>();
         if (scheduleOpt.isPresent()) {
@@ -185,14 +210,25 @@ public class AcademicToolService {
             }
         }
         log.info("[AcademicTool] 📚 Cursos matriculados encontrados (fallback): {}", courses.size());
+        if (courses.isEmpty()) {
+            String message = "No se encontraron asignaturas persistidas para el estudiante " + studentCode
+                    + ". Sincroniza el horario desde la aplicacion para habilitar esta consulta.";
+            return new EnrolledCoursesResult(studentCode, 0, courses, message);
+        }
         return new EnrolledCoursesResult(studentCode, courses.size(), courses);
     }
 
     /**
-     * Tool 2: Obtiene los detalles de un sílabo (fórmula, logro, ponderaciones y temario).
-     * Soporta búsqueda por código exacto o nombre en lenguaje natural (ej. 'desarrollo web').
-     * Aprovecha fetchSyllabusMarkdown de la API Externa para obtener el contenido completo en Markdown listo para LLM.
+     * Tool 2: Obtiene el sílabo de un curso por código exacto o nombre en lenguaje natural.
+     *
+     * <p><b>DEPRECADO — usar el overload con {@code studentCode}.</b> La variante sin código de
+     * estudiante pierde la resolución contra los cursos matriculados y el token de sesión del portal
+     * UTP, por lo que el sílabo no puede recuperarse ni desde MySQL ni desde la API externa.
+     * Se conserva únicamente por compatibilidad binaria y se retirará en la próxima versión mayor.
+     *
+     * @see #getSyllabusDetails(String, String)
      */
+    @Deprecated
     public SyllabusDetailsResult getSyllabusDetails(String courseQuery) {
         return getSyllabusDetails(null, courseQuery);
     }
@@ -201,6 +237,21 @@ public class AcademicToolService {
         studentCode = resolveEffectiveStudentCode(studentCode);
         log.info("[AcademicTool] 📚 Consultando sílabo de curso: {} (alumno: {})", courseQuery, studentCode);
         String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
+
+        if (cleanQuery.isBlank()) {
+            log.warn("[AcademicTool] Consulta de sílabo sin argumento 'course_query'.");
+            return new SyllabusDetailsResult(
+                    "",
+                    "Curso no especificado",
+                    0,
+                    "",
+                    "Argumento obligatorio 'course_query' ausente: envia el codigo oficial de la asignatura "
+                            + "(ej. 100000SI58) o su nombre natural.",
+                    List.of(),
+                    List.of(),
+                    null
+            );
+        }
 
         // 1. Resolver código/nombre exacto desde los cursos matriculados del alumno (PRIORIDAD ALTA)
         //    Esto garantiza que el contexto de "qué clase tiene hoy" se resuelva correctamente.
@@ -373,7 +424,8 @@ public class AcademicToolService {
         if (studentCode == null || studentCode.isBlank()) {
             return List.of();
         }
-        log.info("[AcademicTool] 🎯 Consultando evaluaciones próximas para alumno {} desde semana {}", studentCode, currentWeek);
+        int week = clampCurrentWeek(currentWeek);
+        log.info("[AcademicTool] 🎯 Consultando evaluaciones próximas para alumno {} desde semana {}", studentCode, week);
 
         // 1. Fuente Prioritaria Institucional: API Externa Gateway /tasks/upcoming?limit=5
         String token = resolveStudentToken(studentCode);
@@ -391,7 +443,7 @@ public class AcademicToolService {
                         String urgencyNote = (u.urgency() != null && !u.urgency().isBlank()) ? " (" + u.urgency() + ")" : "";
                         String desc = (u.title() != null ? u.title() : "Evaluación UTP") + urgencyNote;
                         
-                        int week = u.weekNumber() > 0 ? u.weekNumber() : currentWeek;
+                        int evaluationWeek = u.weekNumber() > 0 ? u.weekNumber() : week;
                         
                         mapped.add(new EvaluationSummaryDto(
                                 code,
@@ -399,7 +451,7 @@ public class AcademicToolService {
                                 type,
                                 desc,
                                 0,
-                                week
+                                evaluationWeek
                         ));
                     }
                     log.info("[AcademicTool] 🏛️ {} evaluaciones próximas obtenidas de API Externa Gateway para [{}]", mapped.size(), studentCode);
@@ -422,7 +474,7 @@ public class AcademicToolService {
 
             if (sylOpt.isPresent() && sylOpt.get().getEvaluations() != null) {
                 sylOpt.get().getEvaluations().stream()
-                        .filter(e -> e.getWeek() != null && e.getWeek() >= currentWeek && e.getWeek() <= currentWeek + 3)
+                        .filter(e -> e.getWeek() != null && e.getWeek() >= week && e.getWeek() <= week + 3)
                         .forEach(e -> upcoming.add(new EvaluationSummaryDto(
                                 code,
                                 course.courseName(),
@@ -443,6 +495,60 @@ public class AcademicToolService {
         if (text == null) return "";
         String nfd = java.text.Normalizer.normalize(text.trim().toLowerCase(), java.text.Normalizer.Form.NFD);
         return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * Normaliza la semana lectiva al rango institucional valido (1 a 18).
+     *
+     * @param currentWeek semana solicitada por el cliente
+     * @return semana acotada al rango lectivo
+     */
+    public int clampCurrentWeek(int currentWeek) {
+        if (currentWeek < MIN_CURRENT_WEEK) {
+            return MIN_CURRENT_WEEK;
+        }
+        if (currentWeek > MAX_CURRENT_WEEK) {
+            return MAX_CURRENT_WEEK;
+        }
+        return currentWeek;
+    }
+
+    /**
+     * Resuelve la identidad de un estudiante contra el registro persistido en la base de datos
+     * relacional (Aiven Cloud MySQL).
+     *
+     * <p>Este metodo habilita el modo demostracion del servidor MCP: cuando no existe un token de
+     * sesion UTP activo, la identidad se respalda en el registro ya persistido por el estudiante.
+     * No se sintetiza ni se infiere ninguna informacion: si el estudiante no tiene registro, el
+     * metodo devuelve {@code null} y el llamador responde con un mensaje informativo explicito.
+     *
+     * @param candidate codigo institucional propuesto por el cliente
+     * @return codigo canonical persistido, o {@code null} si no existe registro
+     */
+    public String resolvePersistedStudentCode(String candidate) {
+        if (candidate == null || candidate.isBlank()) {
+            return null;
+        }
+        String code = candidate.trim().toUpperCase();
+        if (!code.matches("^[A-Z]\\d{6,10}$")) {
+            log.warn("[AcademicTool] Formato de codigo de estudiante invalido: '{}'", candidate);
+            return null;
+        }
+        try {
+            Optional<StudentProfile> persisted = studentRepository.findByStudentCode(code);
+            if (persisted.isPresent()) {
+                String persistedCode = persisted.get().getStudentCode();
+                if (persistedCode != null && !persistedCode.isBlank()) {
+                    log.info("[AcademicTool] Identidad respaldada por registro persistido en BD: {}", persistedCode);
+                    return persistedCode.trim().toUpperCase();
+                }
+            }
+            log.info("[AcademicTool] No existe registro persistido para el estudiante [{}]", code);
+            return null;
+        } catch (Exception e) {
+            log.warn("[AcademicTool] No se pudo consultar el registro persistido de [{}]: {}", code, e.getMessage());
+            return null;
+        }
     }
 
 
