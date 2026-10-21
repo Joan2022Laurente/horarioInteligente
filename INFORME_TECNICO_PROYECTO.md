@@ -556,34 +556,34 @@ classDiagram
 ```mermaid
 graph TD
     subgraph InterfacesLayer["interfaces.rest (Capa de Interfaces / Presentación)"]
-        Controllers["Controllers: AuthController, ScheduleController, TaskController, SyllabusController, AiChatController, MarketplaceController, McpServerController, RootController, WellKnownController"]
-        REST_DTOs["Request / Response DTOs: ApiResponse, AuthRequest, AiChatRequest, AiChatStreamRequest"]
-        ErrorHandling["GlobalExceptionHandler: ApiResponse&lt;T&gt; con código HTTP coherente"]
-        Resolvers["Security Resolvers: CurrentStudentArgumentResolver, SecurityIdentityResolver"]
+        Controllers["Controladores REST: AuthController, ScheduleController, TaskController, SyllabusController, AiChatController, MarketplaceController, McpServerController, RootController, WellKnownController"]
+        REST_DTOs["DTOs de Entrada y Salida: ApiResponse, AuthRequest, AiChatRequest, AiChatStreamRequest"]
+        ErrorHandling["Manejador Global de Excepciones: ApiResponse&lt;T&gt; con código HTTP coherente"]
+        Resolvers["Resolutores de Identidad: CurrentStudentArgumentResolver, SecurityIdentityResolver"]
     end
 
     subgraph ApplicationLayer["application (Capa de Aplicación - CQRS)"]
-        Commands["Commands: AuthenticateStudentCommand, GenerateScheduleCommand, SyncTaskCommand, PublishMarketplaceCommand"]
-        Handlers["Command Handlers: AuthenticateStudentCommandHandler, GenerateScheduleCommandHandler, SyncTaskCommandHandler, PublishMarketplaceCommandHandler"]
-        AppServices["Application Services: AgentOrchestratorServiceImpl, SyllabusServiceImpl, DailyQuotaServiceImpl"]
-        ToolServices["application.service.tool: AcademicToolRegistry, AcademicToolService"]
-        Assemblers["Assemblers: StudentAssembler, ScheduleAssembler, TaskAssembler, MarketplaceAssembler"]
-        AppDTOs["Application Projections: StudentDto, ScheduleDto, TaskDto, AcademicToolDto"]
+        Commands["Comandos (Mutación): AuthenticateStudentCommand, GenerateScheduleCommand, SyncTaskCommand, PublishMarketplaceCommand"]
+        Handlers["Manejadores de Comandos: AuthenticateStudentCommandHandler, GenerateScheduleCommandHandler, SyncTaskCommandHandler, PublishMarketplaceCommandHandler"]
+        AppServices["Servicios de Aplicación: AgentOrchestratorServiceImpl, SyllabusServiceImpl, DailyQuotaServiceImpl"]
+        ToolServices["Servicios de Herramientas IA: AcademicToolRegistry, AcademicToolService"]
+        Assemblers["Ensambladores (Assemblers): StudentAssembler, ScheduleAssembler, TaskAssembler, MarketplaceAssembler"]
+        AppDTOs["Proyecciones y DTOs de Dominio: StudentDto, ScheduleDto, TaskDto, AcademicToolDto"]
     end
 
     subgraph DomainLayer["domain.model (Capa de Dominio Puro - Agregados y Reglas)"]
-        Aggregates["Aggregates: StudentProfile, TaskSyncItem, Syllabus, MarketplaceItem"]
-        ValueObjects["Value Objects: ScheduleInterval, ClassSession, Course, DailyQuotaStatus, SyllabusCorrelation, SyllabusEvaluation, SyllabusWeeklySession"]
-        DomainRepos["Repository Interfaces: IStudentRepository, IScheduleRepository, ITaskSyncRepository, ISyllabusRepository, IMarketplaceRepository"]
-        Gateways["Gateway Interfaces: IUtpPortalGateway, ILlmGateway"]
+        Aggregates["Agregados Raíz (Aggregates): StudentProfile, TaskSyncItem, Syllabus, MarketplaceItem"]
+        ValueObjects["Objetos de Valor (Value Objects): ScheduleInterval, ClassSession, Course, DailyQuotaStatus, SyllabusCorrelation, SyllabusEvaluation, SyllabusWeeklySession"]
+        DomainRepos["Puertos de Repositorio (Interfaces): IStudentRepository, IScheduleRepository, ITaskSyncRepository, ISyllabusRepository, IMarketplaceRepository"]
+        Gateways["Puertos de Salida (Gateways): IUtpPortalGateway, ILlmGateway"]
     end
 
     subgraph InfrastructureLayer["infraestructure (Capa de Infraestructura - Persistencia y Red)"]
-        JPA_Repos["JPA Repositories: JPAStudentRepository, JPAScheduleRepository, JPATaskRepository, JPASyllabusRepository, JPAMarketplaceRepository"]
-        Adapters["Adapters: StudentRepositoryAdapter, ScheduleRepositoryAdapter, TaskSyncRepositoryAdapter, SyllabusRepositoryAdapter, MarketplaceRepositoryAdapter"]
-        ExternalGateways["External Adapters: UtpPortalGatewayAdapter, OpenRouterGatewayAdapter, OpenRouterModelSelector"]
-        Entities["Database Entities: StudentEntity, StudentScheduleEntity, TaskSyncEntity, SyllabusEntity, MarketplaceItemEntity"]
-        Mappers["MapStruct / Manual Mappers: StudentMapper, ScheduleMapper, TaskSyncMapper, SyllabusMapper, MarketplaceMapper"]
+        JPA_Repos["Repositorios Spring Data JPA: JPAStudentRepository, JPAScheduleRepository, JPATaskRepository, JPASyllabusRepository, JPAMarketplaceRepository"]
+        Adapters["Adaptadores de Persistencia: StudentRepositoryAdapter, ScheduleRepositoryAdapter, TaskSyncRepositoryAdapter, SyllabusRepositoryAdapter, MarketplaceRepositoryAdapter"]
+        ExternalGateways["Adaptadores de APIs Externas: UtpPortalGatewayAdapter, OpenRouterGatewayAdapter, OpenRouterModelSelector"]
+        Entities["Entidades de Base de Datos (JPA): StudentEntity, StudentScheduleEntity, TaskSyncEntity, SyllabusEntity, MarketplaceItemEntity"]
+        Mappers["Mapeadores de Entidad/Dominio: StudentMapper, ScheduleMapper, TaskSyncMapper, SyllabusMapper, MarketplaceMapper"]
     end
 
     InterfacesLayer --> Commands
