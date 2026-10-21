@@ -189,13 +189,13 @@ gantt
     Diseño de Arquitectura DDD + CQRS y Contratos API  :done, a2, 2026-08-26, 2026-09-05
     section Fase 2: Backend y Servicios Core
     Implementación de Casos de Uso (Horario y Sílabo)  :done, b1, 2026-09-06, 2026-09-15
-    Integración de API Externa v1.2.0 y Persistencia  :done, b2, 2026-09-12, 2026-09-20
+    Integración de API Externa SyncUTP v2.0.0 y Persistencia :done, b2, 2026-09-12, 2026-09-20
     section Fase 3: Copiloto IA y Servidor MCP
     Definición de AcademicToolRegistry (Function Calling) :done, c1, 2026-09-18, 2026-09-24
     Orquestación ReAct vía OpenRouter (Nemotron / LLaMA)   :done, c2, 2026-09-22, 2026-09-28
     section Fase 4: Frontend y Experiencia Visual
     Maquetación de Tema Oscuro en Angular Standalone   :done, d1, 2026-09-15, 2026-09-22
-    Integración de Vistas: Hoy, Semanal y Sílabos      :done, d2, 2026-09-23, 2026-09-28
+    Integración de Vistas - Hoy, Semanal y Sílabos     :done, d2, 2026-09-23, 2026-09-28
     section Fase 5: Entrega 2 y Validación
     Auditoría de Repositorio y Pruebas Técnicas        :active, e1, 2026-09-28, 2026-10-02
     Sustentación de Segunda Entrega Académica           :crit, e2, 2026-10-03, 2026-10-05
@@ -393,10 +393,11 @@ graph TB
         ToolRegistry -.->|consulta temarios de| Syllabus
     end
 
-    Usuario["Estudiante Universitario"] -->|Interactúa en tema oscuro| DominioAcademico
-    DominioAcademico -->|Consume datos normalizados| ApiExterna["API Externa UTP v1.2.0"]
-    DominioAcademico -->|Solicita inferencia y function calling| OpenRouter["OpenRouter Gateway (Nemotron / LLaMA)"]
-    DominioAcademico -->|Persiste datos y perfiles| MySqlDB["MySQL 8.0 Database"]
+    Usuario["Estudiante Universitario"] -->|Interactúa en tema oscuro| StudentProfile
+    Usuario -->|Consulta y planifica| ScheduleInterval
+    SubdominioHorario -->|Consume datos normalizados| ApiExterna["API Externa SyncUTP v2.0.0"]
+    AgentOrchestrator -->|Solicita inferencia y function calling| OpenRouter["OpenRouter Gateway (Nemotron / LLaMA)"]
+    SubdominioEstudiante -->|Persiste perfiles y tareas| MySqlDB["MySQL 8.0 Database (Aiven Cloud)"]
 ```
 
 ---
@@ -603,8 +604,8 @@ graph TD
     ToolServices --> DomainRepos
     ToolServices --> Gateways
 
-    Adapters ..|> DomainRepos
-    ExternalGateways ..|> Gateways
+    Adapters -.->|implementa| DomainRepos
+    ExternalGateways -.->|implementa| Gateways
     Adapters --> JPA_Repos
     Adapters --> Entities
     Adapters --> Mappers
@@ -666,23 +667,23 @@ sequenceDiagram
     participant SyllabusSvc as SyllabusServiceImpl
     participant OpenRouter as OpenRouter Gateway (Nemotron / LLaMA)
 
-    Estudiante->>Modal: Ingresa prompt: "¿Qué temas debo estudiar para la PC2 de Desarrollo Web?"
+    Estudiante->>Modal: Ingresa prompt: ¿Qué temas debo estudiar para la PC2 de Desarrollo Web?
     Modal->>Controller: POST /api/v1/ai/chat (prompt, userId)
     Controller->>Orchestrator: processQuery(prompt, studentCode)
     
     Orchestrator->>OpenRouter: Inferencia 1 (Prompt + Definición de herramientas JSON)
     Note over OpenRouter: El modelo detecta que necesita información del sílabo oficial
-    OpenRouter-->>Orchestrator: tool_calls: [get_syllabus_details(course_query="Desarrollo Web")]
+    OpenRouter-->>Orchestrator: tool_calls: [get_syllabus_details(course_query='Desarrollo Web')]
     
-    Orchestrator->>ToolReg: executeTool("get_syllabus_details", args)
-    ToolReg->>SyllabusSvc: getSyllabusByCourse(token, "100000ST61")
+    Orchestrator->>ToolReg: executeTool('get_syllabus_details', args)
+    ToolReg->>SyllabusSvc: getSyllabusByCourse(token, '100000ST61')
     SyllabusSvc-->>ToolReg: Syllabus (Unidades, Semanas 1 a 18, Rúbrica de evaluación)
-    ToolReg-->>Orchestrator: JSON: { evals: [{ type: "PC2", week: 10, weight: 20 }], topics: ["Arquitectura Hexagonal", "Spring Boot"] }
+    ToolReg-->>Orchestrator: Payload evaluativo (PC2, Semana 10, 20%, Temas: Arquitectura Hexagonal, Spring Boot)
     
     Orchestrator->>OpenRouter: Inferencia 2 (Historial previo + Respuesta de herramienta)
-    OpenRouter-->>Orchestrator: "Para la PC2 de Desarrollo Web (Semana 10, 20%), según el sílabo oficial entran: Arquitectura Hexagonal y Servicios REST con Spring Boot."
+    OpenRouter-->>Orchestrator: Para la PC2 de Desarrollo Web (Semana 10, 20%), según el sílabo oficial entran: Arquitectura Hexagonal y Servicios REST con Spring Boot
     
-    Orchestrator-->>Controller: AiChatMessage (role="assistant", content, toolsUsed=["get_syllabus_details"])
+    Orchestrator-->>Controller: AiChatMessage (role=assistant, content, toolsUsed=[get_syllabus_details])
     Controller-->>Modal: 200 OK ApiResponse (payload estructurado)
     Modal-->>Estudiante: Renderiza mensaje con indicador visual de herramienta consultada
 ```
