@@ -927,15 +927,18 @@ export class TodayViewComponent implements OnInit, OnDestroy {
                 startAt: typeof c.startAt === 'string' ? c.startAt : (c.startAt ? String(c.startAt) : ''),
                 finishAt: typeof c.finishAt === 'string' ? c.finishAt : (c.finishAt ? String(c.finishAt) : ''),
                 metadata: {
-                  zoomLink: c.zoomLink,
+                  courseId: c.courseCode,
+                  courseName: c.courseName,
+                  sectionCode: c.section,
+                  sectionId: c.sectionId || (c.classLink ? c.classLink.match(/\/section\/([a-f0-9\-]+)/i)?.[1] : undefined),
                   classroom: c.classroom,
                   building: c.building,
                   floor: c.floor,
                   environmentType: c.environmentType,
                   teacher: c.teacher,
+                  zoomLink: c.zoomLink,
                   classLink: c.classLink,
-                  sectionCode: c.section,
-                  courseName: c.courseName
+                  syllabusUrl: (c as any).syllabusUrl || (c as any).metadata?.syllabusUrl
                 }
               }))
             };

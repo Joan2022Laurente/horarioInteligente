@@ -430,6 +430,7 @@ export class SyllabusViewComponent implements OnInit {
   openSyllabus(courseName: string): void {
     this.selectedCourseName = courseName;
     this.isSyllabusModalOpen = true;
+    this.currentModalSyllabus = null;
 
     const course = this.courses.find(c => c.name === courseName || c.courseId === courseName);
     this.selectedCourseSyllabusUrl = course?.syllabusUrl;

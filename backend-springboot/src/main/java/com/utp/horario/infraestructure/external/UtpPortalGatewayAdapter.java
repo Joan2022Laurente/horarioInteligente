@@ -503,7 +503,7 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
 
             HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(urlBuilder.toString()))
-                    .timeout(Duration.ofSeconds(25))
+                    .timeout(Duration.ofSeconds(90))
                     .header("Accept", "application/json")
                     .GET();
 

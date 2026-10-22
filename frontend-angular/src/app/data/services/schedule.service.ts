@@ -203,6 +203,7 @@ export class ScheduleService {
               teacher: c.teacher,
               zoomLink: c.zoomLink,
               classLink: c.classLink,
+              syllabusUrl: c.syllabusUrl || (c as any).metadata?.syllabusUrl,
             },
           }));
 
