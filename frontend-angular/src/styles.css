@@ -1769,6 +1769,10 @@ video {
   border-color: rgb(255 255 255 / 0.09);
 }
 
+.border-white\/\[0\.12\]{
+  border-color: rgb(255 255 255 / 0.12);
+}
+
 .border-white\/\[0\.14\]{
   border-color: rgb(255 255 255 / 0.14);
 }

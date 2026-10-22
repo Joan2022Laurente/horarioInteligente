@@ -173,18 +173,18 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   >
                     <div class="flex items-center justify-between gap-1">
                       @if (evt.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold badge-solid-presencial px-2 py-0.5 rounded-sm">
-                          <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
+                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                           Presencial
                         </span>
                       } @else if (evt.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold badge-solid-zoom px-2 py-0.5 rounded-sm">
-                          <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
+                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                           Zoom
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold badge-solid-virtual px-2 py-0.5 rounded-sm">
-                          <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
+                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                           Virtual
                         </span>
                       }
@@ -199,7 +199,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                           <svg class="h-3.5 w-3.5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                         </button>
                       } @else {
-                        <span class="text-[10px] font-mono text-neutral-400 group-hover:text-neutral-200 transition-colors truncate max-w-[80px]">
+                        <span class="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200 transition-colors truncate max-w-[80px]">
                           {{ evt.modality === 'P' ? getLocationForEvent(evt).aula.replace('Aula ', '') : 'Digital' }}
                         </span>
                       }
@@ -209,7 +209,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                       {{ getParsedTitle(evt.title) }}
                     </h4>
 
-                    <div class="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400 whitespace-nowrap">
+                    <div class="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 whitespace-nowrap">
                       <svg class="h-3 w-3 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                       <span class="truncate">{{ formatScheduleTimeRange(evt.startAt, evt.finishAt) }}</span>
                     </div>
@@ -228,7 +228,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
             <h3 class="text-xs font-bold tracking-tight text-neutral-400 uppercase">
               Asignaturas Virtuales 24/7
             </h3>
-            <span class="text-xs font-mono text-neutral-500">
+            <span class="text-xs font-medium text-neutral-500">
               {{ virtual247Courses.length }} {{ virtual247Courses.length === 1 ? 'curso' : 'cursos' }}
             </span>
           </div>
@@ -240,12 +240,12 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                 class="group relative rounded-2xl border p-3.5 transition-all duration-300 space-y-2.5 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0 bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border-[var(--border-subtle)] hover:border-neutral-500"
               >
                 <div class="flex items-center justify-between gap-1">
-                  <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold badge-solid-virtual px-2 py-0.5 rounded-sm">
-                    <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
+                  <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
+                    <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                     24/7 Asíncrono
                   </span>
 
-                  <span class="text-[10px] font-mono text-neutral-400 group-hover:text-neutral-200 transition-colors">
+                  <span class="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200 transition-colors">
                     Canvas
                   </span>
                 </div>
@@ -254,7 +254,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   {{ formatCourseName(course.name) }}
                 </h4>
 
-                <div class="flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                <div class="flex items-center justify-between text-[11px] font-medium text-neutral-400">
                   <div class="flex items-center gap-1.5 truncate">
                     <svg class="h-3 w-3 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"/>
@@ -263,7 +263,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                     <span class="truncate">Sin horario fijo</span>
                   </div>
                   @if (course.sectionCode) {
-                    <span class="text-[10px] text-neutral-500 shrink-0">Sec. {{ course.sectionCode }}</span>
+                    <span class="text-[10px] text-neutral-500 shrink-0 font-medium">Sec. {{ course.sectionCode }}</span>
                   }
                 </div>
               </div>
