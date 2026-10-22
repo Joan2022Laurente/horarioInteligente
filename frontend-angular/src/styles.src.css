@@ -15,27 +15,17 @@
   --surface-input: #121215;
 
   /* ───────────────────────────────────────────────────────────────────────────
-     ESCALA GLOBAL DE RADIOS
-     Única fuente de verdad del sistema de esquinas. Modificar un token aquí
-     reconfigura de inmediato todos los elementos que consumen esa escala,
-     sin intervencion sobre las plantillas.
+     ESCALA GLOBAL DE RADIOS (SQUIRCLES SOBRIOS - ESTILO AZZIA / LINEAR / VERCEL)
+     Valores puros en píxeles. Sin fórmulas porcentuales que deformen elementos.
      ─────────────────────────────────────────────────────────────────────────── */
-  --r-xs: 4px;
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
-  --r-xl: 16px;
-  --r-2xl: 20px;
-  --r-3xl: 28px;
-  /* Radio circular puro: reservado a avatares, anillos de pulso y blobs
-     decorativos, cuya geometria es circular por definicion. */
-  --r-pill: 9999px;
-
-  /* Techo adaptativo proporcional. El radio de un elemento nunca puede exceder
-     este porcentaje de su altura: un componente de poca altura conserva un
-     tramo recto visible y deja de degenerar visualmente en pastilla.
-     El 40% implica que el canto recto conserva siempre el 20% de la altura. */
-  --r-adaptive-cap: 40%;
+  --r-xs: 4px;   /* micro-badges, tags mínimos */
+  --r-sm: 6px;   /* badges compactos (ej. ACTIVE) */
+  --r-md: 8px;   /* chips, botones compactos, inputs */
+  --r-lg: 10px;  /* botones estándar, selectores (ej. MANAGE, Root Folders) */
+  --r-xl: 14px;  /* cards pequeñas, sub-paneles */
+  --r-2xl: 18px; /* cards principales, contenedores grandes */
+  --r-3xl: 24px; /* modales, dashboards y heroes */
+  --r-pill: 9999px; /* exclusivo para avatares circulares y dots 1:1 */
 
   /* Solid Neutral Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);

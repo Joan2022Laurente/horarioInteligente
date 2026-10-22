@@ -79,32 +79,32 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
         </div>
 
         <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <!-- Filtros de Modalidad con Segmented Pills -->
-          <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-2xl overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
+          <!-- Filtros de Modalidad con Segmented Controls -->
+          <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-xl overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
             <button
               (click)="selectedModality = 'ALL'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
               [ngClass]="selectedModality === 'ALL' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
             >
               Todas
             </button>
             <button
               (click)="selectedModality = 'P'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
               [ngClass]="selectedModality === 'P' ? 'bg-[var(--accent-emerald)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
             >
               Presenciales
             </button>
             <button
               (click)="selectedModality = 'R'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
               [ngClass]="selectedModality === 'R' ? 'bg-[var(--accent-orange)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
             >
               Zoom
             </button>
             <button
               (click)="selectedModality = 'VT'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
               [ngClass]="selectedModality === 'VT' ? 'bg-[var(--accent-purple)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
             >
               Virtuales
@@ -116,7 +116,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
             (click)="exportToGoogleCalendar()"
             [disabled]="isExporting()"
             title="Exportar horario oficial a Google Calendar o Outlook (.ics)"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-2 rounded-2xl font-bold border border-[var(--border-subtle)] bg-[var(--surface-card)] hover:bg-[var(--surface-subtle)] text-xs text-white disabled:opacity-50"
+            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-2 rounded-lg font-bold border border-[var(--border-subtle)] bg-[var(--surface-card)] hover:bg-[var(--surface-subtle)] text-xs text-white disabled:opacity-50"
           >
             @if (isExporting()) {
               <svg class="h-3.5 w-3.5 animate-spin text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
