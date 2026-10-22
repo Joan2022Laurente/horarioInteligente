@@ -47,17 +47,17 @@ import { SyllabusService } from '@data/services/syllabus.service';
                 <div class="flex flex-wrap items-center gap-1.5">
                   @for (m of course.modalities; track m) {
                     @if (m === 'P') {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded-full">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded-md">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                         Presencial
                       </span>
                     } @else if (m === 'R') {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-950/40 border border-amber-800/40 px-2.5 py-0.5 rounded-full">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-950/40 border border-amber-800/40 px-2.5 py-0.5 rounded-md">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                         Remoto Zoom
                       </span>
                     } @else {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-400 bg-sky-950/40 border border-sky-800/40 px-2.5 py-0.5 rounded-full">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-400 bg-sky-950/40 border border-sky-800/40 px-2.5 py-0.5 rounded-md">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                         Virtual
                       </span>
@@ -65,7 +65,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
                   }
                 </div>
 
-                <span class="flex items-center gap-1 text-[11px] font-medium text-neutral-400 bg-[var(--surface-subtle)] px-2.5 py-1 rounded-full">
+                <span class="flex items-center gap-1 text-[11px] font-medium text-neutral-400 bg-[var(--surface-subtle)] px-2.5 py-1 rounded-lg">
                   <svg class="h-3 w-3 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
                   {{ course.totalSessions }} {{ course.totalSessions === 1 ? 'sesión' : 'sesiones' }}
                 </span>
@@ -133,7 +133,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
                       {{ currentModalSyllabus?.generalInfo?.courseName || selectedCourseName }}
                     </h3>
                     @if (currentModalSyllabus) {
-                      <span class="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2 py-0.5 rounded-full shrink-0">
+                      <span class="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2 py-0.5 rounded-md shrink-0">
                         Oficial UTP
                       </span>
                     }
@@ -286,7 +286,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
                               </span>
                               
                               @if (isCurrent) {
-                                <span class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-black bg-[var(--accent-lime)] px-2 py-0.5 rounded-full">
+                                <span class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-black bg-[var(--accent-lime)] px-2 py-0.5 rounded-md">
                                   ● En Curso
                                 </span>
                               }
@@ -297,7 +297,7 @@ import { SyllabusService } from '@data/services/syllabus.service';
                             </div>
 
                             @if (session.evaluation) {
-                              <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--accent-orange)] bg-[var(--accent-orange)]/10 border border-[var(--accent-orange)]/30 px-2 py-0.5 rounded-full">
+                              <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--accent-orange)] bg-[var(--accent-orange)]/10 border border-[var(--accent-orange)]/30 px-2 py-0.5 rounded-md">
                                 Entrega: {{ session.evaluation }}
                               </span>
                             }

@@ -63,17 +63,17 @@ interface SyllabusEvaluation {
               <div class="space-y-0.5 min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   @if (isPresencial) {
-                    <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[var(--badge-emerald-text)] bg-[var(--badge-emerald-bg)] border border-[var(--badge-emerald-border)] px-2.5 py-0.5 rounded-full shrink-0">
+                    <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[var(--badge-emerald-text)] bg-[var(--badge-emerald-bg)] border border-[var(--badge-emerald-border)] px-2.5 py-0.5 rounded-md shrink-0">
                       <svg class="h-2.5 w-2.5 sm:h-3 sm:w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                       Presencial
                     </span>
                   } @else if (isRemoteZoom) {
-                    <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[var(--badge-orange-text)] bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] px-2.5 py-0.5 rounded-full shrink-0">
+                    <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[var(--badge-orange-text)] bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] px-2.5 py-0.5 rounded-md shrink-0">
                       <svg class="h-2.5 w-2.5 sm:h-3 sm:w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                       Zoom
                     </span>
                   } @else {
-                    <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[var(--badge-purple-text)] bg-[var(--badge-purple-bg)] border border-[var(--badge-purple-border)] px-2.5 py-0.5 rounded-full shrink-0">
+                    <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[var(--badge-purple-text)] bg-[var(--badge-purple-bg)] border border-[var(--badge-purple-border)] px-2.5 py-0.5 rounded-md shrink-0">
                       <svg class="h-2.5 w-2.5 sm:h-3 sm:w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                       Virtual
                     </span>

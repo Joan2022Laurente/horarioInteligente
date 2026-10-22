@@ -1553,23 +1553,23 @@ video {
 }
 
 .rounded-2xl{
-  border-radius: 1rem;
+  border-radius: min(var(--r-2xl), var(--r-adaptive-cap));
 }
 
 .rounded-3xl{
-  border-radius: 1.5rem;
+  border-radius: min(var(--r-3xl), var(--r-adaptive-cap));
 }
 
 .rounded-full{
-  border-radius: 9999px;
+  border-radius: var(--r-pill);
 }
 
 .rounded-lg{
-  border-radius: 0.5rem;
+  border-radius: min(var(--r-lg), var(--r-adaptive-cap));
 }
 
 .rounded-md{
-  border-radius: 0.375rem;
+  border-radius: min(var(--r-md), var(--r-adaptive-cap));
 }
 
 .rounded-none{
@@ -1577,17 +1577,17 @@ video {
 }
 
 .rounded-xl{
-  border-radius: 0.75rem;
+  border-radius: min(var(--r-xl), var(--r-adaptive-cap));
 }
 
 .rounded-r-xl{
-  border-top-right-radius: 0.75rem;
-  border-bottom-right-radius: 0.75rem;
+  border-top-right-radius: min(var(--r-xl), var(--r-adaptive-cap));
+  border-bottom-right-radius: min(var(--r-xl), var(--r-adaptive-cap));
 }
 
 .rounded-t-3xl{
-  border-top-left-radius: 1.5rem;
-  border-top-right-radius: 1.5rem;
+  border-top-left-radius: min(var(--r-3xl), var(--r-adaptive-cap));
+  border-top-right-radius: min(var(--r-3xl), var(--r-adaptive-cap));
 }
 
 .border{
@@ -3087,6 +3087,27 @@ video {
   --surface-muted: #24242c;
   --surface-elevated: #2c2c36;
   --surface-input: #121215;
+  /* ───────────────────────────────────────────────────────────────────────────
+     ESCALA GLOBAL DE RADIOS
+     Única fuente de verdad del sistema de esquinas. Modificar un token aquí
+     reconfigura de inmediato todos los elementos que consumen esa escala,
+     sin intervencion sobre las plantillas.
+     ─────────────────────────────────────────────────────────────────────────── */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-2xl: 20px;
+  --r-3xl: 28px;
+  /* Radio circular puro: reservado a avatares, anillos de pulso y blobs
+     decorativos, cuya geometria es circular por definicion. */
+  --r-pill: 9999px;
+  /* Techo adaptativo proporcional. El radio de un elemento nunca puede exceder
+     este porcentaje de su altura: un componente de poca altura conserva un
+     tramo recto visible y deja de degenerar visualmente en pastilla.
+     El 40% implica que el canto recto conserva siempre el 20% de la altura. */
+  --r-adaptive-cap: 40%;
   /* Solid Neutral Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-medium: rgba(255, 255, 255, 0.16);
@@ -3952,7 +3973,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .sm\:rounded-2xl{
-    border-radius: 1rem;
+    border-radius: min(var(--r-2xl), var(--r-adaptive-cap));
   }
 
   .sm\:border-t-0{

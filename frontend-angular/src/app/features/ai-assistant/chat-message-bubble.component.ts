@@ -59,7 +59,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
 
         <!-- Indicador en tiempo real de actividad del agente (Píldora brillante dinámica) -->
         @if (msg.currentActivity) {
-          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/25 backdrop-blur-sm animate-pulse w-fit my-0.5">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/25 backdrop-blur-sm animate-pulse w-fit my-0.5">
             <span class="relative flex h-2 w-2">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
@@ -120,7 +120,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
         @if (toolBadges().length > 0) {
           <div class="flex flex-wrap gap-1.5 mt-0.5">
             @for (badge of toolBadges(); track badge.label) {
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800/50 text-neutral-500 border border-neutral-700/40 select-none tracking-wide">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-neutral-800/50 text-neutral-500 border border-neutral-700/40 select-none tracking-wide">
                 {{ badge.label }}
               </span>
             }
@@ -148,7 +148,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
             @for (action of chips; track action) {
               <button
                 (click)="sendAction.emit(action)"
-                class="inline-flex items-center gap-1.5 rounded-full bg-[#18181f] hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-medium text-neutral-300 transition-all shadow-sm active:scale-95 border-none cursor-pointer"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#18181f] hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-medium text-neutral-300 transition-all shadow-sm active:scale-95 border-none cursor-pointer"
               >
                 <span>{{ action }}</span>
                 <svg class="h-3 w-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>

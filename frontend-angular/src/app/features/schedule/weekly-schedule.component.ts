@@ -71,7 +71,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
           </div>
 
           @if (selectedWeek === currentWeek) {
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-lime)] text-black font-extrabold px-3 py-1 text-[11px] shadow-none">
+            <span class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-lime)] text-black font-extrabold px-3 py-1 text-[11px] shadow-none">
               <span class="h-1.5 w-1.5 rounded-full bg-black animate-pulse"></span>
               En curso
             </span>
@@ -173,17 +173,17 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   >
                     <div class="flex items-center justify-between gap-1">
                       @if (evt.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-full backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-md backdrop-blur-md">
                           <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                           Presencial
                         </span>
                       } @else if (evt.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-full backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-md backdrop-blur-md">
                           <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                           Zoom
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-full backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-md backdrop-blur-md">
                           <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                           Virtual
                         </span>
@@ -254,7 +254,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                       <h4 class="text-xs sm:text-sm font-semibold text-white tracking-tight truncate">
                         {{ formatCourseName(course.name) }}
                       </h4>
-                      <span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full shrink-0">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-md shrink-0">
                         24/7 Asíncrono
                       </span>
                     </div>

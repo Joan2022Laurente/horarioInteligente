@@ -74,12 +74,12 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             <div class="space-y-2 min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 @if (isLiveNow) {
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
                     <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
                     En vivo • Quedan {{ minutesRemainingCurrent }}m
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
                     </svg>
@@ -88,7 +88,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 }
 
                 @if (bannerClass.modality === 'P') {
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
                       <circle cx="12" cy="10" r="3"/>
@@ -96,7 +96,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     Presencial
                   </span>
                 } @else if (bannerClass.modality === 'R') {
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="m22 8-6 4 6 4V8Z"/>
                       <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
@@ -104,7 +104,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     Remoto Zoom
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="2"/>
                       <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
@@ -230,21 +230,21 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                   <div class="space-y-1 min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       @if (ev.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#00e676] bg-[rgba(0,200,83,0.14)] border border-[rgba(0,200,83,0.32)] px-2.5 py-0.5 rounded-full">
+                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#00e676] bg-[rgba(0,200,83,0.14)] border border-[rgba(0,200,83,0.32)] px-2.5 py-0.5 rounded-md">
                           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
                           </svg>
                           Presencial
                         </span>
                       } @else if (ev.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#ff7043] bg-[rgba(255,87,34,0.14)] border border-[rgba(255,87,34,0.32)] px-2.5 py-0.5 rounded-full">
+                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#ff7043] bg-[rgba(255,87,34,0.14)] border border-[rgba(255,87,34,0.32)] px-2.5 py-0.5 rounded-md">
                           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
                           </svg>
                           Remoto Zoom
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#a5a8ff] bg-[rgba(112,117,255,0.14)] border border-[rgba(112,117,255,0.32)] px-2.5 py-0.5 rounded-full">
+                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#a5a8ff] bg-[rgba(112,117,255,0.14)] border border-[rgba(112,117,255,0.32)] px-2.5 py-0.5 rounded-md">
                           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/>
                           </svg>
@@ -263,7 +263,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                       }
 
                       @if (isSessionActive(ev)) {
-                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] border border-white/[0.14] px-2 py-0.5 rounded-full backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] border border-white/[0.14] px-2 py-0.5 rounded-md backdrop-blur-md">
                           <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
                           Sesión Actual
                         </span>

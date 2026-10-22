@@ -17,7 +17,7 @@ import { formatCourseName } from '@data/schedule-parser';
         <div>
           <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
             <span>Radar de Estudio & Matching Dual</span>
-            <span class="text-[11px] font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 border border-[var(--accent-lime)]/20 px-2.5 py-0.5 rounded-full">
+            <span class="text-[11px] font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 border border-[var(--accent-lime)]/20 px-2.5 py-0.5 rounded-md">
               Sede Lima Centro
             </span>
           </h2>
@@ -97,13 +97,13 @@ import { formatCourseName } from '@data/schedule-parser';
                 
                 <!-- Match Score & Badge -->
                 <div class="flex items-center justify-between gap-2">
-                  <span class="inline-flex items-center gap-1.5 text-[11px] font-black text-black bg-[var(--accent-lime)] px-3 py-1 rounded-full shadow-none">
+                  <span class="inline-flex items-center gap-1.5 text-[11px] font-black text-black bg-[var(--accent-lime)] px-3 py-1 rounded-lg shadow-none">
                     <svg class="h-3 w-3 fill-black" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     <span>{{ buddy.compatibilityPercent }}% Match Dual</span>
                   </span>
 
                   <div class="flex items-center gap-1.5">
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--badge-emerald-text)] bg-[var(--badge-emerald-bg)] border border-[var(--badge-emerald-border)] px-2 py-0.5 rounded-full">
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--badge-emerald-text)] bg-[var(--badge-emerald-bg)] border border-[var(--badge-emerald-border)] px-2 py-0.5 rounded-md">
                       <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-emerald)] animate-pulse"></span>
                       {{ buddy.modality === 'Presencial' ? 'In-Campus' : 'Online' }}
                     </span>
@@ -197,7 +197,7 @@ import { formatCourseName } from '@data/schedule-parser';
             <div class="flex flex-col justify-between rounded-3xl bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border border-[var(--border-subtle)] hover:border-neutral-500 p-5 space-y-4 shadow-none transition-all">
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <span class="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2.5 py-0.5 rounded-full">
+                  <span class="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2.5 py-0.5 rounded-md">
                     {{ b.current_collaborators }}/{{ b.max_collaborators }} Compañeros
                   </span>
                   <span class="text-[10px] font-mono text-neutral-400">Activa ahora</span>
