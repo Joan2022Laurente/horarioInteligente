@@ -659,34 +659,29 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Estudiante as Estudiante (Angular UI)
-    participant Modal as AiAssistantModalComponent
-    participant Controller as AiChatController
-    participant Orchestrator as AgentOrchestratorServiceImpl
-    participant ToolReg as AcademicToolRegistry
-    participant SyllabusSvc as SyllabusServiceImpl
-    participant OpenRouter as OpenRouter Gateway (Nemotron / LLaMA)
+    actor Estudiante as Estudiante (Angular)
+    participant Backend as Backend (Spring Boot)
+    participant Tools as Academic Tools (SyncUTP)
+    participant LLM as LLM Gateway (OpenRouter)
 
-    Estudiante->>Modal: Ingresa prompt: ¿Qué temas debo estudiar para la PC2 de Desarrollo Web?
-    Modal->>Controller: POST /api/v1/ai/chat (prompt, userId)
-    Controller->>Orchestrator: processQuery(prompt, studentCode)
-    
-    Orchestrator->>OpenRouter: Inferencia 1 (Prompt + Definición de herramientas JSON)
-    Note over OpenRouter: El modelo detecta que necesita información del sílabo oficial
-    OpenRouter-->>Orchestrator: tool_calls: [get_syllabus_details(course_query='Desarrollo Web')]
-    
-    Orchestrator->>ToolReg: executeTool('get_syllabus_details', args)
-    ToolReg->>SyllabusSvc: getSyllabusByCourse(token, '100000ST61')
-    SyllabusSvc-->>ToolReg: Syllabus (Unidades, Semanas 1 a 18, Rúbrica de evaluación)
-    ToolReg-->>Orchestrator: Payload evaluativo (PC2, Semana 10, 20%, Temas: Arquitectura Hexagonal, Spring Boot)
-    
-    Orchestrator->>OpenRouter: Inferencia 2 (Historial previo + Respuesta de herramienta)
-    OpenRouter-->>Orchestrator: Para la PC2 de Desarrollo Web (Semana 10, 20%), según el sílabo oficial entran: Arquitectura Hexagonal y Servicios REST con Spring Boot
-    
-    Orchestrator-->>Controller: AiChatMessage (role=assistant, content, toolsUsed=[get_syllabus_details])
-    Controller-->>Modal: 200 OK ApiResponse (payload estructurado)
-    Modal-->>Estudiante: Renderiza mensaje con indicador visual de herramienta consultada
+    Estudiante->>Backend: POST /ai/chat ("Temas PC2")
+    Backend->>LLM: Inferencia 1 (Prompt + Tools JSON)
+    Note over LLM: Detecta necesidad de sílabo
+    LLM-->>Backend: tool_call: get_syllabus_details
+    Backend->>Tools: getSyllabusByCourse("100000ST61")
+    Tools-->>Backend: Datos Sílabo (PC2, Sem 10, 20%)
+    Backend->>LLM: Inferencia 2 (Contexto + Tool Output)
+    LLM-->>Backend: Respuesta con rúbrica oficial
+    Backend-->>Estudiante: 200 OK (Respuesta + Citas)
 ```
+
+**Escenario de Prueba Validado (TC-AI-01: Consulta de Evaluación Asistida por ReAct):**
+| Paso | Entrada / Estímulo | Salida Esperada / Estado |
+|---|---|---|
+| **1. Solicitud** | Prompt: *"¿Qué temas vienen en la PC2 de Desarrollo Web?"* | Backend despacha consulta con catálogo de herramientas. |
+| **2. Razonamiento** | Inferencia inicial del modelo LLM | Detección de requerimiento y emisión de `tool_call`. |
+| **3. Acción** | Ejecución de `get_syllabus_details("100000ST61")` | Retorno de datos oficiales de evaluación (Sem 10, 20%). |
+| **4. Síntesis** | Inferencia final con contexto del sílabo | Respuesta estudiantil precisa con rúbrica y badges visuales. |
 
 ---
 
