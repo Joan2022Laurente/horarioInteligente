@@ -938,7 +938,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
                   teacher: c.teacher,
                   zoomLink: c.zoomLink,
                   classLink: c.classLink,
-                  syllabusUrl: (c as any).syllabusUrl || (c as any).metadata?.syllabusUrl
+                  syllabusUrl: c.syllabusUrl
                 }
               }))
             };

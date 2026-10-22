@@ -45,6 +45,43 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
     }
 
     @Override
+    public Optional<Syllabus> findByCourseName(String courseName) {
+        if (courseName == null || courseName.isBlank()) return Optional.empty();
+        String clean = courseName.trim();
+
+        // 1. Coincidencia directa por nombre (la collation de MySQL ya es insensible a
+        //    mayúsculas y acentos en el esquema de producción).
+        Optional<SyllabusEntity> exact = jpa.findByCourseNameIgnoreCase(clean);
+        if (exact.isPresent()) {
+            return Optional.ofNullable(mapper.toDomain(exact.get()));
+        }
+
+        // 2. Coincidencia normalizada: ignora acentos, guiones y signos de puntuación, de
+        //    modo que 'FORMACION PARA LA INVESTIGACION SISTEMAS' resuelva el sílabo
+        //    'FORMACIÓN PARA LA INVESTIGACIÓN - SISTEMAS'.
+        String normalized = normalizeCourseName(clean);
+        if (normalized.isEmpty()) return Optional.empty();
+
+        for (SyllabusEntity entity : jpa.findAll()) {
+            if (normalizeCourseName(entity.getCourseName()).equals(normalized)) {
+                return Optional.ofNullable(mapper.toDomain(entity));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Normaliza una denominación de asignatura para comparar sin acentos ni puntuación.
+     */
+    private String normalizeCourseName(String value) {
+        if (value == null) return "";
+        String nfd = java.text.Normalizer
+                .normalize(value.trim().toUpperCase(), java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .replaceAll("[^A-Z0-9]", "");
+    }
+
+    @Override
     public List<Syllabus> findAllByCourseCodes(List<String> courseCodes) {
         List<Syllabus> list = new ArrayList<>();
         for (String code : courseCodes) {

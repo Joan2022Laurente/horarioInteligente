@@ -252,6 +252,10 @@ export interface ClassSession {
   finishAt: string;
   zoomLink?: string;
   classLink?: string;
+  /** Identificador de sección en la plataforma UTP+Class. Lo deriva el backend de `classLink`. */
+  sectionId?: string;
+  /** URL directa del PDF oficial del sílabo, cuando la pasarela la expone. */
+  syllabusUrl?: string;
 }
 
 export interface Course {

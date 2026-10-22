@@ -346,8 +346,11 @@ import { SyllabusService } from '@data/services/syllabus.service';
               } @else {
                 <div class="py-12 text-center text-neutral-400 space-y-2">
                   <p class="text-sm font-semibold text-white">No se encontró el sílabo oficial para este curso.</p>
+                  @if (syllabusErrorMessage) {
+                    <p class="text-xs text-neutral-400 max-w-sm mx-auto">{{ syllabusErrorMessage }}</p>
+                  }
                   <button
-                    (click)="openSyllabus(selectedCourseName)"
+                    (click)="retrySyllabus()"
                     class="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-semibold text-white cursor-pointer"
                   >
                     Reintentar
@@ -373,6 +376,7 @@ export class SyllabusViewComponent implements OnInit {
   currentModalSyllabus: ParsedSyllabus | null = null;
   isSyncing = false;
   syncStep = '';
+  syllabusErrorMessage: string | null = null;
   copiedFormula = false;
 
   Math = Math;
@@ -431,6 +435,7 @@ export class SyllabusViewComponent implements OnInit {
     this.selectedCourseName = courseName;
     this.isSyllabusModalOpen = true;
     this.currentModalSyllabus = null;
+    this.syllabusErrorMessage = null;
 
     const course = this.courses.find(c => c.name === courseName || c.courseId === courseName);
     this.selectedCourseSyllabusUrl = course?.syllabusUrl;
@@ -446,15 +451,61 @@ export class SyllabusViewComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.isSyncing = false;
-        if (res.success && res.data) {
-          this.currentModalSyllabus = res.data;
-          this.scrollToCurrentWeek();
+
+        if (!res?.success || !res?.data) {
+          this.currentModalSyllabus = null;
+          this.syllabusErrorMessage = res?.message
+            || 'No fue posible recuperar el sílabo oficial en este momento.';
+          console.warn(`[SyllabusView] Sílabo no disponible para '${identifier}': ${this.syllabusErrorMessage}`);
+          return;
         }
+
+        // Un sobre 200 OK con un sílabo sin contenido real (fórmula y cronograma vacíos)
+        // es una degradación silenciosa de la pasarela: se trata como error explícito
+        // para no presentar una ficha vacía como si fuera el sílabo oficial.
+        if (!this.isUsableSyllabus(res.data)) {
+          this.currentModalSyllabus = null;
+          this.syllabusErrorMessage =
+            'El sílabo oficial de este curso aún no está disponible. Reintenta en unos segundos.';
+          console.warn(`[SyllabusView] Sílabo sin contenido verificable para '${identifier}'.`);
+          return;
+        }
+
+        this.currentModalSyllabus = res.data;
+        this.syllabusErrorMessage = null;
+        this.scrollToCurrentWeek();
       },
-      error: () => {
+      error: (err) => {
         this.isSyncing = false;
+        this.currentModalSyllabus = null;
+        this.syllabusErrorMessage =
+          'No fue posible conectar con la pasarela de sílabos. Revisa tu conexión y reintenta.';
+        console.warn(`[SyllabusView] Error de red al cargar el sílabo de '${identifier}':`, err);
       }
     });
+  }
+
+  /**
+   * Verifica que el sílabo recibido tenga contenido curricular real y verificable.
+   */
+  private isUsableSyllabus(syllabus: any): boolean {
+    if (!syllabus) return false;
+    const hasFormula = typeof syllabus.formula === 'string' && syllabus.formula.trim().length > 0;
+    const hasWeeks = Array.isArray(syllabus.weeklySchedule) && syllabus.weeklySchedule.length > 0;
+    const hasEvaluations = Array.isArray(syllabus.evaluations) && syllabus.evaluations.length > 0;
+    return hasFormula || hasWeeks || hasEvaluations;
+  }
+
+  /**
+   * Reintenta la carga del sílabo: limpia el estado previo, reactiva el spinner
+   * y vuelve a invocar la pasarela con los mismos parámetros.
+   */
+  retrySyllabus(): void {
+    this.currentModalSyllabus = null;
+    this.syllabusErrorMessage = null;
+    this.isSyncing = true;
+    this.syncStep = `Cargando sílabo oficial de ${this.selectedCourseName}...`;
+    this.openSyllabus(this.selectedCourseName);
   }
 
   copyFormula(formula: string): void {

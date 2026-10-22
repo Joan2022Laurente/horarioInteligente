@@ -38,11 +38,22 @@ public class SyllabusServiceImpl implements SyllabusService {
         String targetCode = courseCode.trim();
 
         // 1. Repositorio local con contenido estructurado válido
-        Optional<Syllabus> localOpt = syllabusRepository.findByCourseCode(targetCode)
-                .filter(s -> s.getWeeklySchedule() != null && !s.getWeeklySchedule().isEmpty()
-                        && s.getFormula() != null && !s.getFormula().isBlank());
+        Optional<Syllabus> localOpt = completeSyllabus(syllabusRepository.findByCourseCode(targetCode));
         if (localOpt.isPresent()) {
             return localOpt.get();
+        }
+
+        // 1b. Resolución inversa por nombre: cuando el consumidor consulta por la
+        //     denominación visible de la asignatura (no por su código de catálogo), se
+        //     resuelve el sílabo ya persistido en el Read Model local. Esto evita el
+        //     coste de la llamada remota y el re-procesamiento del PDF en la pasarela.
+        if (!looksLikeCatalogCode(targetCode)) {
+            Optional<Syllabus> byName = completeSyllabus(syllabusRepository.findByCourseName(targetCode));
+            if (byName.isPresent()) {
+                log.info("[SyllabusServiceImpl] Sílabo de '{}' resuelto localmente por nombre (sin llamada a la pasarela externa).",
+                        targetCode);
+                return byName.get();
+            }
         }
 
         // 2. Gateway hacia portal externo con el código directo
@@ -55,6 +66,26 @@ public class SyllabusServiceImpl implements SyllabusService {
         }
 
         return buildEmptySyllabus(targetCode);
+    }
+
+    /**
+     * Filtra los sílabos sin contenido curricular verificable: un objeto vacío no debe
+     * presentarse como un sílabo oficial válido.
+     */
+    private Optional<Syllabus> completeSyllabus(Optional<Syllabus> syllabus) {
+        return syllabus.filter(s -> s.getWeeklySchedule() != null && !s.getWeeklySchedule().isEmpty()
+                && s.getFormula() != null && !s.getFormula().isBlank());
+    }
+
+    /**
+     * Determina si un identificador tiene forma de código de catálogo (p. ej. {@code 100000ST61}).
+     * Los códigos UTP son alfanuméricos, sin espacios y de longitud acotada; cualquier otra
+     * forma se interpreta como denominación de asignatura.
+     */
+    private boolean looksLikeCatalogCode(String value) {
+        if (value == null || value.isBlank()) return false;
+        if (value.length() > 12) return false;
+        return value.chars().allMatch(ch -> Character.isLetterOrDigit(ch) || ch == '-' || ch == '_');
     }
 
     @Override

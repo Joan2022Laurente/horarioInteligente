@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of, from, catchError, map, firstValueFrom } from 'rxjs';
 import { ScheduleInterval, ApiResponse, UTPCurrentInterval, ProcessedCourse, UTPEvent } from '@domain/models/utp.model';
 import { getProcessedCourses } from '@data/schedule-parser';
-import { getCachedCalendarData, saveCachedCalendarData, getCachedStudentProfile } from '@data/syllabus/client-storage';
+import { getCachedCalendarData, saveCachedCalendarData, getCachedStudentProfile, purgeContaminatedCalendarCaches } from '@data/syllabus/client-storage';
 import { AppDiagnosticLogger } from '@data/diagnostic-logger';
 import { environment } from '@env/environment';
 import { UiFeedbackService } from '../../core/services/ui-feedback.service';
@@ -157,6 +157,11 @@ export class ScheduleService {
         return this.scheduleSignal();
       }
 
+      // 0. AUDITORÍA DE INTEGRIDAD DE CACHÉ: si una versión anterior dejó el calendario
+      //    sin `metadata.courseId`, las consultas de sílabo se degradarían a pedir por nombre
+      //    y no podrían aprovechar la caché de la pasarela. Se invalida y se resincroniza.
+      purgeContaminatedCalendarCaches();
+
       // 1. GATEWAY LOCAL: Verificar si ya existe horario del día en LocalStorage particionado
       const localSyncKey = studentCode ? `utp_schedule_last_sync_${studentCode}` : DAILY_SYNC_KEY;
       const localLastSync = localStorage.getItem(localSyncKey);
@@ -203,7 +208,7 @@ export class ScheduleService {
               teacher: c.teacher,
               zoomLink: c.zoomLink,
               classLink: c.classLink,
-              syllabusUrl: c.syllabusUrl || (c as any).metadata?.syllabusUrl,
+              syllabusUrl: c.syllabusUrl,
             },
           }));
 

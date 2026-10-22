@@ -168,6 +168,114 @@ export function saveCachedCalendarData(data: UTPCalendarResponse, studentCode?: 
 }
 
 /**
+ * Resultado de la auditoría de integridad de las cachés de calendario.
+ */
+export interface CalendarCachePurgeReport {
+  /** Claves de caché eliminadas por estar contaminadas. */
+  purgedKeys: string[];
+  /** Número de eventos con metadata de curso inválida detectados. */
+  contaminatedEvents: number;
+}
+
+/**
+ * Detecta si un evento de calendario carece de un identificador de curso utilizable.
+ *
+ * <p>Una caché se considera contaminada cuando algún evento no expone
+ * {@code metadata.courseId} o cuando su valor coincide con el nombre del curso
+ * (p. ej. {@code 'DESARROLLO WEB INTEGRADO'}). En ambos casos el frontend
+ * degrada a consultar el sílabo por nombre en lugar de por código de catálogo,
+ * lo que impide aprovechar la caché de la pasarela y ralentiza cada consulta.</p>
+ */
+function isContaminatedEvent(event: any): boolean {
+  const metadata = event?.metadata;
+  if (!metadata) return true;
+
+  const courseId = (metadata.courseId ?? '').toString().trim();
+  if (!courseId) return true;
+
+  const courseName = (metadata.courseName ?? '').toString().trim();
+  if (courseName && normalizeKey(courseId) === normalizeKey(courseName)) return true;
+
+  return false;
+}
+
+/**
+ * Auditoría y auto-purgado de las cachés de calendario contaminadas.
+ *
+ * <p>Cuando una versión anterior de la aplicación (o un escritor con un contrato
+ * de metadata distinto) dejó eventos sin {@code metadata.courseId}, la caché
+ * envenena todas las consultas de sílabo del día. En lugar de exigir al usuario
+ * que limpie su almacenamiento local manualmente, esta rutina detecta la
+ * anomalía, invalida la caché afectada y levanta el Daily Gate para forzar una
+ * sincronización limpia contra el backend en la siguiente carga.</p>
+ *
+ * @returns informe de las claves purgadas y de los eventos contaminados detectados
+ */
+export function purgeContaminatedCalendarCaches(): CalendarCachePurgeReport {
+  const report: CalendarCachePurgeReport = { purgedKeys: [], contaminatedEvents: 0 };
+  if (typeof window === 'undefined') return report;
+
+  try {
+    const candidateKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key === CALENDAR_STORAGE_KEY || /^utp_[A-Z0-9]+_calendar_data$/.test(key)) {
+        candidateKeys.push(key);
+      }
+    }
+
+    for (const key of candidateKeys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      let parsed: UTPCalendarResponse | null = null;
+      try {
+        parsed = JSON.parse(raw) as UTPCalendarResponse;
+      } catch (e) {
+        console.warn(`[client-storage] Caché de calendario corrupta en '${key}', se invalida.`, e);
+        removeStorageItem(key);
+        report.purgedKeys.push(key);
+        continue;
+      }
+
+      const events = parsed?.data?.current_interval?.events ?? [];
+      if (!Array.isArray(events) || events.length === 0) continue;
+
+      const contaminated = events.filter(isContaminatedEvent).length;
+      if (contaminated === 0) continue;
+
+      report.contaminatedEvents += contaminated;
+      removeStorageItem(key);
+      report.purgedKeys.push(key);
+    }
+
+    if (report.purgedKeys.length > 0) {
+      // Levantar el Daily Gate: sin esto, la app volvería a leer una caché ausente
+      // y no volvería a solicitar el horario al backend.
+      const gateKeys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('utp_schedule_last_sync')) {
+          gateKeys.push(key);
+        }
+      }
+      gateKeys.forEach((key) => removeStorageItem(key));
+
+      console.warn(
+        `[client-storage] ⚠️ Caché de calendario contaminada detectada (${report.contaminatedEvents} evento/s). ` +
+        `Se invalidaron ${report.purgedKeys.length} clave(s) y se forzó la resincronización del horario: ` +
+        `${report.purgedKeys.join(', ')}`
+      );
+    }
+  } catch (e) {
+    console.warn('[client-storage] Error auditando cachés de calendario:', e);
+  }
+
+  return report;
+}
+
+/**
  * Obtiene el perfil del estudiante desde localStorage (descifrando credenciales).
  */
 export function getCachedStudentProfile(): StudentProfile | null {
