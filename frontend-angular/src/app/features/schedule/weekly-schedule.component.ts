@@ -173,18 +173,18 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   >
                     <div class="flex items-center justify-between gap-1">
                       @if (evt.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold badge-solid-presencial px-2 py-0.5 rounded-sm">
+                          <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                           Presencial
                         </span>
                       } @else if (evt.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold badge-solid-zoom px-2 py-0.5 rounded-sm">
+                          <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                           Zoom
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold badge-solid-virtual px-2 py-0.5 rounded-sm">
+                          <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                           Virtual
                         </span>
                       }
@@ -221,101 +221,50 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
         }
       </div>
 
-      <!-- Sección Dedicada: Cursos Virtuales 24/7 (Acceso Permanente) -->
+      <!-- Sección Asignaturas Virtuales 24/7 -->
       @if (virtual247Courses.length > 0) {
         <div class="pt-4 border-t border-[var(--border-subtle)] space-y-3">
           <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-sm font-bold tracking-tight text-white">
-                Asignaturas Virtuales 24/7 (Acceso Permanente)
-              </h3>
-              <p class="text-xs text-neutral-400 mt-0.5">
-                Cursos 100% asíncronos sin horario semanal fijo. Disponibles en cualquier momento en UTP Canvas.
-              </p>
-            </div>
+            <h3 class="text-xs font-bold tracking-tight text-neutral-400 uppercase">
+              Asignaturas Virtuales 24/7
+            </h3>
             <span class="text-xs font-mono text-neutral-500">
               {{ virtual247Courses.length }} {{ virtual247Courses.length === 1 ? 'curso' : 'cursos' }}
             </span>
           </div>
 
-          <div class="flex flex-col gap-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             @for (course of virtual247Courses; track course.courseId) {
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 sm:px-5 sm:py-3.5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-neutral-700/80 transition-all backdrop-blur-md">
-                <div class="flex items-center gap-3.5 min-w-0">
-                  <div class="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                    <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                  </div>
+              <div
+                (click)="openVirtualCourseModal(course)"
+                class="group relative rounded-2xl border p-3.5 transition-all duration-300 space-y-2.5 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0 bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border-[var(--border-subtle)] hover:border-neutral-500"
+              >
+                <div class="flex items-center justify-between gap-1">
+                  <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold badge-solid-virtual px-2 py-0.5 rounded-sm">
+                    <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
+                    24/7 Asíncrono
+                  </span>
 
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <h4 class="text-xs sm:text-sm font-semibold text-white tracking-tight truncate">
-                        {{ formatCourseName(course.name) }}
-                      </h4>
-                      <span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-sm shrink-0">
-                        24/7 Asíncrono
-                      </span>
-                    </div>
-                    <p class="text-[11px] text-neutral-400 font-mono mt-0.5 truncate">
-                      {{ course.sectionCode ? 'Sección ' + course.sectionCode + ' • ' : '' }}Autoaprendizaje continuo en Canvas • Sin horario semanal fijo
-                    </p>
-                  </div>
+                  <span class="text-[10px] font-mono text-neutral-400 group-hover:text-neutral-200 transition-colors">
+                    Canvas
+                  </span>
                 </div>
 
-                <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-800/60 w-full sm:w-auto justify-end">
-                  <button
-                    (click)="onOpenSyllabus(course.name)"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-neutral-200 hover:text-white text-xs font-medium transition cursor-pointer"
-                  >
-                    <svg class="h-3.5 w-3.5 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="8" r="6"/>
-                      <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+                <h4 class="text-xs font-bold text-white group-hover:text-neutral-100 leading-snug line-clamp-2 transition-colors">
+                  {{ formatCourseName(course.name) }}
+                </h4>
+
+                <div class="flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                  <div class="flex items-center gap-1.5 truncate">
+                    <svg class="h-3 w-3 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
                     </svg>
-                    <span>Sílabo & Rúbricas</span>
-                  </button>
-
-                  @if (course.syllabusUrl) {
-                    <a
-                      [href]="course.syllabusUrl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Descargar Sílabo Oficial PDF"
-                      class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-white transition cursor-pointer no-underline"
-                    >
-                      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" x2="8" y1="13" y2="13"/>
-                        <line x1="16" x2="8" y1="17" y2="17"/>
-                        <line x1="10" x2="8" y1="9" y2="9"/>
-                      </svg>
-                    </a>
+                    <span class="truncate">Sin horario fijo</span>
+                  </div>
+                  @if (course.sectionCode) {
+                    <span class="text-[10px] text-neutral-500 shrink-0">Sec. {{ course.sectionCode }}</span>
                   }
-
-                  @if (course.zoomLink || course.classLink) {
-                    <a
-                      [href]="course.zoomLink || course.classLink"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Aula Virtual / Enlace de Clase"
-                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-transparent hover:bg-neutral-800/60 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white text-xs font-medium transition no-underline cursor-pointer"
-                    >
-                      <svg class="h-3.5 w-3.5 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                      <span>Aula Virtual</span>
-                    </a>
-                  }
-
-                  <button
-                    (click)="onAskAiClick('Explícame la metodología, evaluaciones y rúbricas del curso ' + course.name)"
-                    title="Consultar al Agente sobre este curso"
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-amber-300 transition cursor-pointer"
-                  >
-                    <svg class="h-3.5 w-3.5 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-                    </svg>
-                  </button>
                 </div>
               </div>
             }
@@ -606,5 +555,32 @@ export class WeeklyScheduleComponent implements OnInit {
 
   onAskAiClick(prompt: string): void {
     this.openAi.emit(prompt);
+  }
+
+  openVirtualCourseModal(course: ProcessedCourse): void {
+    const existingEvt = this.events.find(e => {
+      const title = this.getParsedTitle(e.title).toLowerCase();
+      return title.includes(course.name.toLowerCase()) || course.name.toLowerCase().includes(title);
+    });
+
+    if (existingEvt) {
+      this.selectedEventForModal = existingEvt;
+    } else {
+      this.selectedEventForModal = {
+        id: course.courseId || `virtual-${Date.now()}`,
+        title: `${course.name} (Virtual 24/7)`,
+        modality: 'VT',
+        type: 'SESSION',
+        startAt: new Date().toISOString(),
+        finishAt: new Date().toISOString(),
+        metadata: {
+          courseName: course.name,
+          sectionCode: course.sectionCode,
+          zoomLink: course.zoomLink,
+          classLink: course.classLink,
+          environmentType: 'Virtual 24/7'
+        }
+      };
+    }
   }
 }

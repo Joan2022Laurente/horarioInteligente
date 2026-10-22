@@ -57,6 +57,19 @@
   --badge-lime-text: #bbf451;
   --badge-lime-border: rgba(187, 244, 81, 0.32);
 
+  /* Badges de Modalidad con Fondos Sólidos (Sin Opacidad / Paleta Oficial UTP) */
+  --badge-solid-presencial-bg: #142009;
+  --badge-solid-presencial-border: #304a14;
+  --badge-solid-presencial-text: #bbf451;
+
+  --badge-solid-zoom-bg: #261205;
+  --badge-solid-zoom-border: #522208;
+  --badge-solid-zoom-text: #fb923c;
+
+  --badge-solid-virtual-bg: #071726;
+  --badge-solid-virtual-border: #0e3456;
+  --badge-solid-virtual-text: #38bdf8;
+
   --badge-neutral-bg: rgba(255, 255, 255, 0.06);
   --badge-neutral-text: #d4d4d8;
   --badge-neutral-border: rgba(255, 255, 255, 0.12);
@@ -384,4 +397,23 @@ h1, h2, h3, h4, h5, h6 {
   color: #3a86ff !important;
   text-decoration: underline;
   font-weight: 700;
+}
+
+/* Badges de Modalidad Sólidos (Cero Opacidad / Colores de Sistema) */
+.badge-solid-presencial {
+  background-color: var(--badge-solid-presencial-bg) !important;
+  border: 1px solid var(--badge-solid-presencial-border) !important;
+  color: var(--badge-solid-presencial-text) !important;
+}
+
+.badge-solid-zoom {
+  background-color: var(--badge-solid-zoom-bg) !important;
+  border: 1px solid var(--badge-solid-zoom-border) !important;
+  color: var(--badge-solid-zoom-text) !important;
+}
+
+.badge-solid-virtual {
+  background-color: var(--badge-solid-virtual-bg) !important;
+  border: 1px solid var(--badge-solid-virtual-border) !important;
+  color: var(--badge-solid-virtual-text) !important;
 }

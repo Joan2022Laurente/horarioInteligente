@@ -230,21 +230,21 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                   <div class="space-y-1 min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       @if (ev.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#00e676] bg-[rgba(0,200,83,0.14)] border border-[rgba(0,200,83,0.32)] px-2.5 py-0.5 rounded-md">
+                        <span class="inline-flex items-center gap-1.5 rounded-sm badge-solid-presencial px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
                           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
                           </svg>
                           Presencial
                         </span>
                       } @else if (ev.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#ff7043] bg-[rgba(255,87,34,0.14)] border border-[rgba(255,87,34,0.32)] px-2.5 py-0.5 rounded-md">
+                        <span class="inline-flex items-center gap-1.5 rounded-sm badge-solid-zoom px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
                           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
                           </svg>
                           Remoto Zoom
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#a5a8ff] bg-[rgba(112,117,255,0.14)] border border-[rgba(112,117,255,0.32)] px-2.5 py-0.5 rounded-md">
+                        <span class="inline-flex items-center gap-1.5 rounded-sm badge-solid-virtual px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
                           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/>
                           </svg>

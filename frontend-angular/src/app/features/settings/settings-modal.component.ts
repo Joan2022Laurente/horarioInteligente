@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 import { ApiResponse } from '@domain/models/utp.model';
@@ -8,7 +7,7 @@ import { ApiResponse } from '@domain/models/utp.model';
 @Component({
   selector: 'app-settings-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   template: `
     @if (isOpen) {
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in" (click)="close.emit()">
@@ -74,38 +73,6 @@ import { ApiResponse } from '@domain/models/utp.model';
               }
             </button>
 
-            <!-- Modo Avanzado: Token UTP manual -->
-            <div>
-              <button
-                type="button"
-                (click)="showAdvanced = !showAdvanced"
-                class="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1 transition bg-transparent border-none cursor-pointer"
-              >
-                <span>{{ showAdvanced ? '▼ Ocultar opciones avanzadas' : '▶ Modo Avanzado (Token Bearer UTP)' }}</span>
-              </button>
-
-              @if (showAdvanced) {
-                <div class="mt-2.5 p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2.5">
-                  <label class="block text-[11px] text-neutral-400 font-mono">
-                    Token Bearer JWT (desde portal class.utp.edu.pe):
-                  </label>
-                  <textarea
-                    [(ngModel)]="customToken"
-                    rows="3"
-                    placeholder="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    class="w-full rounded-xl bg-black/60 border border-white/10 p-2 text-[10px] font-mono text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--accent-lime)] transition resize-none"
-                  ></textarea>
-                  <button
-                    type="button"
-                    (click)="handleSaveToken()"
-                    class="w-full py-2 rounded-xl bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-black font-bold text-xs uppercase tracking-wider transition cursor-pointer border-none"
-                  >
-                    Guardar & Sincronizar Token
-                  </button>
-                </div>
-              }
-            </div>
-
             <div class="pt-2">
               <button 
                 type="button"
@@ -126,8 +93,6 @@ export class SettingsModalComponent {
   @Input() isOpen = false;
   @Output() close = new EventEmitter<void>();
 
-  showAdvanced = false;
-  customToken = '';
   isSyncing = false;
   feedbackMessage: string | null = null;
 
@@ -152,23 +117,6 @@ export class SettingsModalComponent {
         this.isSyncing = false;
         this.feedbackMessage = 'Horario actualizado desde el registro oficial.';
         setTimeout(() => (this.feedbackMessage = null), 3000);
-      }
-    });
-  }
-
-  handleSaveToken(): void {
-    if (!this.customToken.trim()) return;
-    this.authService.login({ token: this.customToken.trim() }).subscribe({
-      next: (res: ApiResponse<any>) => {
-        if (res.success) {
-          this.feedbackMessage = 'Sesión actualizada con el nuevo token.';
-          this.customToken = '';
-          this.showAdvanced = false;
-          if (res.data?.token) {
-            this.scheduleService.syncSchedule(res.data.token).subscribe();
-          }
-          setTimeout(() => (this.feedbackMessage = null), 3000);
-        }
       }
     });
   }
