@@ -96,7 +96,8 @@ public class AcademicToolRegistry {
                                 "parameters", Map.of(
                                         "type", "object",
                                         "properties", Map.of(
-                                                "course_query", Map.of("type", "string", "description", "Nombre del curso o código exacto. NO inventes abreviaturas de 2 letras.")
+                                                "course_query", Map.of("type", "string", "description", "Nombre del curso o código exacto. NO inventes abreviaturas de 2 letras."),
+                                                "week", Map.of("type", "integer", "description", "Semana lectiva (1 a 18) que se desea consultar. Omitirlo devuelve el sílabo completo; es la forma recomendada cuando el estudiante pregunta por 'esta semana' o 'la semana actual'.")
                                         ),
                                         "required", List.of("course_query")
                                 )

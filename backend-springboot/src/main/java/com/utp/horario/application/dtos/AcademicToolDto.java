@@ -19,10 +19,16 @@ public class AcademicToolDto {
             String date,
             int totalClasses,
             List<ClassSessionDto> classes,
-            String message
+            String message,
+            Integer weekNumber
     ) {
+        public DayScheduleResult(String studentCode, String date, int totalClasses,
+                                 List<ClassSessionDto> classes, String message) {
+            this(studentCode, date, totalClasses, classes, message, null);
+        }
+
         public DayScheduleResult(String studentCode, String date, int totalClasses, List<ClassSessionDto> classes) {
-            this(studentCode, date, totalClasses, classes, null);
+            this(studentCode, date, totalClasses, classes, null, null);
         }
     }
 

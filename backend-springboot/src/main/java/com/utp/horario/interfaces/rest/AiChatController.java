@@ -38,8 +38,8 @@ public class AiChatController {
         AiChatMessage response = aiAssistantService.processUserQuery(
                 effectiveStudentCode,
                 request.getMessage(),
-                null,
-                null,
+                request.getSchedule(),
+                request.getSyllabi(),
                 request.getModel(),
                 request.getHistory()
         );

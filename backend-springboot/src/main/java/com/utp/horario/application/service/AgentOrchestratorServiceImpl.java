@@ -140,7 +140,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
     @Override
     public AiChatMessage processUserQuery(String studentCode, String message,
-            ScheduleInterval ignoredSchedule, Map<String, Syllabus> ignoredSyllabi,
+            ScheduleInterval schedule, Map<String, Syllabus> syllabi,
             String requestedModel, List<Map<String, String>> history) {
 
         DailyQuotaStatus quota = quotaService.consumeQuota(studentCode);
@@ -152,7 +152,8 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         }
 
         String effectiveModel = resolveModel(requestedModel);
-        List<Map<String, Object>> messages = buildMessages(message, history);
+        Integer currentWeek = resolveCurrentWeek(studentCode, schedule);
+        List<Map<String, Object>> messages = buildMessages(message, history, currentWeek, schedule);
         List<String> toolsExecuted = new ArrayList<>();
         List<Map<String, Object>> toolDetails = new ArrayList<>();
 
@@ -214,7 +215,8 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         }
 
         String effectiveModel = resolveModel(requestedModel);
-        List<Map<String, Object>> messages = buildMessages(message, history);
+        Integer currentWeek = resolveCurrentWeek(studentCode, null);
+        List<Map<String, Object>> messages = buildMessages(message, history, currentWeek, null);
 
         try {
             for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
@@ -406,9 +408,35 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                         : "nvidia/nemotron-3.5-lightning:free");
     }
 
+    /**
+     * Resuelve la semana lectiva vigente para anclar temporalmente las respuestas del agente.
+     *
+     * <p>Prioridad: el horario recibido en la peticion (fuente de la interfaz) y, en su
+     * defecto, el snapshot persistido del horario en la base de datos relacional.</p>
+     */
+    private Integer resolveCurrentWeek(String studentCode, ScheduleInterval schedule) {
+        if (schedule != null && schedule.getWeekNumber() != null && schedule.getWeekNumber() > 0) {
+            return schedule.getWeekNumber();
+        }
+        try {
+            return toolService.resolveCurrentWeek(studentCode);
+        } catch (Exception e) {
+            log.debug("[AgentOrchestrator] No se pudo resolver la semana lectiva vigente: {}", e.getMessage());
+            return null;
+        }
+    }
+
     private List<Map<String, Object>> buildMessages(String message, List<Map<String, String>> history) {
+        return buildMessages(message, history, null, null);
+    }
+
+    private List<Map<String, Object>> buildMessages(String message, List<Map<String, String>> history,
+            Integer currentWeek, ScheduleInterval schedule) {
         List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(Map.of("role", "system", "content", getSystemPrompt()));
+        String periodName = schedule != null ? schedule.getPeriodName() : null;
+        Integer totalWeeks = schedule != null ? schedule.getTotalWeeks() : null;
+        messages.add(Map.of("role", "system",
+                "content", getSystemPrompt(currentWeek, periodName, totalWeeks)));
         if (history != null && !history.isEmpty()) {
             int startIdx = Math.max(0, history.size() - 8);
             for (int i = startIdx; i < history.size(); i++) {
@@ -457,7 +485,10 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             }
             case "get_syllabus_details" -> {
                 String query = AcademicToolRegistry.resolveCourseQuery(args);
-                yield objectMapper.writeValueAsString(toolService.getSyllabusDetails(studentCode, query));
+                Integer week = readWeekArgument(args);
+                yield objectMapper.writeValueAsString(week == null
+                        ? toolService.getSyllabusDetails(studentCode, query)
+                        : toolService.getSyllabusDetails(studentCode, query, week));
             }
             case "get_upcoming_evaluations" -> {
                 int week = args.has("current_week") ? args.path("current_week").asInt() : 6;
@@ -467,7 +498,58 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         };
     }
 
+    /**
+     * Lee el argumento opcional {@code week} emitido por el modelo. Acepta numero o cadena
+     * numerica y acota el rango al periodo lectivo institucional (1 a 18). Ante un valor no
+     * interpretable devuelve {@code null}, con lo que la herramienta conserva su
+     * comportamiento completo.
+     */
+    private Integer readWeekArgument(JsonNode args) {
+        if (args == null) return null;
+        JsonNode node = args.path("week");
+        if (node.isMissingNode() || node.isNull()) return null;
+        int value;
+        if (node.isNumber()) {
+            value = node.asInt();
+        } else {
+            String raw = node.asText("").trim();
+            if (raw.isEmpty()) return null;
+            try {
+                value = Integer.parseInt(raw);
+            } catch (NumberFormatException e) {
+                log.warn("[AgentOrchestrator] 'week' no numérico ('{}'), se consulta el sílabo completo", raw);
+                return null;
+            }
+        }
+        if (value < 1 || value > 18) {
+            log.warn("[AgentOrchestrator] 'week' fuera de rango ({}), se consulta el sílabo completo", value);
+            return null;
+        }
+        return value;
+    }
+
     private String getSystemPrompt() {
+        return getSystemPrompt(null, null, null);
+    }
+
+    /**
+     * Construye el prompt del sistema enriquecido con el contexto academico vigente.
+     *
+     * <p>El ancla temporal (semana lectiva) es indispensable: sin ella el agente no puede
+     * responder consultas de alcance semanal como "que temas tocan esta semana" y solo puede
+     * volcar el cronograma integro o pedir precision al estudiante.</p>
+     *
+     * @param currentWeek semana lectiva vigente (1 a 18), o {@code null} si se desconoce
+     * @param periodName  periodo lectivo vigente
+     * @param totalWeeks  total de semanas del periodo
+     */
+    private String getSystemPrompt(Integer currentWeek, String periodName, Integer totalWeeks) {
+        String weekLine = (currentWeek != null && currentWeek > 0)
+                ? "- Semana lectiva actual: " + currentWeek
+                        + (totalWeeks != null && totalWeeks > 0 ? " de " + totalWeeks : "")
+                        + (periodName != null && !periodName.isBlank() ? " (periodo " + periodName + ")" : "")
+                : "- Semana lectiva actual: NO CONOCIDA. Si el estudiante pregunta por 'esta semana', "
+                        + "consulta 'get_today_schedule' y declara que no dispone del numero de semana.";
         return """
         Eres el Copiloto Académico de Horario Inteligente UTP, un asistente universitario inteligente, proactivo, empático y muy resolutivo para estudiantes de la Universidad Tecnológica del Perú.
 
@@ -476,6 +558,10 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         - Temarios semanales, fórmulas de evaluación y sílabos oficiales (`get_syllabus_details`)
         - Cursos matriculados del ciclo actual (`get_enrolled_courses`)
         - Evaluaciones próximas y tareas (`get_upcoming_evaluations`)
+
+        CONTEXTO ACADÉMICO VIGENTE (datos verificados por el sistema: no los pidas, no los supongas, no los contradigas):
+        - Fecha actual: %s (Zona horaria: Lima, Perú).
+        %s
 
         DIRECTRICES DE RAZONAMIENTO Y PROACTIVIDAD:
         1. Memoria Conversacional Continua:
@@ -489,8 +575,15 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
              c) Si tiene más de 1 clase hoy: Consulta el temario de esas clases y resume los temas de cada una ordenadamente.
              d) Si no tiene clases hoy: Indícaselo cordialmente y ofrécele consultar el temario de sus cursos matriculados si lo desea.
 
+        2.b. Consultas sobre "esta semana" o "el temario de la semana":
+           a. Usa SIEMPRE el número de semana indicado en el CONTEXTO ACADÉMICO VIGENTE. Nunca lo deduzcas, nunca lo inventes y nunca lo preguntes al estudiante.
+           b. Si el estudiante NO nombró un curso, identifícalo a partir de `get_today_schedule` (la clase de esta semana) o de `get_enrolled_courses`. Si hay una sola opción evidente, úsala sin preguntar. Si hay varias, elige la más relevante y anuncia cuál usas en una sola frase.
+           c. Invoca `get_syllabus_details` con DOS argumentos: `course_query` (el curso) y `week` (la semana vigente del contexto). El parámetro `week` acota el resultado a esa semana.
+           d. Responde SOLO con esa semana: unidad, temas, actividades y entrega programada si existe. NO enumeres el cronograma completo de 18 semanas ante una pregunta de una sola semana.
+           e. Si el curso no tiene contenido para esa semana, indícalo con UNA frase precisa y ofrece el temario de otras semanas. No inventes contenidos.
+
         3. Consultas sobre cursos específicos:
-           - Cuando el estudiante nombre un curso (ej. 'desarrollo web', 'cloud', 'gestión ti', 'investigación'), invoca directamente `get_syllabus_details` pasando el nombre en `course_query`.
+           - Cuando el estudiante nombre un curso (ej. 'desarrollo web', 'cloud', 'gestión ti', 'investigación'), invoca directamente `get_syllabus_details` pasando el nombre en `course_query`. Si la pregunta tiene alcance temporal ("esta semana", "la semana 5"), añade también `week` con ese valor.
 
         4. Consultas genéricas abiertas:
            - Solo si la pregunta es totalmente abierta sin referirse a hoy ni a ningún curso previo (\"¿qué cursos llevo?\", \"¿cuáles son mis materias?\"), consulta `get_enrolled_courses`.
@@ -502,8 +595,9 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
              * Usa encabezados breves con `###`.
              * Usa viñetas con guion `- ` para listar aulas, horarios, docentes o temas.
              * Resalta en **negrita** nombres de asignaturas, aulas, docentes y temas clave.
-           - Fecha actual de referencia: %s (Zona horaria: Lima, Perú).
-        """.formatted(LocalDate.now(java.time.ZoneId.of("America/Lima")).toString());
+        """.formatted(
+                LocalDate.now(java.time.ZoneId.of("America/Lima")).toString(),
+                weekLine);
     }
 
     private JsonNode callOpenRouterWithFailover(Map<String, Object> body) throws Exception {

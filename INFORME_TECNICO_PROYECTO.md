@@ -1263,6 +1263,10 @@ El proyecto cumplió con todos los objetivos trazados para esta segunda entrega 
           "course_query": {
             "type": "string",
             "description": "Código oficial de la asignatura (ej. 100000SI58) o nombre natural del curso."
+          },
+          "week": {
+            "type": "integer",
+            "description": "Semana lectiva (1 a 18) que se desea consultar. Omitirlo devuelve el sílabo completo; acota el resultado a esa semana cuando la consulta tiene alcance temporal."
           }
         },
         "required": ["course_query"]

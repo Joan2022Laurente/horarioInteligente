@@ -86,6 +86,7 @@ public class AcademicToolService {
         log.info("[AcademicTool] 📅 Consultando horario de hoy: fecha={}, día={}, studentCode={}", today, dayOfWeek, studentCode);
 
         List<ClassSessionDto> dayClasses = new ArrayList<>();
+        Integer weekNumber = null;
 
         // 1. Intento desde repositorio local MySQL / L1 Cache
         Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
@@ -93,6 +94,7 @@ public class AcademicToolService {
 
 
         if (scheduleOpt.isPresent() && scheduleOpt.get().getClasses() != null) {
+            weekNumber = scheduleOpt.get().getWeekNumber();
             for (ClassSession c : scheduleOpt.get().getClasses()) {
                 boolean matchesDay = false;
                 if (c.getStartAt() != null) {
@@ -125,7 +127,30 @@ public class AcademicToolService {
                 ? "No tienes clases programadas para el día de hoy (" + dayOfWeek + " " + today + ")."
                 : null;
 
-        return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message);
+        return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message, weekNumber);
+    }
+
+    /**
+     * Resuelve la semana lectiva vigente del estudiante a partir del snapshot persistido del
+     * horario. Constituye la fuente autoritativa del ancla temporal para el agente: sin ella,
+     * el modelo no puede determinar qué semana corresponde a "esta semana".
+     *
+     * @param studentCode codigo institucional del estudiante
+     * @return semana lectiva vigente, o {@code null} si no hay horario persistido
+     */
+    public Integer resolveCurrentWeek(String studentCode) {
+        String code = resolveEffectiveStudentCode(studentCode);
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        try {
+            return scheduleRepository.findByStudentIdAndPeriod(code, DEFAULT_PERIOD_NAME)
+                    .map(ScheduleInterval::getWeekNumber)
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("[AcademicTool] No se pudo resolver la semana lectiva vigente de [{}]: {}", code, e.getMessage());
+            return null;
+        }
     }
 
     private String resolveStudentToken(String studentCode) {
@@ -234,6 +259,24 @@ public class AcademicToolService {
     }
 
     public SyllabusDetailsResult getSyllabusDetails(String studentCode, String courseQuery) {
+        return getSyllabusDetails(studentCode, courseQuery, null);
+    }
+
+    /**
+     * Obtiene el sílabo oficial de un curso acotado opcionalmente a una semana lectiva.
+     *
+     * <p>El filtro por semana existe para responder consultas de alcance temporal concreto
+     * ("¿qué temas tocan esta semana?") de forma determinista en el servidor, sin depender de
+     * que el modelo discrimine por sí mismo entre la semana vigente y el cronograma completo.
+     * Si {@code week} es {@code null} el comportamiento es idéntico al histórico: se devuelve
+     * el sílabo íntegro con las dieciocho semanas.</p>
+     *
+     * @param studentCode codigo institucional del estudiante
+     * @param courseQuery codigo de catalogo o denominacion natural del curso
+     * @param week        semana lectiva (1 a 18) o {@code null} para el sílabo completo
+     * @return detalle del sílabo acotado a la semana solicitada
+     */
+    public SyllabusDetailsResult getSyllabusDetails(String studentCode, String courseQuery, Integer week) {
         studentCode = resolveEffectiveStudentCode(studentCode);
         log.info("[AcademicTool] 📚 Consultando sílabo de curso: {} (alumno: {})", courseQuery, studentCode);
         String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
@@ -403,7 +446,7 @@ public class AcademicToolService {
                         w.getEvaluation()
                 )).toList() : List.of();
 
-        return new SyllabusDetailsResult(
+        return applyWeekFilter(new SyllabusDetailsResult(
                 s.getCourseCode(),
                 s.getCourseName(),
                 s.getCredits() != null ? s.getCredits() : 3,
@@ -412,6 +455,41 @@ public class AcademicToolService {
                 evals,
                 weekly,
                 (markdown != null && !markdown.isBlank()) ? markdown : null
+        ), week);
+    }
+
+    /**
+     * Acota el detalle de un sílabo a una semana lectiva concreta.
+     *
+     * <p>El filtro se aplica en el servidor para que la respuesta del agente sea acotada por
+     * construcción, con independencia del grado de obediencia del modelo. Cuando la semana no
+     * se especifica, el sílabo se devuelve íntegro.</p>
+     *
+     * @param result sílabo completo
+     * @param week   semana lectiva solicitada, o {@code null}
+     * @return sílabo acotado a la semana, o el original si no procede filtrar
+     */
+    private SyllabusDetailsResult applyWeekFilter(SyllabusDetailsResult result, Integer week) {
+        if (result == null || week == null || week < MIN_CURRENT_WEEK || week > MAX_CURRENT_WEEK) {
+            return result;
+        }
+        List<WeeklySessionDto> weekly = result.weeklySchedule() == null
+                ? List.of()
+                : result.weeklySchedule().stream().filter(s -> s.week() == week).toList();
+        List<EvaluationSummaryDto> evaluations = result.evaluations() == null
+                ? List.of()
+                : result.evaluations().stream().filter(e -> e.weekScheduled() == week).toList();
+        log.info("[AcademicTool] Sílabo acotado a la semana {}: {} sesión(es), {} evaluación(es).",
+                week, weekly.size(), evaluations.size());
+        return new SyllabusDetailsResult(
+                result.courseCode(),
+                result.courseName(),
+                result.credits(),
+                result.formula(),
+                result.learningGoal(),
+                evaluations,
+                weekly,
+                result.markdown()
         );
     }
 

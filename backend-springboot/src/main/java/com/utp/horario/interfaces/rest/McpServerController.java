@@ -468,7 +468,10 @@ public class McpServerController {
                                         + "de la asignatura (ej. 100000SI58) o su nombre natural.",
                                 AcademicToolRegistry.getSupportedToolNames()));
                     }
-                    resultJson = objectMapper.writeValueAsString(toolService.getSyllabusDetails(studentCode, query));
+                    Integer week = readOptionalWeekArgument(arguments);
+                    resultJson = objectMapper.writeValueAsString(week == null
+                            ? toolService.getSyllabusDetails(studentCode, query)
+                            : toolService.getSyllabusDetails(studentCode, query, week));
                 }
 
                 case "get_upcoming_evaluations" -> {
@@ -548,6 +551,38 @@ public class McpServerController {
         }
         if (value > MAX_CURRENT_WEEK) {
             return MAX_CURRENT_WEEK;
+        }
+        return value;
+    }
+
+    /**
+     * Lee el argumento opcional {@code week} (semana lectiva). Acepta numero o cadena
+     * numerica; ante un valor no interpretable devuelve {@code null} para preservar el
+     * comportamiento historico de la herramienta (sílabo completo).
+     */
+    private Integer readOptionalWeekArgument(JsonNode arguments) {
+        JsonNode node = arguments.path("week");
+        if (node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        int value;
+        if (node.isNumber()) {
+            value = node.asInt();
+        } else {
+            String raw = node.asText("").trim();
+            if (raw.isEmpty()) {
+                return null;
+            }
+            try {
+                value = Integer.parseInt(raw);
+            } catch (NumberFormatException e) {
+                log.warn("[MCP-JSONRPC] 'week' no numérico ('{}'), se ignora el filtro por semana", raw);
+                return null;
+            }
+        }
+        if (value < 1 || value > 18) {
+            log.warn("[MCP-JSONRPC] 'week' fuera del rango lectivo ({}), se ignora el filtro por semana", value);
+            return null;
         }
         return value;
     }
