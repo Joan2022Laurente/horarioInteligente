@@ -32,7 +32,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
         
         <!-- Selector de Semana -->
         <div class="flex items-center gap-2">
-          <div class="flex items-center bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-2xl p-1 shadow-none">
+          <div class="flex items-center bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-md p-1 shadow-none">
             <button
               (click)="changeWeek(selectedWeek - 1)"
               [disabled]="selectedWeek <= 1"
@@ -71,7 +71,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
           </div>
 
           @if (selectedWeek === currentWeek) {
-            <span class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-lime)] text-black font-extrabold px-3 py-1 text-[11px] shadow-none">
+            <span class="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent-lime)] text-black font-extrabold px-3 py-1 text-[11px] shadow-none">
               <span class="h-1.5 w-1.5 rounded-full bg-black animate-pulse"></span>
               En curso
             </span>
@@ -80,7 +80,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
 
         <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <!-- Filtros de Modalidad con Segmented Controls -->
-          <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-xl overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
+          <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-md overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
             <button
               (click)="selectedModality = 'ALL'"
               class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
@@ -150,7 +150,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   {{ getDayName(dayNum) }}
                 </span>
                 @if (isToday(dayNum)) {
-                  <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-white text-black leading-none">
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded-xs text-[9px] font-bold bg-white text-black leading-none">
                     Hoy
                   </span>
                 }
@@ -173,17 +173,17 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   >
                     <div class="flex items-center justify-between gap-1">
                       @if (evt.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-md backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
                           <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                           Presencial
                         </span>
                       } @else if (evt.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-md backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
                           <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                           Zoom
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-md backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
                           <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
                           Virtual
                         </span>
@@ -254,7 +254,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                       <h4 class="text-xs sm:text-sm font-semibold text-white tracking-tight truncate">
                         {{ formatCourseName(course.name) }}
                       </h4>
-                      <span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-md shrink-0">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-sm shrink-0">
                         24/7 Asíncrono
                       </span>
                     </div>
@@ -267,7 +267,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                 <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-800/60 w-full sm:w-auto justify-end">
                   <button
                     (click)="onOpenSyllabus(course.name)"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-neutral-200 hover:text-white text-xs font-medium transition cursor-pointer"
+                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-neutral-200 hover:text-white text-xs font-medium transition cursor-pointer"
                   >
                     <svg class="h-3.5 w-3.5 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="8" r="6"/>
@@ -282,7 +282,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Descargar Sílabo Oficial PDF"
-                      class="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-white transition cursor-pointer no-underline"
+                      class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-white transition cursor-pointer no-underline"
                     >
                       <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -300,7 +300,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Aula Virtual / Enlace de Clase"
-                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-transparent hover:bg-neutral-800/60 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white text-xs font-medium transition no-underline cursor-pointer"
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-transparent hover:bg-neutral-800/60 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white text-xs font-medium transition no-underline cursor-pointer"
                     >
                       <svg class="h-3.5 w-3.5 shrink-0 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       <span>Aula Virtual</span>
@@ -310,7 +310,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   <button
                     (click)="onAskAiClick('Explícame la metodología, evaluaciones y rúbricas del curso ' + course.name)"
                     title="Consultar al Agente sobre este curso"
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-amber-300 transition cursor-pointer"
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-300 hover:text-amber-300 transition cursor-pointer"
                   >
                     <svg class="h-3.5 w-3.5 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>

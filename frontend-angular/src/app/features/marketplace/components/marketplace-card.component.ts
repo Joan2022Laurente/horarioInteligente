@@ -9,7 +9,7 @@ import { ServiceItem } from '@domain/models/marketplace';
   template: `
     <article 
       (click)="selectItem.emit(item)"
-      class="group relative flex flex-col bg-[#0e0f13] hover:bg-[#14151b] border border-white/[0.08] hover:border-[var(--accent-lime)]/40 rounded-3xl overflow-hidden transition duration-200 cursor-pointer text-left shadow-xl"
+      class="group relative flex flex-col bg-[#0e0f13] hover:bg-[#14151b] border border-white/[0.08] hover:border-[var(--accent-lime)]/40 rounded-2xl overflow-hidden transition duration-200 cursor-pointer text-left shadow-xl"
     >
       
       <!-- Card Image Aspect Square Frame -->

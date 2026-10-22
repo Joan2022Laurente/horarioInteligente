@@ -63,7 +63,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                       Copiloto Académico
                     </h3>
                     @if (isExpanded) {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/10 text-neutral-300">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-sm bg-white/10 text-neutral-300">
                         Pantalla Completa
                       </span>
                     }
@@ -77,13 +77,13 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
               <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <!-- Badge de Cuota de Consultas -->
                 @if (quota.isUnlimited) {
-                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                     <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                     <span class="hidden sm:inline">Ilimitado</span>
                   </span>
                 } @else {
                   <span 
-                    class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg"
+                    class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md"
                     [ngClass]="quota.remaining > 0 ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'"
                   >
                     @if (quota.remaining > 0) {
@@ -185,12 +185,12 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                   name="chatInput"
                   placeholder="Pregúntale a tu copiloto académico..."
                   [disabled]="isLoading"
-                  class="flex-1 rounded-2xl bg-black/40 border-none px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none transition"
+                  class="flex-1 rounded-md bg-black/40 border-none px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none transition"
                 />
                 <button
                   type="submit"
                   [disabled]="isLoading || !input.trim()"
-                  class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--accent-lime)] text-[#0a0a0c] hover:bg-[#a8e63b] disabled:opacity-40 transition shadow-lg shadow-[var(--accent-lime)]/20 active:scale-95 cursor-pointer shrink-0 border-none"
+                  class="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent-lime)] text-[#0a0a0c] hover:bg-[#a8e63b] disabled:opacity-40 transition shadow-lg shadow-[var(--accent-lime)]/20 active:scale-95 cursor-pointer shrink-0 border-none"
                 >
                   <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                 </button>

@@ -12,7 +12,7 @@ import { ApiResponse } from '@domain/models/utp.model';
   template: `
     @if (isOpen) {
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in" (click)="close.emit()">
-        <div class="w-full max-w-md rounded-3xl bg-[#09090c]/95 border border-white/[0.08] p-6 sm:p-8 space-y-5 text-left shadow-[0_25px_70px_rgba(0,0,0,0.85)]" (click)="$event.stopPropagation()">
+        <div class="w-full max-w-md rounded-2xl bg-[#09090c]/95 border border-white/[0.08] p-6 sm:p-8 space-y-5 text-left shadow-[0_25px_70px_rgba(0,0,0,0.85)]" (click)="$event.stopPropagation()">
           
           <div class="flex items-start justify-between">
             <div>
@@ -61,7 +61,7 @@ import { ApiResponse } from '@domain/models/utp.model';
               type="button"
               [disabled]="isSyncing"
               (click)="handleSyncLive()"
-              class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer disabled:opacity-50"
+              class="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer disabled:opacity-50"
             >
               @if (isSyncing) {
                 <span class="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -110,7 +110,7 @@ import { ApiResponse } from '@domain/models/utp.model';
               <button 
                 type="button"
                 (click)="authService.logout(); close.emit()"
-                class="w-full py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 font-bold text-xs uppercase tracking-wider transition cursor-pointer"
+                class="w-full py-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 font-bold text-xs uppercase tracking-wider transition cursor-pointer"
               >
                 Cerrar Sesión & Purgar Datos Locales
               </button>

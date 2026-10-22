@@ -23,13 +23,13 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
             [ngModel]="filter.searchQuery"
             (ngModelChange)="onSearchChange($event)"
             placeholder="Buscar productos, snacks, ropa o tutorías..."
-            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] rounded-2xl pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 outline-none transition"
+            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] rounded-md pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 outline-none transition"
           />
         </div>
 
         <button
           (click)="isMobileDrawerOpen = true"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#14151a] border border-white/[0.08] text-xs font-bold text-white transition cursor-pointer shrink-0"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#14151a] border border-white/[0.08] text-xs font-bold text-white transition cursor-pointer shrink-0"
         >
           <svg class="h-3.5 w-3.5 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
@@ -73,7 +73,7 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
             [ngModel]="filter.searchQuery"
             (ngModelChange)="onSearchChange($event)"
             placeholder="Buscar en el campus..."
-            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] focus:bg-[#181920] rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-neutral-500 outline-none transition"
+            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] focus:bg-[#181920] rounded-md pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-neutral-500 outline-none transition"
           />
         </div>
       </div>
@@ -157,7 +157,7 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
             <select
               [ngModel]="filter.courseName"
               (ngModelChange)="onCourseChange($event)"
-              class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer appearance-none truncate pr-8"
+              class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] rounded-md px-3 py-2 text-xs text-white outline-none cursor-pointer appearance-none truncate pr-8"
             >
               <option value="ALL">Todas las asignaturas</option>
               @for (c of courses; track c) {
@@ -173,7 +173,7 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
         <!-- Sort Order Selector -->
         <div class="space-y-1">
           <label class="block text-[11px] text-neutral-400 font-medium">Ordenar por</label>
-          <div class="grid grid-cols-3 gap-1 bg-[#14151a] p-1 rounded-xl border border-white/[0.08]">
+          <div class="grid grid-cols-3 gap-1 bg-[#14151a] p-1 rounded-md border border-white/[0.08]">
             <button
               (click)="onSortChange('POPULAR')"
               class="py-1 rounded-lg text-[11px] font-medium transition border-none cursor-pointer text-center"

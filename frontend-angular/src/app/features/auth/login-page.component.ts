@@ -70,7 +70,7 @@ import { ScheduleService } from '@data/services/schedule.service';
             <button
               type="button"
               (click)="isLoginModalOpen = true"
-              class="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs sm:text-sm tracking-wide uppercase shadow-xl shadow-[var(--accent-lime)]/20 transition-all active:scale-95 cursor-pointer group shrink-0 border-none"
+              class="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-3.5 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs sm:text-sm tracking-wide uppercase shadow-xl shadow-[var(--accent-lime)]/20 transition-all active:scale-95 cursor-pointer group shrink-0 border-none"
             >
               <span>Empezar</span>
               <svg class="h-4 w-4 text-[#0a0a0c] group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -172,7 +172,7 @@ import { ScheduleService } from '@data/services/schedule.service';
           (click)="isLoginModalOpen = false"
         >
           <div 
-            class="relative w-full max-w-md rounded-3xl bg-[#09090c]/95 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-4 sm:space-y-5"
+            class="relative w-full max-w-md rounded-2xl bg-[#09090c]/95 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-4 sm:space-y-5"
             (click)="$event.stopPropagation()"
           >
             <!-- Header del Modal -->
@@ -189,7 +189,7 @@ import { ScheduleService } from '@data/services/schedule.service';
               <button
                 type="button"
                 (click)="isLoginModalOpen = false"
-                class="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer bg-transparent border-none"
+                class="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer bg-transparent border-none"
                 aria-label="Cerrar modal"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -241,7 +241,7 @@ import { ScheduleService } from '@data/services/schedule.service';
                     placeholder="u123456789"
                     [disabled]="isLoading"
                     required
-                    class="w-full rounded-2xl bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
+                    class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
                   />
                 </div>
               </div>
@@ -264,7 +264,7 @@ import { ScheduleService } from '@data/services/schedule.service';
                     placeholder="Tu contraseña de UTP Class"
                     [disabled]="isLoading"
                     required
-                    class="w-full rounded-2xl bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
+                    class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
                   />
                 </div>
               </div>
@@ -272,7 +272,7 @@ import { ScheduleService } from '@data/services/schedule.service';
               <button
                 type="submit"
                 [disabled]="isLoading"
-                class="w-full flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-3 sm:py-3.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer uppercase tracking-wider border-none"
+                class="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-3 sm:py-3.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer uppercase tracking-wider border-none"
               >
                 @if (isLoading) {
                   <span class="h-4 w-4 border-2 border-[#0a0a0c] border-t-transparent rounded-full animate-spin"></span>

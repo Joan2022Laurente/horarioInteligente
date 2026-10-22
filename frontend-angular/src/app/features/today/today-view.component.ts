@@ -52,11 +52,11 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
           <div class="space-y-3">
             <div class="h-6 w-48 bg-white/10 rounded-lg"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="h-32 rounded-3xl bg-[#141417] border border-white/5 p-4 space-y-3">
+              <div class="h-32 rounded-2xl bg-[#141417] border border-white/5 p-4 space-y-3">
                 <div class="h-4 w-1/4 bg-white/10 rounded"></div>
                 <div class="h-5 w-3/4 bg-white/10 rounded"></div>
               </div>
-              <div class="h-32 rounded-3xl bg-[#141417] border border-white/5 p-4 space-y-3">
+              <div class="h-32 rounded-2xl bg-[#141417] border border-white/5 p-4 space-y-3">
                 <div class="h-4 w-1/4 bg-white/10 rounded"></div>
                 <div class="h-5 w-3/4 bg-white/10 rounded"></div>
               </div>
@@ -74,12 +74,12 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             <div class="space-y-2 min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 @if (isLiveNow) {
-                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
                     <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
                     En vivo • Quedan {{ minutesRemainingCurrent }}m
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
                     </svg>
@@ -88,7 +88,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 }
 
                 @if (bannerClass.modality === 'P') {
-                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
                       <circle cx="12" cy="10" r="3"/>
@@ -96,7 +96,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     Presencial
                   </span>
                 } @else if (bannerClass.modality === 'R') {
-                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="m22 8-6 4 6 4V8Z"/>
                       <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
@@ -104,7 +104,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     Remoto Zoom
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                     <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="2"/>
                       <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
@@ -156,7 +156,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
       <!-- 2. Flat Navigation Tabs -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-        <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-2xl overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
+        <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-md overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
           <button
             (click)="activeSection = 'todayClasses'"
             class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
@@ -209,7 +209,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
           </div>
 
           @if (todayEvents.length === 0) {
-            <div class="py-16 text-center rounded-3xl bg-[var(--surface-card)] border border-[var(--border-subtle)] p-8 space-y-3 shadow-none">
+            <div class="py-16 text-center rounded-2xl bg-[var(--surface-card)] border border-[var(--border-subtle)] p-8 space-y-3 shadow-none">
               <svg class="h-10 w-10 mx-auto text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
                 <line x1="16" x2="16" y1="2" y2="6"/>
@@ -263,7 +263,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                       }
 
                       @if (isSessionActive(ev)) {
-                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] border border-white/[0.14] px-2 py-0.5 rounded-md backdrop-blur-md">
+                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] border border-white/[0.14] px-2 py-0.5 rounded-sm backdrop-blur-md">
                           <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
                           Sesión Actual
                         </span>
@@ -312,7 +312,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
               </span>
             </div>
 
-            <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-2xl text-[11px] font-bold">
+            <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-md text-[11px] font-bold">
               <button
                 (click)="taskFilter = 'all'"
                 class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
@@ -378,7 +378,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
                         @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
                           <span class="text-neutral-600">•</span>
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 font-bold text-[11px]">
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 font-bold text-[11px]">
                             <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                               <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
                             </svg>
@@ -388,7 +388,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
                         @if (item.task.evaluationSystem) {
                           <span class="text-neutral-600">•</span>
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-sm bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
                             {{ item.task.evaluationSystem }}
                             @if (item.syllabusContext.formulaWeight) {
                               ({{ item.syllabusContext.formulaWeight }}%)
@@ -396,7 +396,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                           </span>
                         } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
                           <span class="text-neutral-600">•</span>
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-sm bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
                             {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
                           </span>
                         }
@@ -418,7 +418,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                       @if (item.task.instructionsHtml) {
                         <button
                           (click)="selectedTaskForInstructions = item.task"
-                          class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-subtle)] hover:bg-white hover:text-black border border-[var(--border-subtle)] px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                          class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-subtle)] hover:bg-white hover:text-black border border-[var(--border-subtle)] px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
                         >
                           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
@@ -430,7 +430,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                       @if (item.task.rubric) {
                         <button
                           (click)="openRubric(item.task.rubric, item.task.title, item.task.courseName)"
-                          class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-subtle)] hover:bg-white hover:text-black border border-[var(--border-subtle)] px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                          class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-subtle)] hover:bg-white hover:text-black border border-[var(--border-subtle)] px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
                         >
                           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
@@ -552,7 +552,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
                   <button
                     (click)="selectedCourseForSyllabus = ev.courseName; isSyllabusModalOpen = true"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
                   >
                     <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
@@ -592,7 +592,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
           (click)="activeRubric = null"
         >
           <div 
-            class="relative flex flex-col w-full max-w-3xl max-h-[85vh] rounded-3xl bg-[#111114] text-white shadow-2xl overflow-hidden border border-white/10"
+            class="relative flex flex-col w-full max-w-3xl max-h-[85vh] rounded-2xl bg-[#111114] text-white shadow-2xl overflow-hidden border border-white/10"
             (click)="$event.stopPropagation()"
           >
             <div class="bg-[#16161a] px-6 py-4 border-b border-white/10 flex items-center justify-between">
@@ -635,7 +635,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
           (click)="selectedTaskForInstructions = null"
         >
           <div 
-            class="relative flex flex-col w-full max-w-2xl max-h-[85vh] rounded-3xl bg-[#111114] text-white shadow-2xl overflow-hidden border border-white/10"
+            class="relative flex flex-col w-full max-w-2xl max-h-[85vh] rounded-2xl bg-[#111114] text-white shadow-2xl overflow-hidden border border-white/10"
             (click)="$event.stopPropagation()"
           >
             <div class="bg-[#16161a] px-6 py-4 border-b border-white/10 flex items-center justify-between">

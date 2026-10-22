@@ -28,7 +28,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
           </div>
         }
         @if (userTextClean) {
-          <div class="rounded-3xl bg-[#1e1e24] text-white px-4 py-2.5 max-w-[85%] text-xs sm:text-sm font-medium shadow-sm border-none">
+          <div class="rounded-2xl bg-[#1e1e24] text-white px-4 py-2.5 max-w-[85%] text-xs sm:text-sm font-medium shadow-sm border-none">
             {{ userTextClean }}
           </div>
         }
@@ -74,7 +74,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
             <button
               type="button"
               (click)="toggleActivities()"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-neutral-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition cursor-pointer select-none"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-neutral-400 hover:text-neutral-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition cursor-pointer select-none"
             >
               <svg class="h-3 w-3 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="20 6 9 17 4 12"/>
@@ -120,7 +120,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
         @if (toolBadges().length > 0) {
           <div class="flex flex-wrap gap-1.5 mt-0.5">
             @for (badge of toolBadges(); track badge.label) {
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-neutral-800/50 text-neutral-500 border border-neutral-700/40 select-none tracking-wide">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-medium bg-neutral-800/50 text-neutral-500 border border-neutral-700/40 select-none tracking-wide">
                 {{ badge.label }}
               </span>
             }
@@ -134,7 +134,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
               [href]="msg.contextInfo?.zoomLink"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-neutral-200 text-black px-4 py-2 text-xs font-bold transition shadow no-underline cursor-pointer"
+              class="inline-flex items-center gap-2 rounded-lg bg-white hover:bg-neutral-200 text-black px-4 py-2 text-xs font-bold transition shadow no-underline cursor-pointer"
             >
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
               <span>Unirse a Zoom</span>

@@ -24,7 +24,7 @@ import { MarketplaceStore } from './marketplace.store';
       <!-- ===================================================================== -->
       <!-- CENTER CONTINUOUS COLUMN (Elevated Dark Marketplace Stream)           -->
       <!-- ===================================================================== -->
-      <main class="w-full md:max-w-[600px] flex-1 border border-white/[0.08] bg-[#0c0d10] rounded-3xl overflow-hidden shadow-2xl min-h-screen">
+      <main class="w-full md:max-w-[600px] flex-1 border border-white/[0.08] bg-[#0c0d10] rounded-2xl overflow-hidden shadow-2xl min-h-screen">
         
         <!-- Sticky Top Channel Selector (Modern Segmented Pills) -->
         <div class="sticky top-0 z-20 bg-[#0c0d10]/90 backdrop-blur-md border-b border-white/[0.08] p-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -160,7 +160,7 @@ import { MarketplaceStore } from './marketplace.store';
           (click)="selectedItem = null"
         >
           <div 
-            class="relative flex flex-col md:flex-row w-full max-w-3xl rounded-3xl bg-[#0c0d10] text-white shadow-2xl border border-white/[0.08] overflow-hidden max-h-[90vh] text-left"
+            class="relative flex flex-col md:flex-row w-full max-w-3xl rounded-2xl bg-[#0c0d10] text-white shadow-2xl border border-white/[0.08] overflow-hidden max-h-[90vh] text-left"
             (click)="$event.stopPropagation()"
           >
             <!-- Left Modal Image Frame -->
@@ -324,7 +324,7 @@ import { MarketplaceStore } from './marketplace.store';
           (click)="isOfferModalOpen = false"
         >
           <div 
-            class="relative flex flex-col w-full max-w-xl rounded-3xl bg-[#0c0d10] text-white p-6 shadow-2xl border border-white/[0.08] space-y-4 text-left max-h-[90vh] overflow-y-auto no-scrollbar"
+            class="relative flex flex-col w-full max-w-xl rounded-2xl bg-[#0c0d10] text-white p-6 shadow-2xl border border-white/[0.08] space-y-4 text-left max-h-[90vh] overflow-y-auto no-scrollbar"
             (click)="$event.stopPropagation()"
           >
             <div class="flex items-center justify-between border-b border-white/[0.08] pb-3">

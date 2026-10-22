@@ -167,7 +167,7 @@ import { CommonModule } from '@angular/common';
         <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <button
             (click)="goBack.emit()"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-[var(--accent-lime)]/20 border-none cursor-pointer"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-[var(--accent-lime)]/20 border-none cursor-pointer"
           >
             <span>Volver a la Plataforma</span>
             <svg class="h-4 w-4 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

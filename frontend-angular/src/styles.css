@@ -1576,8 +1576,16 @@ video {
   border-radius: 0px;
 }
 
+.rounded-sm{
+  border-radius: var(--r-sm);
+}
+
 .rounded-xl{
   border-radius: var(--r-xl);
+}
+
+.rounded-xs{
+  border-radius: var(--r-xs);
 }
 
 .rounded-r-xl{
