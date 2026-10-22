@@ -41,6 +41,10 @@ app:
     api-key-4: ${OPENROUTER_API_KEY_4:}
     api-key-5: ${OPENROUTER_API_KEY_5:}
     api-keys: ${OPENROUTER_API_KEYS:}
+    # Modelo efectivo del copiloto. Lee OPENROUTER_MODEL y, por compatibilidad,
+    # OPENROUTER_PRIMARY_MODEL (que tambien consume OpenRouterModelSelector).
+    # Con ambos vacios, el orquestador aplica su modelo gratuito por defecto.
+    model: ${OPENROUTER_MODEL:${OPENROUTER_PRIMARY_MODEL:}}
     primary-model: ${OPENROUTER_PRIMARY_MODEL:}
     models:
       - nvidia/nemotron-3.5-lightning:free

@@ -167,12 +167,22 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 JsonNode toolCalls = choiceMessage.get("tool_calls");
 
                 if (toolCalls == null || !toolCalls.isArray() || toolCalls.isEmpty()) {
+                    // Respaldo: ciertos proveedores no materializan la estructura nativa
+                    // tool_calls y el modelo emite la invocacion como bloque JSON en el texto.
+                    JsonNode rescued = rescueToolCalls(choiceMessage.path("content").asText(""));
+                    if (rescued != null && !rescued.isEmpty()) {
+                        toolCalls = rescued;
+                    }
+                }
+
+                if (toolCalls == null || !toolCalls.isArray() || toolCalls.isEmpty()) {
                     String finalContent = choiceMessage.path("content").asText();
                     log.info("[AgentOrchestrator] ✅ Síntesis final generada por OpenRouter ({} caracteres)", finalContent.length());
                     return AiChatMessage.builder()
                             .id(UUID.randomUUID().toString()).role("assistant").content(finalContent)
                             .timestamp(LocalDateTime.now())
-                            .metadata(Map.of("toolsUsed", toolsExecuted, "toolDetails", toolDetails, "iterations", iteration + 1))
+                            .metadata(Map.of("toolsUsed", toolsExecuted, "toolDetails", toolDetails,
+                                    "iterations", iteration + 1, "model", effectiveModel))
                             .build();
                 }
 
@@ -380,6 +390,24 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 }
 
                 List<ToolCallAccumulator> toolCalls = new ArrayList<>(toolCallMap.values());
+
+                // Respaldo: si el proveedor no materializo tool_calls nativos, el modelo pudo
+                // emitir la invocacion como bloque JSON dentro del contenido transmitido.
+                if (toolCalls.isEmpty()) {
+                    JsonNode rescued = rescueToolCalls(contentBuilder.toString());
+                    if (rescued != null && !rescued.isEmpty()) {
+                        JsonNode call = rescued.get(0);
+                        ToolCallAccumulator acc = new ToolCallAccumulator();
+                        acc.id = call.path("id").asText("call_txt_" + UUID.randomUUID().toString().substring(0, 8));
+                        acc.type = call.path("type").asText("function");
+                        acc.name = call.at("/function/name").asText("");
+                        acc.arguments.append(call.at("/function/arguments").asText("{}"));
+                        if (!acc.name.isBlank()) {
+                            toolCalls.add(acc);
+                            isToolCall = true;
+                        }
+                    }
+                }
                 List<Map<String, Object>> toolCallNodes = toolCalls.stream()
                         .map(ToolCallAccumulator::toAssistantToolCall).toList();
 
@@ -402,10 +430,90 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
-    private String resolveModel(String requestedModel) {
-        return (requestedModel != null && !requestedModel.isBlank()) ? requestedModel
+    /**
+     * Resuelve el modelo efectivo de inferencia.
+     *
+     * <p>Prioridad: el modelo solicitado por el cliente, la configuracion del backend
+     * ({@code app.openrouter.model}) y, en ultimo termino, un modelo gratuito por defecto.</p>
+     *
+     * @param requestedModel modelo solicitado por el cliente, puede ser nulo
+     * @return identificador del modelo que atendera la peticion
+     */
+    public String resolveModel(String requestedModel) {
+        String effective = (requestedModel != null && !requestedModel.isBlank()) ? requestedModel
                 : (defaultModelName != null && !defaultModelName.isBlank() ? defaultModelName
                         : "nvidia/nemotron-3.5-lightning:free");
+        log.info("[AgentOrchestrator] 🤖 Modelo efectivo de inferencia: {}", effective);
+        return effective;
+    }
+
+    /**
+     * Respaldo ante proveedores que no materializan la estructura nativa {@code tool_calls}.
+     *
+     * <p>Algunos modelos de OpenRouter responden con la invocacion de la herramienta
+     * serializada como un bloque JSON dentro del contenido, en lugar de emitirla en el
+     * canal {@code tool_calls}. En ese caso el orquestador no detecta la llamada y el
+     * modelo se limita a narrar su plan. Este metodo rescata esa invocacion y la
+     * devuelve con la forma estandar de OpenAI para que el flujo continue con normalidad.</p>
+     *
+     * @param content contenido textual generado por el modelo
+     * @return arreglo con la invocacion recuperada, o {@code null} si no hay ninguna
+     */
+    JsonNode rescueToolCalls(String content) {
+        if (content == null || content.isBlank()) return null;
+        String json = extractToolCallJson(content);
+        if (json == null) return null;
+        try {
+            JsonNode node = objectMapper.readTree(json);
+            if (node == null || !node.isObject()) return null;
+
+            String name = node.path("name").asText("").trim();
+            if (name.isEmpty() || !AcademicToolRegistry.getSupportedToolNames().contains(name)) {
+                return null;
+            }
+            JsonNode params = node.has("parameters") ? node.path("parameters") : node.path("arguments");
+            String args = (params != null && params.isObject()) ? params.toString() : "{}";
+
+            var calls = objectMapper.createArrayNode();
+            var call = calls.addObject();
+            call.put("id", "call_txt_" + UUID.randomUUID().toString().substring(0, 8));
+            call.put("type", "function");
+            var fn = call.putObject("function");
+            fn.put("name", name);
+            fn.put("arguments", args);
+
+            log.info("[AgentOrchestrator] 🛟 Invocación de herramienta recuperada del texto del modelo: {} args={}", name, args);
+            return calls;
+        } catch (Exception e) {
+            log.debug("[AgentOrchestrator] El contenido del modelo no contenía una invocación de herramienta: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extrae el primer objeto JSON del contenido, priorizando los bloques cercados por
+     * codigo json y usando, como alternativa, el primer objeto JSON suelto del texto.
+     */
+    private String extractToolCallJson(String content) {
+        int fence = content.indexOf("```");
+        if (fence >= 0) {
+            int end = content.indexOf("```", fence + 3);
+            if (end > fence) {
+                String block = content.substring(fence + 3, end).trim();
+                if (block.toLowerCase().startsWith("json")) {
+                    block = block.substring(4).trim();
+                }
+                if (block.startsWith("{")) {
+                    return block;
+                }
+            }
+        }
+        int first = content.indexOf('{');
+        int last = content.lastIndexOf('}');
+        if (first >= 0 && last > first) {
+            return content.substring(first, last + 1);
+        }
+        return null;
     }
 
     /**

@@ -28,6 +28,7 @@ public class AiChatController {
     private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
     private final com.utp.horario.application.service.tool.AcademicToolService academicToolService;
     private final com.utp.horario.infraestructure.security.SecurityIdentityResolver securityIdentityResolver;
+    private final com.utp.horario.application.service.AgentOrchestratorServiceImpl agentOrchestrator;
 
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<AiChatMessage>> chat(
@@ -89,6 +90,16 @@ public class AiChatController {
             String model,
             java.util.List<java.util.Map<String, String>> history) {
         var emitter = new org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter(120000L);
+
+        // Modelo efectivo que atenderá la petición: se expone al cliente para que quede
+        // registrado en la consola del navegador con que modelo se respondió.
+        final String effectiveModel = agentOrchestrator.resolveModel(model);
+        try {
+            String modelPayload = objectMapper.writeValueAsString(java.util.Map.of("model", effectiveModel));
+            emitter.send("event: model\ndata: " + modelPayload + "\n\n");
+        } catch (Exception ex) {
+            log.debug("[AiChatController] Evento de modelo no emitido: {}", ex.getMessage());
+        }
 
         emitter.onTimeout(() -> {
             log.warn("[AiChatController] â±ï¸ Timeout en stream SSE");

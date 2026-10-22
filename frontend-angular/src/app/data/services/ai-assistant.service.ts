@@ -187,7 +187,14 @@ export class AiAssistantService {
               return;
             }
 
-            if (currentEvent === 'activity') {
+            if (currentEvent === 'model') {
+              try {
+                const parsed = JSON.parse(data);
+                console.log('[AiChat] 🤖 Modelo que respondió:', parsed.model);
+              } catch (e) {
+                console.warn('[AiChat] No se pudo leer el modelo efectivo:', e);
+              }
+            } else if (currentEvent === 'activity') {
               try {
                 const act = JSON.parse(data) as AgentActivity;
                 console.log('[AiChat] ⚡ Actividad en tiempo real:', act);

@@ -556,6 +556,7 @@ export class AiAssistantModalComponent implements OnChanges {
           this.isLoading = false;
           if (res.success && res.data) {
             this.quota = incrementClientDailyUsage(userId);
+            console.log('[AiAssistantModal] 🤖 Modelo que respondió:', (res.data.metadata as any)?.model ?? 'no informado');
             if (msgAdded) {
               assistantMsg.content = res.data.content;
               assistantMsg.suggestions = res.data.suggestions || res.data.suggestedActions;
