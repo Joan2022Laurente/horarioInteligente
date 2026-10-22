@@ -689,30 +689,30 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph ClientEnvironment["Entorno del Estudiante"]
-        Browser["Navegador Web / PWA"]
-        AngularApp["SPA Angular 18 (Signals, Standalone Components, Tema Oscuro)"]
-        Browser --> AngularApp
+    subgraph EntornoCliente["Entorno del Cliente (Estudiante)"]
+        Navegador["Navegador Web / PWA"]
+        AppAngular["SPA Angular 18 (Señales, Componentes Autónomos, Modo Oscuro)"]
+        Navegador --> AppAngular
     end
 
-    subgraph HerokuPaaS["Heroku Cloud Platform (Dyno Web)"]
-        OpenJDK["Azul Zulu OpenJDK 17 LTS"]
-        SpringApp["Spring Boot 3.3.3 (horario-backend.jar)"]
-        AgentEngine["Agent Orchestrator (SSE Streaming + Loop Circuit Breaker)"]
-        OpenJDK --> SpringApp
-        SpringApp --> AgentEngine
+    subgraph PlataformaServidor["Servidor de Aplicaciones en la Nube (Heroku PaaS)"]
+        EntornoJava["Entorno Java 17 LTS (Azul Zulu OpenJDK)"]
+        AppSpring["Núcleo Spring Boot 3.3.3 (horario-backend.jar)"]
+        MotorAgente["Orquestador de Agente IA (Flujo SSE + Disyuntor de Bucles)"]
+        EntornoJava --> AppSpring
+        AppSpring --> MotorAgente
     end
 
-    subgraph ExternalCloudServices["Servicios Cloud Gestionados"]
-        SyncUtpApi["Gateway Académico SyncUTP v2.0.0 (API Externa REST)"]
-        AivenMySql["Aiven Cloud MySQL 8.0 (SSL:26871, esquema horariodb)"]
-        OpenRouter["OpenRouter Gateway (Balanceo Multi-Key + Nemotron/LLM)"]
+    subgraph ServiciosExternos["Servicios Externos Gestionados en la Nube"]
+        PasarelaSyncUtp["Pasarela Académica SyncUTP v2.0.0 (API Externa REST)"]
+        BaseDatosNube["Base de Datos MySQL 8.0 en Aiven (Cifrado SSL, esquema horariodb)"]
+        PasarelaLLM["Pasarela OpenRouter (Balanceo Multi-Clave + Modelos LLM)"]
     end
 
-    AngularApp -->|HTTPS REST / SSE delta, tool, activity| SpringApp
-    SpringApp -->|REST JSON Bearer Token| SyncUtpApi
-    SpringApp -->|JDBC SSL HikariCP Pool| AivenMySql
-    AgentEngine -->|HTTPS OpenAI Spec Function Calling| OpenRouter
+    AppAngular -->|HTTPS REST y Transmisión SSE| AppSpring
+    AppSpring -->|Llamadas REST con Token de Autenticación| PasarelaSyncUtp
+    AppSpring -->|Conexión JDBC SSL con Pool HikariCP| BaseDatosNube
+    MotorAgente -->|HTTPS con Invocación de Herramientas| PasarelaLLM
 ```
 
 ---
