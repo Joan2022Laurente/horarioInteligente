@@ -11,6 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Adaptador de persistencia para sílabos oficiales (Fase de Normalización).
+ * Todas las lecturas usan consultas con JOIN FETCH de evaluaciones y cronograma
+ * semanal (un round-trip por sílabo) para evitar {@code LazyInitializationException}
+ * fuera de una transacción y el problema N+1.
+ */
 @Repository
 public class SyllabusRepositoryAdapter implements ISyllabusRepository {
 
@@ -25,8 +31,9 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
     @Override
     public Syllabus save(Syllabus syllabus) {
         try {
-            SyllabusEntity entity = mapper.toEntity(syllabus);
-            jpa.save(entity);
+            // Cada guardado es un snapshot: las filas nuevas sustituyen a las anteriores
+            // vía cascade ALL + orphanRemoval (los hijos son hojas, sin riesgo FK anidada).
+            jpa.save(mapper.toEntity(syllabus));
             return syllabus;
         } catch (Exception e) {
             throw new RuntimeException("Error persistiendo sílabo: " + syllabus.getCourseCode(), e);
@@ -37,11 +44,11 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
     public Optional<Syllabus> findByCourseCode(String courseCode) {
         if (courseCode == null || courseCode.isBlank()) return Optional.empty();
         String clean = courseCode.trim();
-        List<SyllabusEntity> matches = jpa.searchSyllabus(clean);
+        List<SyllabusEntity> matches = jpa.searchSyllabusWithRelations(clean);
         if (!matches.isEmpty()) {
             return Optional.ofNullable(mapper.toDomain(matches.get(0)));
         }
-        return jpa.findById(clean).map(mapper::toDomain);
+        return jpa.findWithRelationsById(clean).map(mapper::toDomain);
     }
 
     @Override
@@ -51,7 +58,7 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
 
         // 1. Coincidencia directa por nombre (la collation de MySQL ya es insensible a
         //    mayúsculas y acentos en el esquema de producción).
-        Optional<SyllabusEntity> exact = jpa.findByCourseNameIgnoreCase(clean);
+        Optional<SyllabusEntity> exact = jpa.findByCourseNameIgnoreCaseWithRelations(clean);
         if (exact.isPresent()) {
             return Optional.ofNullable(mapper.toDomain(exact.get()));
         }
@@ -62,7 +69,7 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
         String normalized = normalizeCourseName(clean);
         if (normalized.isEmpty()) return Optional.empty();
 
-        for (SyllabusEntity entity : jpa.findAll()) {
+        for (SyllabusEntity entity : jpa.findAllWithRelations()) {
             if (normalizeCourseName(entity.getCourseName()).equals(normalized)) {
                 return Optional.ofNullable(mapper.toDomain(entity));
             }
@@ -92,7 +99,7 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
 
     @Override
     public Optional<Syllabus> findById(String id) {
-        return jpa.findById(id).map(mapper::toDomain);
+        return jpa.findWithRelationsById(id).map(mapper::toDomain);
     }
 
     @Override
@@ -102,7 +109,7 @@ public class SyllabusRepositoryAdapter implements ISyllabusRepository {
 
     @Override
     public List<Syllabus> list() {
-        return jpa.findAll().stream().map(mapper::toDomain).toList();
+        return jpa.findAllWithRelations().stream().map(mapper::toDomain).toList();
     }
 
     @Override
