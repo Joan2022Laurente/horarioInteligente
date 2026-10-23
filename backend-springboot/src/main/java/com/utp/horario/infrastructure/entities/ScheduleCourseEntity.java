@@ -51,13 +51,13 @@ public class ScheduleCourseEntity {
     @JoinColumn(name = "schedule_id", nullable = false)
     private StudentScheduleEntity schedule;
 
-    @Column(name = "course_code", length = 32)
+    @Column(name = "course_code", length = 128)
     private String courseCode;
 
     @Column(name = "course_name", length = 255, nullable = false)
     private String courseName;
 
-    @Column(name = "section", length = 32)
+    @Column(name = "section", length = 64)
     private String section;
 
     @Column(name = "credits")

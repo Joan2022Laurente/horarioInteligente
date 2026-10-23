@@ -273,4 +273,91 @@ class ScheduleMapperTest {
             assertSame(target, orphan.getSchedule());
         }
     }
+
+    // ── Zero-Crash Policy (Fase 1.1): truncado seguro del write path ──
+
+    @Test
+    @DisplayName("truncateSafely recorta espacios, respeta null y corta en la cota exacta")
+    void truncateSafelyRecortaEspaciosYCortaEnLaCota() {
+        assertNull(ScheduleMapper.truncateSafely(null, 128));
+        assertEquals("SI65", ScheduleMapper.truncateSafely("  SI65  ", 128));
+        assertEquals("x".repeat(128), ScheduleMapper.truncateSafely("x".repeat(128), 128));
+        assertEquals("x".repeat(128), ScheduleMapper.truncateSafely("x".repeat(300), 128));
+    }
+
+    @Test
+    @DisplayName("Curso con cotas excedidas persiste truncado a la cota de cada columna")
+    void cursoExcedidoSePersisteTruncado() {
+        Course bloated = Course.builder()
+                .id("c-bloated")
+                .code("C".repeat(300))
+                .name("N".repeat(300))
+                .section("S".repeat(300))
+                .credits(3)
+                .teacher("T".repeat(300))
+                .modality("M".repeat(300))
+                .weeklyHours(6)
+                .build();
+
+        StudentScheduleEntity root = mapper.toEntity("U23307609", ScheduleInterval.builder()
+                .id("sched-bloated-cursos")
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of(bloated))
+                .classes(List.of())
+                .build());
+
+        ScheduleCourseEntity row = root.getCourses().iterator().next();
+        assertEquals(128, row.getCourseCode().length(), "course_code respeta VARCHAR(128)");
+        assertEquals(255, row.getCourseName().length(), "course_name respeta VARCHAR(255)");
+        assertEquals(64, row.getSection().length(), "section respeta VARCHAR(64)");
+        assertEquals(255, row.getTeacher().length(), "teacher respeta VARCHAR(255)");
+        assertEquals(32, row.getModality().length(), "modality respeta VARCHAR(32)");
+    }
+
+    @Test
+    @DisplayName("Regresión del incidente: código compuesto largo en sesión persiste sin Data truncation")
+    void sesionCompuestaLargaSePersisteTruncada() {
+        ClassSession bloated = ClassSession.builder()
+                .id("ev-bloated")
+                .courseCode("C".repeat(300))
+                .courseName("N".repeat(300))
+                .section("S".repeat(300))
+                .classroom("A".repeat(300))
+                .building("B".repeat(300))
+                .floor("F".repeat(300))
+                .teacher("T".repeat(300))
+                .modality("M".repeat(300))
+                .startAt(LocalDateTime.of(2026, 10, 5, 7, 0))
+                .finishAt(LocalDateTime.of(2026, 10, 5, 10, 0))
+                .zoomLink("https://zoom.us/j/utp-demo/seccion/rola-muy-larga")
+                .environmentType("E".repeat(300))
+                .classLink("https://utp.puo.edu/section/rola-muy-larga")
+                .sectionId("I".repeat(300))
+                .build();
+
+        ScheduleInterval interval = ScheduleInterval.builder()
+                .id("sched-bloated-sesiones")
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of())
+                .classes(List.of(bloated))
+                .build();
+        StudentScheduleEntity root = mapper.toEntity("U23307609", interval);
+
+        List<ScheduleSessionEntity> orphans = mapper.toOrphanSessionRows(root, interval);
+        assertEquals(1, orphans.size());
+        ScheduleSessionEntity row = orphans.get(0);
+        assertEquals(128, row.getCourseCode().length(), "course_code respeta VARCHAR(128) (causa del incidente)");
+        assertEquals(255, row.getCourseName().length(), "course_name respeta VARCHAR(255)");
+        assertEquals(64, row.getSection().length(), "section respeta VARCHAR(64)");
+        assertEquals(128, row.getClassroom().length(), "classroom respeta VARCHAR(128)");
+        assertEquals(128, row.getBuilding().length(), "building respeta VARCHAR(128)");
+        assertEquals(32, row.getFloor().length(), "floor respeta VARCHAR(32)");
+        assertEquals(255, row.getTeacher().length(), "teacher respeta VARCHAR(255)");
+        assertEquals(16, row.getModality().length(), "modality respeta VARCHAR(16)");
+        assertEquals(128, row.getEnvironmentType().length(), "environment_type respeta VARCHAR(128)");
+        assertEquals(128, row.getSectionId().length(), "section_id respeta VARCHAR(128)");
+        // Los links persisten en TEXT sin truncado.
+        assertEquals("https://zoom.us/j/utp-demo/seccion/rola-muy-larga", row.getZoomLink());
+        assertEquals("https://utp.puo.edu/section/rola-muy-larga", row.getClassLink());
+    }
 }

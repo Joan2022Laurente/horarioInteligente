@@ -68,21 +68,21 @@ public class ScheduleSessionEntity {
 
     // ── Denormalizaciones de paridad y análisis (copian el dato exacto del Value Object) ──
 
-    @Column(name = "course_code", length = 32)
+    @Column(name = "course_code", length = 128)
     private String courseCode;
 
     @Column(name = "course_name", length = 255)
     private String courseName;
 
-    @Column(name = "section", length = 32)
+    @Column(name = "section", length = 64)
     private String section;
 
     // ── Columnas atómicas de la sesión ──
 
-    @Column(name = "classroom", length = 64)
+    @Column(name = "classroom", length = 128)
     private String classroom;
 
-    @Column(name = "building", length = 64)
+    @Column(name = "building", length = 128)
     private String building;
 
     @Column(name = "floor", length = 32)
@@ -105,13 +105,13 @@ public class ScheduleSessionEntity {
     @Column(name = "zoom_link", columnDefinition = "TEXT")
     private String zoomLink;
 
-    @Column(name = "environment_type", length = 64)
+    @Column(name = "environment_type", length = 128)
     private String environmentType;
 
     @Lob
     @Column(name = "class_link", columnDefinition = "TEXT")
     private String classLink;
 
-    @Column(name = "section_id", length = 64)
+    @Column(name = "section_id", length = 128)
     private String sectionId;
 }

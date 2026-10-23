@@ -171,13 +171,13 @@ public class ScheduleMapper {
     private ScheduleCourseEntity toCourseEntity(StudentScheduleEntity root, Course course) {
         ScheduleCourseEntity row = ScheduleCourseEntity.builder()
                 .id(rowId(course.getId()))
-                .courseCode(course.getCode())
-                .courseName(course.getName() != null ? course.getName()
-                        : (course.getCode() != null ? course.getCode() : ""))
-                .section(course.getSection())
+                .courseCode(truncateSafely(course.getCode(), 128))
+                .courseName(truncateSafely(course.getName() != null ? course.getName()
+                        : (course.getCode() != null ? course.getCode() : ""), 255))
+                .section(truncateSafely(course.getSection(), 64))
                 .credits(course.getCredits())
-                .teacher(course.getTeacher())
-                .modality(course.getModality())
+                .teacher(truncateSafely(course.getTeacher(), 255))
+                .modality(truncateSafely(course.getModality(), 32))
                 .weeklyHours(course.getWeeklyHours())
                 .build();
         row.setSchedule(root);
@@ -187,20 +187,20 @@ public class ScheduleMapper {
     private ScheduleSessionEntity toSessionEntity(StudentScheduleEntity root, ClassSession session) {
         ScheduleSessionEntity row = ScheduleSessionEntity.builder()
                 .id(rowId(session.getId()))
-                .courseCode(session.getCourseCode())
-                .courseName(session.getCourseName())
-                .section(session.getSection())
-                .classroom(session.getClassroom())
-                .building(session.getBuilding())
-                .floor(session.getFloor())
-                .teacher(session.getTeacher())
-                .modality(session.getModality())
+                .courseCode(truncateSafely(session.getCourseCode(), 128))
+                .courseName(truncateSafely(session.getCourseName(), 255))
+                .section(truncateSafely(session.getSection(), 64))
+                .classroom(truncateSafely(session.getClassroom(), 128))
+                .building(truncateSafely(session.getBuilding(), 128))
+                .floor(truncateSafely(session.getFloor(), 32))
+                .teacher(truncateSafely(session.getTeacher(), 255))
+                .modality(truncateSafely(session.getModality(), 16))
                 .startAt(session.getStartAt())
                 .finishAt(session.getFinishAt())
                 .zoomLink(session.getZoomLink())
-                .environmentType(session.getEnvironmentType())
+                .environmentType(truncateSafely(session.getEnvironmentType(), 128))
                 .classLink(session.getClassLink())
-                .sectionId(session.getSectionId())
+                .sectionId(truncateSafely(session.getSectionId(), 128))
                 .build();
         row.setSchedule(root);
         return row;
@@ -267,5 +267,19 @@ public class ScheduleMapper {
         return candidate != null && !candidate.isBlank() && candidate.trim().length() <= 36
                 ? candidate.trim()
                 : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Politica Zero-Crash (Fase 1.1): sanitiza todo string antes de asignarlo a una
+     * columna acotada. Recorta espacios y, si el valor excede la cota de la columna
+     * (cotas holgadas tras la ampliación a 128), lo trunca en el límite. Con esto la
+     * transacción relacional de MySQL jamás falla por {@code Data truncation}, ante
+     * cualquier emisión anómala futura de la pasarela institucional. Los links
+     * (zoom/class) persisten en columnas TEXT y no requieren truncado.
+     */
+    static String truncateSafely(String value, int maxLength) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
     }
 }

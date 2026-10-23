@@ -57,7 +57,7 @@ public class SyllabusEvaluationEntity {
     @Column(name = "evaluation_name", length = 128)
     private String evaluationName;
 
-    @Column(name = "evaluation_code", length = 32)
+    @Column(name = "evaluation_code", length = 128)
     private String evaluationCode;
 
     @Column(name = "weight_percent")
