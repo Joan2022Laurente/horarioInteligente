@@ -1,10 +1,10 @@
 package com.utp.horario.interfaces.rest;
 
 import com.utp.horario.application.command.SyncTaskCommand;
-import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
 import com.utp.horario.application.handle.SyncTaskCommandHandler;
+import com.utp.horario.application.service.TaskQueryService;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
-import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
+import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
 import com.utp.horario.infraestructure.security.CurrentStudent;
 import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
@@ -14,47 +14,28 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Endpoints de tareas/actividades. La regla de direcciones DDD manda: interfaces
+ * ➜ application ➜ dominio. Aquí solo se compone el comando desde el transport
+ * (identidad, token del encabezado/parámetro) y se delega a los casos de uso de
+ * application — el controlador no toca puertos de dominio (IUtpPortalGateway).
+ */
 @RestController
 @RequestMapping({"/tasks", "/api/v1/tasks"})
 @RequiredArgsConstructor
 public class TaskController {
 
     private final SyncTaskCommandHandler taskCommandHandler;
+    private final TaskQueryService taskQueryService;
     private final SecurityIdentityResolver identityResolver;
-    private final IUtpPortalGateway utpPortalGateway;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TaskSyncItem>>> getTasks(
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token) {
-        List<TaskSyncItem> tasks = taskCommandHandler.getTasksForStudent(studentId);
-        if (tasks == null || tasks.isEmpty()) {
-            String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-            if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-                effectiveToken = utpPortalGateway.getStudentToken(studentId);
-            }
-            if (effectiveToken != null && !effectiveToken.isBlank()) {
-                List<UpcomingEvaluationDto> upcoming = utpPortalGateway.fetchUpcomingEvaluations(effectiveToken, 15);
-                if (upcoming != null && !upcoming.isEmpty()) {
-                    List<TaskSyncItem> mapped = upcoming.stream().map(u -> TaskSyncItem.builder()
-                            .id(u.id() != null && !u.id().isBlank() ? u.id() : u.activityId())
-                            .courseName(u.courseName())
-                            .sectionId(u.sectionId())
-                            .homeworkId(u.activityId())
-                            .title(u.title())
-                            .type(u.activityType())
-                            .week(u.weekNumber())
-                            .homeworkStatus(u.studentStatus() != null && !u.studentStatus().isBlank() ? u.studentStatus() : "PENDING")
-                            .assignmentProgress("IN_PROGRESS")
-                            .isDelivered("DELIVERED".equalsIgnoreCase(u.studentStatus()) || "SUBMITTED".equalsIgnoreCase(u.studentStatus()))
-                            .build()
-                    ).toList();
-                    return ResponseEntity.ok(ApiResponse.ok(mapped));
-                }
-            }
-        }
-        return ResponseEntity.ok(ApiResponse.ok(tasks));
+        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        return ResponseEntity.ok(ApiResponse.ok(taskQueryService.getTasksWithPortalFallback(studentId, resolvedToken)));
     }
 
     @GetMapping("/activities")
@@ -67,11 +48,9 @@ public class TaskController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean onlyGraded,
             @RequestParam(required = false) String type) {
-        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-        if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-            effectiveToken = utpPortalGateway.getStudentToken(studentId);
-        }
-        List<TaskSyncItem> activities = utpPortalGateway.fetchActivities(effectiveToken, intervalMode, week, status, onlyGraded, type);
+        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        List<TaskSyncItem> activities = taskQueryService.getActivities(
+                studentId, resolvedToken, intervalMode, week, status, onlyGraded, type);
         return ResponseEntity.ok(ApiResponse.ok(activities));
     }
 
@@ -82,11 +61,9 @@ public class TaskController {
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token) {
-        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-        if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-            effectiveToken = utpPortalGateway.getStudentToken(studentId);
-        }
-        com.fasterxml.jackson.databind.JsonNode detail = utpPortalGateway.fetchTaskDetail(effectiveToken, sectionId, activityId);
+        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        com.fasterxml.jackson.databind.JsonNode detail =
+                taskQueryService.getTaskDetail(studentId, resolvedToken, sectionId, activityId);
         if (detail == null) {
             return ResponseEntity.notFound().build();
         }
@@ -99,11 +76,8 @@ public class TaskController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token,
             @RequestParam(defaultValue = "15") int limit) {
-        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-        if ((effectiveToken == null || effectiveToken.isBlank()) && studentId != null) {
-            effectiveToken = utpPortalGateway.getStudentToken(studentId);
-        }
-        List<UpcomingEvaluationDto> upcoming = utpPortalGateway.fetchUpcomingEvaluations(effectiveToken, limit);
+        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        List<UpcomingEvaluationDto> upcoming = taskQueryService.getUpcomingEvaluations(studentId, resolvedToken, limit);
         return ResponseEntity.ok(ApiResponse.ok(upcoming));
     }
 

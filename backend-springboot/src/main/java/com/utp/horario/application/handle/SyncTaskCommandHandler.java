@@ -1,8 +1,6 @@
 package com.utp.horario.application.handle;
 
-import com.utp.horario.application.assembler.TaskAssembler;
 import com.utp.horario.application.command.SyncTaskCommand;
-import com.utp.horario.application.dtos.TaskDto;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.repositories.ITaskSyncRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
@@ -18,22 +16,9 @@ public class SyncTaskCommandHandler {
 
     private final ITaskSyncRepository repository;
     private final IUtpPortalGateway utpPortalGateway;
-    private final TaskAssembler assembler;
 
     public List<TaskSyncItem> handle(SyncTaskCommand command) {
         return syncTasksFromUtp(command.getStudentId(), command.getToken(), command.getSectionId());
-    }
-
-    public List<TaskDto> handleAsDto(SyncTaskCommand command) {
-        List<TaskSyncItem> items = handle(command);
-        return items.stream().map(assembler::toDto).toList();
-    }
-
-    public List<TaskSyncItem> getTasksForStudent(String studentId) {
-        if (studentId == null || studentId.isBlank() || "current-student".equalsIgnoreCase(studentId)) {
-            return List.of();
-        }
-        return repository.findByStudentId(studentId);
     }
 
     public List<TaskSyncItem> syncTasksFromUtp(String studentId, String token, String sectionId) {
