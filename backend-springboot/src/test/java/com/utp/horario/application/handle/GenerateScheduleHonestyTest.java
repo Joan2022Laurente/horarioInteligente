@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -114,6 +115,77 @@ class GenerateScheduleHonestyTest {
     void invalidIdentityIsRejectedWithoutRemoteCalls() {
         assertThrows(IllegalArgumentException.class, () -> handler.getStudentSchedule("current-student", PERIOD, TOKEN));
         assertThrows(IllegalArgumentException.class, () -> handler.syncScheduleFromUtp("  ", TOKEN, PERIOD));
+
+        verify(gateway, never()).fetchSchedule(anyString(), anyString());
+        verify(repository, never()).save(anyString(), any(ScheduleInterval.class));
+    }
+
+    // ─── Bootstrap local-first (ensureFreshSchedule) ────────────────────────────
+
+    private static final LocalDate FRESHNESS = LocalDate.now();
+
+    @Test
+    @DisplayName("Bootstrap: snapshot vigente en BD se sirve en local sin llamar a la pasarela")
+    void bootstrapServesFreshPersistedSnapshotWithoutGateway() {
+        when(repository.findByStudentIdAndPeriodSyncedSince(STUDENT, PERIOD, FRESHNESS))
+                .thenReturn(Optional.of(realInterval()));
+
+        ScheduleInterval result = handler.ensureFreshSchedule(STUDENT, TOKEN, PERIOD, FRESHNESS);
+
+        assertEquals("interval-123", result.getId());
+        verify(gateway, never()).fetchSchedule(anyString(), anyString());
+        verify(repository, never()).save(anyString(), any(ScheduleInterval.class));
+    }
+
+    @Test
+    @DisplayName("Bootstrap: snapshot vencido o ausente refresca por la pasarela y persiste")
+    void bootstrapRefreshesFromGatewayWhenNoFreshSnapshot() {
+        when(repository.findByStudentIdAndPeriodSyncedSince(STUDENT, PERIOD, FRESHNESS))
+                .thenReturn(Optional.empty());
+        ScheduleInterval official = realInterval();
+        when(gateway.fetchSchedule(TOKEN, PERIOD)).thenReturn(official);
+        when(repository.save(eq(STUDENT), eq(official))).thenReturn(official);
+
+        ScheduleInterval result = handler.ensureFreshSchedule(STUDENT, TOKEN, PERIOD, FRESHNESS);
+
+        assertEquals("interval-123", result.getId());
+        verify(repository).save(STUDENT, official);
+    }
+
+    @Test
+    @DisplayName("Bootstrap: pasarela sin respuesta + snapshot previo vencido → se sirve el previo sin abortar")
+    void bootstrapDegradesToStaleSnapshotWhenGatewayUnavailable() {
+        when(repository.findByStudentIdAndPeriodSyncedSince(STUDENT, PERIOD, FRESHNESS))
+                .thenReturn(Optional.empty());
+        when(gateway.fetchSchedule(TOKEN, PERIOD)).thenReturn(null);
+        when(repository.findByStudentIdAndPeriod(STUDENT, PERIOD)).thenReturn(Optional.of(realInterval()));
+
+        ScheduleInterval result = handler.ensureFreshSchedule(STUDENT, TOKEN, PERIOD, FRESHNESS);
+
+        assertEquals("interval-123", result.getId());
+        verify(repository, never()).save(anyString(), any(ScheduleInterval.class));
+    }
+
+    @Test
+    @DisplayName("Bootstrap: ni pasarela ni snapshot previo → se declara la ausencia con excepción honesta")
+    void bootstrapDeclaresAbsenceWithoutAnyData() {
+        when(repository.findByStudentIdAndPeriodSyncedSince(STUDENT, PERIOD, FRESHNESS))
+                .thenReturn(Optional.empty());
+        when(gateway.fetchSchedule(TOKEN, PERIOD)).thenReturn(null);
+        when(repository.findByStudentIdAndPeriod(STUDENT, PERIOD)).thenReturn(Optional.empty());
+
+        assertThrows(ScheduleUnavailableException.class,
+                () -> handler.ensureFreshSchedule(STUDENT, TOKEN, PERIOD, FRESHNESS));
+        verify(repository, never()).save(anyString(), any(ScheduleInterval.class));
+    }
+
+    @Test
+    @DisplayName("Bootstrap: identidad inválida es rechazada sin consultar pasarela ni repositorio")
+    void bootstrapInvalidIdentityRejected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> handler.ensureFreshSchedule("current-student", TOKEN, PERIOD, FRESHNESS));
+        assertThrows(IllegalArgumentException.class,
+                () -> handler.ensureFreshSchedule("  ", TOKEN, PERIOD, FRESHNESS));
 
         verify(gateway, never()).fetchSchedule(anyString(), anyString());
         verify(repository, never()).save(anyString(), any(ScheduleInterval.class));

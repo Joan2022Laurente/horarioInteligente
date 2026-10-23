@@ -1,6 +1,5 @@
 package com.utp.horario.application.service;
 
-import com.utp.horario.application.command.GenerateScheduleCommand;
 import com.utp.horario.application.dtos.SessionBootstrapDto.SessionBootstrapResult;
 import com.utp.horario.application.handle.GenerateScheduleCommandHandler;
 import com.utp.horario.application.service.tool.AcademicToolService;
@@ -13,12 +12,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -27,16 +30,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Pipeline:
  * <ol>
- *   <li><b>Horario:</b> sincronización con la pasarela y persistencia del snapshot
- *       (reutiliza {@link GenerateScheduleCommandHandler#syncScheduleFromUtp}: fetch +
- *       save, con excepción declarada ante pasarela sin respuesta).</li>
+ *   <li><b>Horario local-first:</b> si MySQL ya tiene un snapshot oficial sincronizado
+ *       hoy ({@link GenerateScheduleCommandHandler#ensureFreshSchedule}), se sirve de
+ *       base de datos en milisegundos y la pasarela no se consulta — el re-login no
+ *       repite la latencia remota. Solo los snapshots ausentes o vencidos disparan el
+ *       fetch oficial; si la pasarela no responde degrada al snapshot previo en vez de
+ *       abortar el login (excepción declarada solo cuando no hay datos de ninguna
+ *       fuente).</li>
  *   <li><b>Extracción de cursos:</b> códigos únicos de asignatura matriculada a partir
- *       del intervalo sincronizado (fuentes declarativas y horario).</li>
+ *       del intervalo vigente (fuentes declarativas y horario).</li>
  *   <li><b>Sílabos concurrentes:</b> para cada curso se resuelve el sílabo vía
  *       {@link SyllabusService#getSyllabus(String, String, String, String)}, que es
  *       local-first: los sílabos ya persistidos (HIT local, milisegundos) no tocan la
- *       pasarela y solo los faltantes se descargan, en paralelo, para no congelar la
- *       experiencia de login.</li>
+ *       pasarela y solo los faltantes se descargan, en paralelo, con un presupuesto de
+ *       espera acotado — los pendientes concluyen en segundo plano y quedan
+ *       reintentables, para que el login no quede bloqueado por un PDF remoto.</li>
  * </ol>
  *
  * <p><b>Regla de honestidad:</b> el resultado reporta los faltantes pero nunca inventa
@@ -54,6 +62,14 @@ public class SessionBootstrapService {
      */
     static final int MAX_PARALLEL_SYLLABUS_FETCHES = 8;
 
+    /**
+     * Presupuesto de espera por los sílabos que deban descargarse de la pasarela
+     * durante el login. Vencido el plazo, los downloads siguen en segundo plano y
+     * persisten al completarse (reintentables en el siguiente bootstrap): el
+     * stepper reporta el conteo real confirmado y el login no se congela.
+     */
+    static final int SYLLABUS_RESOLUTION_BUDGET_SECONDS = 8;
+
     private final GenerateScheduleCommandHandler scheduleSyncHandler;
     private final SyllabusService syllabusService;
 
@@ -64,10 +80,13 @@ public class SessionBootstrapService {
         String effectivePeriod = (period == null || period.isBlank())
                 ? AcademicToolService.DEFAULT_PERIOD_NAME : period;
 
-        // Paso 1: horario desde la pasarela oficial (excepción declarada si no responde)
+        // Paso 1: horario local-first — si MySQL ya tiene snapshot oficial sincronizado
+        // hoy se sirve en milisegundos (sin llamada a la pasarela); si falta o venció,
+        // fetch oficial; si la pasarela no responde degrada al snapshot previo persistido.
         ScheduleInterval schedule;
         try {
-            schedule = scheduleSyncHandler.handle(new GenerateScheduleCommand(studentCode, effectivePeriod, token));
+            schedule = scheduleSyncHandler.ensureFreshSchedule(
+                    studentCode, token, effectivePeriod, LocalDate.now());
         } catch (ScheduleUnavailableException ex) {
             log.warn("[SessionBootstrap] 🚫 Horario no disponible para [{}/{}]: {}",
                     studentCode, effectivePeriod, safeMessage(ex));
@@ -120,6 +139,9 @@ public class SessionBootstrapService {
     /**
      * Resuelve los sílabos de todos los cursos en paralelo; cada descarga fallida
      * (pasarela ocupada, PDF no verificable) cuenta como pendiente y NO aborta el resto.
+     * La espera por los faltantes remotos es acotada por el presupuesto
+     * {@link #SYLLABUS_RESOLUTION_BUDGET_SECONDS}: los downloads inconclusos
+     * continúan en segundo plano y persisten al completarse.
      */
     private int resolveSyllabiConcurrently(List<CourseTarget> targets, String token) {
         if (targets.isEmpty()) {
@@ -143,7 +165,19 @@ public class SessionBootstrapService {
                         }
                     }, pool))
                     .toList();
-            CompletableFuture.allOf(jobs.toArray(new CompletableFuture[0])).join();
+            try {
+                CompletableFuture.allOf(jobs.toArray(new CompletableFuture[0]))
+                        .get(SYLLABUS_RESOLUTION_BUDGET_SECONDS, TimeUnit.SECONDS);
+            } catch (TimeoutException timeoutEx) {
+                log.warn("[SessionBootstrap] ⏱️ Presupuesto de {} s agotado esperando sílabos remotos: "
+                        + "los pendientes continúan en segundo plano y quedan reintentables.",
+                        SYLLABUS_RESOLUTION_BUDGET_SECONDS);
+            } catch (ExecutionException ex) {
+                log.warn("[SessionBootstrap] ⚠️ Fallo agregado resolviendo sílabos: {}", safeMessage(ex));
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                log.warn("[SessionBootstrap] ⚠️ Resolución de sílabos interrumpida: {}", safeMessage(ex));
+            }
         } finally {
             pool.shutdown();
         }

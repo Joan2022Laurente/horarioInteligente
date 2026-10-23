@@ -9,7 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -68,6 +70,54 @@ public class GenerateScheduleCommandHandler {
                     "Horario no disponible para '" + period + "': la pasarela oficial no respondió. Reintenta en unos segundos.");
         }
         return repository.save(studentId, interval);
+    }
+
+    /**
+     * Bootstrap de sesión (Fase 0.7): estrategia LOCAL-FIRST con ventana de frescura.
+     *
+     * <p>Si MySQL ya contiene un snapshot oficial sincronizado en {@code minSyncDate}
+     * o después, se sirve de base de datos en milisegundos y la pasarela NO se
+     * consulta: el re-login no repite la latencia remota. Solo cuando el snapshot
+     * falta o está vencido se consulta la pasarela oficial. Si esta no responde
+     * pero existe copia local previa (aunque vencida), se sirve para no congelar el
+     * login — son los datos oficiales sincronizados antes, nunca inventados —; la
+     * expiración declarada ({@link ScheduleUnavailableException}) queda reservada
+     * para el caso sin datos remotos NI locales.</p>
+     *
+     * <p>La política de vigencia la fija la capa de aplicación (p. ej. el día en
+     * curso); este método solo ejecuta la regla de adopción de datos.</p>
+     */
+    public ScheduleInterval ensureFreshSchedule(String studentId, String token, String period, LocalDate minSyncDate) {
+        if (studentId == null || studentId.isBlank() || "current-student".equalsIgnoreCase(studentId)) {
+            throw new IllegalArgumentException("Identidad de estudiante inválida para sincronizar horario");
+        }
+
+        Optional<ScheduleInterval> fresh =
+                repository.findByStudentIdAndPeriodSyncedSince(studentId, period, minSyncDate);
+        if (fresh.isPresent()) {
+            log.info("[GenerateSchedule] ⚡ Bootstrap local-first: horario vigente en BD para [{}/{}] (sincronizado ≥ {}), sin llamada a la pasarela",
+                    studentId, period, minSyncDate);
+            return fresh.get();
+        }
+
+        ScheduleInterval interval = null;
+        if (token != null && !token.isBlank()) {
+            interval = utpPortalGateway.fetchSchedule(token, period);
+        }
+        if (interval != null) {
+            return repository.save(studentId, interval);
+        }
+
+        // La pasarela no respondió: se sirve el snapshot oficial previo (vencido)
+        // para continuar el login; el refresco remoto es reintentable después.
+        Optional<ScheduleInterval> stale = repository.findByStudentIdAndPeriod(studentId, period);
+        if (stale.isPresent()) {
+            log.warn("[GenerateSchedule] ⚠️ Pasarela sin respuesta en bootstrap [{}/{}]: se sirve el snapshot previo persistido",
+                    studentId, period);
+            return stale.get();
+        }
+        throw new ScheduleUnavailableException(
+                "Horario no disponible para '" + period + "': la pasarela oficial no respondió. Reintenta en unos segundos.");
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.utp.horario.application.service;
 
-import com.utp.horario.application.command.GenerateScheduleCommand;
 import com.utp.horario.application.dtos.SessionBootstrapDto.SessionBootstrapResult;
 import com.utp.horario.application.handle.GenerateScheduleCommandHandler;
 import com.utp.horario.domain.model.aggregate.Syllabus;
@@ -13,33 +12,34 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Pruebas del Auto-Bootstrap Integral de sesión (Fase 0.7) con mocks puros.
+ * Pruebas del Auto-Bootstrap Integral de sesión (Fase 0.7, estrategia local-first)
+ * con mocks puros.
  *
  * <p>Ningún test toca la pasarela real, MySQL ni OpenRouter: el handler de horario y el
- * servicio de sílabos son mocks, de modo que se verifican la orquestación, la deduplicación
- * de cursos, el conteo honesto de faltantes ante sílabos no verificables y la regla de
- * honestidad (nunca se completa un bootstrap con datos inventados).</p>
+ * servicio de sílabos son mocks, de modo que se verifican la orquestación local-first,
+ * la ventana de vigencia del snapshot, la deduplicación de cursos, el conteo honesto de
+ * faltantes ante sílabos no verificables y la regla de honestidad (nunca se completa un
+ * bootstrap con datos inventados).</p>
  */
 @ExtendWith(MockitoExtension.class)
 class SessionBootstrapServiceTest {
@@ -61,6 +61,19 @@ class SessionBootstrapServiceTest {
         bootstrapService = new SessionBootstrapService(scheduleSyncHandler, syllabusService);
     }
 
+    // El Paso 1 del bootstrap fija la ventana de vigencia en el día en curso.
+    private ScheduleInterval stubFreshSchedule() throws Exception {
+        ScheduleInterval schedule = scheduleWith(
+                List.of(Course.builder().code("100000SI58").section("101").build()),
+                List.of(
+                        classOf("100000SI58", "101"),
+                        classOf("100000SI89", "201"),
+                        classOf("100000US71", "301")));
+        when(scheduleSyncHandler.ensureFreshSchedule(eq(STUDENT), eq(TOKEN), eq(PERIOD), any(LocalDate.class)))
+                .thenReturn(schedule);
+        return schedule;
+    }
+
     private ScheduleInterval scheduleWith(List<Course> courses, List<ClassSession> classes) {
         return ScheduleInterval.builder()
                 .id("interval-001")
@@ -76,15 +89,9 @@ class SessionBootstrapServiceTest {
     }
 
     @Test
-    @DisplayName("Pipeline completo: horario persistido + sílabos locales-first para los cursos matriculados")
-    void fullPipelineSyncsScheduleAndSyllabi() {
-        when(scheduleSyncHandler.handle(anyCommand()))
-                .thenReturn(scheduleWith(
-                        List.of(Course.builder().code("100000SI58").section("101").build()),
-                        List.of(
-                                classOf("100000SI58", "101"),
-                                classOf("100000SI89", "201"),
-                                classOf("100000US71", "301"))));
+    @DisplayName("Pipeline completo: horario local-first + sílabos locales-first para los cursos matriculados")
+    void fullPipelineSyncsScheduleAndSyllabi() throws Exception {
+        stubFreshSchedule();
         when(syllabusService.getSyllabus(anyString(), anyString(), nullable(String.class), eq(TOKEN)))
                 .thenReturn(mock(Syllabus.class));
 
@@ -94,32 +101,39 @@ class SessionBootstrapServiceTest {
         assertEquals(3, result.coursesCount(), "El curso repetido en declaracion y clases no se duplica");
         assertEquals(3, result.syllabiSynced());
         assertEquals(3, result.syllabiTotal());
-        verify(scheduleSyncHandler, times(1)).handle(anyCommand());
+        verify(scheduleSyncHandler).ensureFreshSchedule(eq(STUDENT), eq(TOKEN), eq(PERIOD), any(LocalDate.class));
     }
 
     @Test
-    @DisplayName("El comando hereda el periodo pedido por el consumidor")
-    void periodIsForwardedToScheduleSync() {
-        when(scheduleSyncHandler.handle(anyCommand()))
-                .thenReturn(scheduleWith(List.of(), List.of(classOf("100000SI58", "101"))));
+    @DisplayName("El bootstrap fija la ventana de vigencia del snapshot en el día en curso")
+    void freshnessWindowIsToday() throws Exception {
+        stubFreshSchedule();
         when(syllabusService.getSyllabus(anyString(), anyString(), nullable(String.class), eq(TOKEN)))
                 .thenReturn(mock(Syllabus.class));
 
         bootstrapService.bootstrapStudentData(STUDENT, TOKEN, PERIOD);
 
-        verify(scheduleSyncHandler).handle(argThat(cmd ->
-                STUDENT.equals(cmd.getStudentId()) && PERIOD.equals(cmd.getPeriod())
-                        && TOKEN.equals(cmd.getToken())));
+        verify(scheduleSyncHandler).ensureFreshSchedule(eq(STUDENT), eq(TOKEN), eq(PERIOD), eq(LocalDate.now()));
+    }
+
+    @Test
+    @DisplayName("Periodo nulo cae en el periodo lectivo canónico del contrato de persistencia")
+    void nullPeriodFallsBackToCanonicalPeriod() throws Exception {
+        ScheduleInterval schedule = scheduleWith(List.of(), List.of(classOf("100000SI58", "101")));
+        when(scheduleSyncHandler.ensureFreshSchedule(eq(STUDENT), eq(TOKEN), eq(PERIOD), any(LocalDate.class)))
+                .thenReturn(schedule);
+        when(syllabusService.getSyllabus(anyString(), anyString(), nullable(String.class), eq(TOKEN)))
+                .thenReturn(mock(Syllabus.class));
+
+        bootstrapService.bootstrapStudentData(STUDENT, TOKEN, null);
+
+        verify(scheduleSyncHandler).ensureFreshSchedule(eq(STUDENT), eq(TOKEN), eq(PERIOD), any(LocalDate.class));
     }
 
     @Test
     @DisplayName("Sílabo no verificable en un curso NO aborta el resto y queda reportado como pendiente")
-    void unavailableSyllabusIsCountedAsPending() {
-        when(scheduleSyncHandler.handle(anyCommand()))
-                .thenReturn(scheduleWith(List.of(), List.of(
-                        classOf("100000SI58", "101"),
-                        classOf("100000SI89", "201"),
-                        classOf("100000US71", "301"))));
+    void unavailableSyllabusIsCountedAsPending() throws Exception {
+        stubFreshSchedule();
         when(syllabusService.getSyllabus("100000SI58", "101", null, TOKEN))
                 .thenReturn(mock(Syllabus.class));
         when(syllabusService.getSyllabus("100000SI89", "201", null, TOKEN))
@@ -136,9 +150,9 @@ class SessionBootstrapServiceTest {
     }
 
     @Test
-    @DisplayName("Pasarela sin horario: bootstrap sin datos reservados, sin tocar sílabos")
-    void scheduleUnavailableReportsFailureWithoutSyllabusCalls() {
-        when(scheduleSyncHandler.handle(anyCommand()))
+    @DisplayName("Pasarela sin horario (sin snapshot local): bootstrap sin datos reservados, sin tocar sílabos")
+    void scheduleUnavailableReportsFailureWithoutSyllabusCalls() throws Exception {
+        when(scheduleSyncHandler.ensureFreshSchedule(eq(STUDENT), eq(TOKEN), eq(PERIOD), any(LocalDate.class)))
                 .thenThrow(new ScheduleUnavailableException("La pasarela oficial no respondió."));
 
         SessionBootstrapResult result = bootstrapService.bootstrapStudentData(STUDENT, TOKEN, PERIOD);
@@ -152,29 +166,11 @@ class SessionBootstrapServiceTest {
     }
 
     @Test
-    @DisplayName("Identidad ausente es rechazada antes de invocar la pasarela")
+    @DisplayName("Identidad ausente es rechazada antes de invocar al handler de horario")
     void blankIdentityIsRejected() {
         assertThrows(IllegalArgumentException.class,
                 () -> bootstrapService.bootstrapStudentData("   ", TOKEN, PERIOD));
-        verify(scheduleSyncHandler, never()).handle(anyCommand());
-    }
-
-    @Test
-    @DisplayName("Periodo nulo cae en el periodo lectivo canónico del contrato de persistencia")
-    void nullPeriodFallsBackToCanonicalPeriod() {
-        when(scheduleSyncHandler.handle(anyCommand()))
-                .thenReturn(scheduleWith(List.of(), List.of(classOf("100000SI58", "101"))));
-        when(syllabusService.getSyllabus(anyString(), anyString(), nullable(String.class), eq(TOKEN)))
-                .thenReturn(mock(Syllabus.class));
-
-        bootstrapService.bootstrapStudentData(STUDENT, TOKEN, null);
-
-        verify(scheduleSyncHandler).handle(argThat(cmd ->
-                STUDENT.equals(cmd.getStudentId()) && PERIOD.equals(cmd.getPeriod())
-                        && TOKEN.equals(cmd.getToken())));
-    }
-
-    private GenerateScheduleCommand anyCommand() {
-        return ArgumentMatchers.any(GenerateScheduleCommand.class);
+        verify(scheduleSyncHandler, never()).ensureFreshSchedule(anyString(), anyString(), anyString(), any());
+        verify(scheduleSyncHandler, never()).handle(any());
     }
 }

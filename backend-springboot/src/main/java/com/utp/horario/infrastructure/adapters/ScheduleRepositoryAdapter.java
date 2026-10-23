@@ -10,6 +10,7 @@ import com.utp.horario.infrastructure.repositories.ScheduleSessionJpaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,6 +82,28 @@ public class ScheduleRepositoryAdapter implements IScheduleRepository {
     @Override
     public ScheduleInterval save(ScheduleInterval schedule) {
         return save("default", schedule);
+    }
+
+    /**
+     * Caché persistida vigente: valida la marca {@code lastSyncedDate} de la fila
+     * raíz en base de datos. Contrasta con la lectura habitual: la cache L1 en
+     * memoria NO participa aquí porque no porta la marca de sincronización y
+     * podría servir un snapshot vencido como fresco.
+     */
+    @Override
+    public Optional<ScheduleInterval> findByStudentIdAndPeriodSyncedSince(String studentId, String period, LocalDate minSyncDate) {
+        String periodName = period != null ? period : DEFAULT_PERIOD;
+        try {
+            Optional<ScheduleInterval> fresh = jpa.findByStudentCodeAndPeriodNameWithCourses(studentId, periodName)
+                    .filter(root -> root.getLastSyncedDate() != null
+                            && !root.getLastSyncedDate().isBefore(minSyncDate))
+                    .map(root -> mapper.toDomain(root, sessionJpa.findAllByScheduleId(root.getId())));
+            fresh.ifPresent(interval -> l1Cache.put(studentId + ":" + periodName, interval));
+            return fresh;
+        } catch (Exception e) {
+            log.warn("Error validando frescura del horario en base de datos para [{}]: {}", studentId, e.getMessage());
+            return Optional.empty();
+        }
     }
 
     @Override
