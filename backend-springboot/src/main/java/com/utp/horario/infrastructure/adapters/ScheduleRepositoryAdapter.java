@@ -10,7 +10,6 @@ import com.utp.horario.infrastructure.repositories.ScheduleSessionJpaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +25,11 @@ import java.util.stream.Collectors;
  * {@code orphanRemoval} (sus sesiones ya no existen) y el grafo nuevo se inserta
  * en cascada. La reconstrucción de lectura evita el N+1: catálogo con
  * {@code JOIN FETCH} + calendario plano con una consulta indexada extra.</p>
+ *
+ * <p>Cada escritura se delimita en UNA transacción por {@link ScheduleSnapshotTransaction}
+ * (auditoría de cierre 0.9): el fallo intermedio ejecuta rollback completo y no
+ * deja cursos ni sesiones huérfanas; el catch preserva el plan B de degradación
+ * elegante porque la transacción vive y muere dentro de esa frontera.</p>
  */
 @Slf4j
 @Repository
@@ -36,14 +40,17 @@ public class ScheduleRepositoryAdapter implements IScheduleRepository {
     private final JPAScheduleRepository jpa;
     private final ScheduleSessionJpaRepository sessionJpa;
     private final ScheduleMapper mapper;
+    private final ScheduleSnapshotTransaction snapshotTx;
     private final ConcurrentHashMap<String, ScheduleInterval> l1Cache = new ConcurrentHashMap<>();
 
     public ScheduleRepositoryAdapter(JPAScheduleRepository jpa,
                                      ScheduleSessionJpaRepository sessionJpa,
-                                     ScheduleMapper mapper) {
+                                     ScheduleMapper mapper,
+                                     ScheduleSnapshotTransaction snapshotTx) {
         this.jpa = jpa;
         this.sessionJpa = sessionJpa;
         this.mapper = mapper;
+        this.snapshotTx = snapshotTx;
     }
 
     @Override
@@ -59,10 +66,9 @@ public class ScheduleRepositoryAdapter implements IScheduleRepository {
                     jpa.findByStudentCodeAndPeriodNameWithCourses(studentId, periodName);
 
             if (existing.isPresent()) {
-                snapshotReplaceOrphanSafe(existing.get(), fresh, orphanRows);
+                snapshotTx.replaceSnapshot(existing.get(), fresh, orphanRows);
             } else {
-                jpa.save(fresh);
-                if (!orphanRows.isEmpty()) sessionJpa.saveAll(orphanRows);
+                snapshotTx.insertSnapshot(fresh, orphanRows);
             }
             log.info("Horario persistido en base de datos para alumno [{}] periodo [{}]", studentId, periodName);
         } catch (Exception e) {
@@ -70,38 +76,6 @@ public class ScheduleRepositoryAdapter implements IScheduleRepository {
         }
 
         return schedule;
-    }
-
-    /**
-     * Sustitución del grafo anterior conservando la fila raíz: el borrado masivo del
-     * calendario ({@code deleteByScheduleId}) se ejecuta EN UNA TRANSACCIÓN
-     * PROPIA antes de tocar colecciones, de modo que el flush posterior del
-     * {@code orphanRemoval} nunca choca contra FK de sesiones todavía presentes.
-     */
-    private void snapshotReplaceOrphanSafe(StudentScheduleEntity stale,
-                                           StudentScheduleEntity fresh,
-                                           List<ScheduleSessionEntity> orphanRows) {
-        // 1) Calendario del snapshot anterior fuera (sesiones matched + huérfanas).
-        sessionJpa.deleteByScheduleId(stale.getId());
-
-        // 2) Reanclaje de las filas nuevas a la raíz gestionada y copia de columnas.
-        mapper.rebindSchedule(stale, fresh, orphanRows);
-        stale.setWeekNumber(fresh.getWeekNumber());
-        stale.setTotalWeeks(fresh.getTotalWeeks());
-        stale.setStartDate(fresh.getStartDate());
-        stale.setEndDate(fresh.getEndDate());
-        stale.setLastSyncedDate(LocalDate.now());
-        // El contenido antiguo vive ya en tablas relacionales; escrituras limpian el blob.
-        stale.setScheduleData(null);
-        stale.getCourses().clear();
-        stale.getCourses().addAll(fresh.getCourses());
-
-        // 3) Persistencia en cascada: inserta catálogo nuevo + sesiones matched;
-        //    orphanRemoval borra el catálogo del snapshot anterior.
-        jpa.save(stale);
-
-        // 4) Sesiones huérfanas del snapshot nuevo (course_id NULL, salvadas por schedule_id).
-        if (!orphanRows.isEmpty()) sessionJpa.saveAll(orphanRows);
     }
 
     @Override
@@ -163,11 +137,14 @@ public class ScheduleRepositoryAdapter implements IScheduleRepository {
                 .toList();
     }
 
+    /**
+     * Eliminación atómica: calendario + raíz en UNA transacción; un fallo intermedio
+     * deja el horario íntegro en vez de una raíz sin calendario.
+     */
     @Override
     public Boolean delete(String id) {
         if (jpa.existsById(id)) {
-            sessionJpa.deleteByScheduleId(id);
-            jpa.deleteById(id);
+            snapshotTx.deleteSnapshotById(id);
             return true;
         }
         return false;

@@ -130,6 +130,9 @@ export class AuthService {
   logout(): void {
     console.log('[AuthService] 🚪 Cerrando sesión y limpiando credenciales locales...');
     this.currentStudentSignal.set(null);
+    // Auditoría 0.9: sin esto, un perfil pendiente de bootstrap sobrevive al logout
+    // y `finalizeLogin()` sin argumentos podría reactivarlo (estado zombie).
+    this.pendingStudentProfile = null;
     localStorage.removeItem('utp_auth_profile');
     localStorage.removeItem('utp_current_student_code');
     clearAllLocalUserData();

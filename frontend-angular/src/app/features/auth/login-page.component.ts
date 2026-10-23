@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '@data/services/auth.service';
@@ -406,7 +406,7 @@ export interface StepItem {
     </div>
   `
 })
-export class LoginPageComponent {
+export class LoginPageComponent implements OnDestroy {
   @Output() openPrivacy = new EventEmitter<void>();
 
   isLoginModalOpen = false;
@@ -424,7 +424,11 @@ export class LoginPageComponent {
   currentStep: LoginStep = 'idle';
   failedStep: LoginStep | null = null;
   bootstrapError: string | null = null;
+  // Auditoría 0.9: TODO timer del pipeline es rastreado; ningún callback sobrevive
+  // al desmontaje del componente ni a una cancelación del onboarding.
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
+  private syllabiTimer: ReturnType<typeof setTimeout> | null = null;
+  private readyTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private authService: AuthService,
@@ -483,7 +487,7 @@ export class LoginPageComponent {
       return;
     }
 
-    this.clearCloseTimer();
+    this.clearAllTimers();
     this.isLoading = true;
     this.errorMessage = null;
     this.isBootstrapping = true;
@@ -536,7 +540,8 @@ export class LoginPageComponent {
           detail: 'Sincronizando sílabos y evaluaciones...'
         });
 
-        setTimeout(() => {
+        this.syllabiTimer = setTimeout(() => {
+          if (!this.isBootstrapping) return; // Guard: onboarding cancelado → no-op
           this.updateStep('syllabi', {
             status: 'completed',
             detail: `Sílabos y evaluaciones sincronizados (${summary.syllabiSynced}/${summary.syllabiTotal})`
@@ -559,12 +564,14 @@ export class LoginPageComponent {
     // con el horario ya persistido por el Auto-Bootstrap del backend.
     this.scheduleService.getSchedule().subscribe();
 
-    setTimeout(() => {
+    this.readyTimer = setTimeout(() => {
+      if (!this.isBootstrapping) return; // Guard: onboarding cancelado → no-op
       this.updateStep('ready', { status: 'completed', detail: 'Copiloto Académico IA listo para operar' });
 
       // El backend YA completó el bootstrap: este timer da 800ms para que el usuario
       // aprecie los 4 checks verdes antes de ingresar al Dashboard.
       this.closeTimer = setTimeout(() => {
+        if (!this.isBootstrapping) return; // Guard: onboarding cancelado → no-op
         this.authService.finalizeLogin();
         this.resetStepperState();
         this.isLoginModalOpen = false;
@@ -614,7 +621,7 @@ export class LoginPageComponent {
 
   /** Restaura la máquina de estados; los campos del formulario nunca se borran. */
   private resetStepperState(): void {
-    this.clearCloseTimer();
+    this.clearAllTimers();
     this.isBootstrapping = false;
     this.currentStep = 'idle';
     this.failedStep = null;
@@ -622,10 +629,18 @@ export class LoginPageComponent {
     this.steps = LoginPageComponent.buildSteps();
   }
 
-  private clearCloseTimer(): void {
-    if (this.closeTimer !== null) {
-      clearTimeout(this.closeTimer);
-      this.closeTimer = null;
+  /** Apaga TODOS los timers del pipeline (close, syllabi y ready). */
+  private clearAllTimers(): void {
+    for (const timer of [this.closeTimer, this.syllabiTimer, this.readyTimer]) {
+      if (timer !== null) clearTimeout(timer);
     }
+    this.closeTimer = null;
+    this.syllabiTimer = null;
+    this.readyTimer = null;
+  }
+
+  /** Auditoría 0.9: el desmontaje del componente deja cero timers pendientes. */
+  ngOnDestroy(): void {
+    this.clearAllTimers();
   }
 }
