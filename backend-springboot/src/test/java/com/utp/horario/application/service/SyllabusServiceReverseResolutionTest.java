@@ -1,6 +1,7 @@
 package com.utp.horario.application.service;
 
 import com.utp.horario.domain.model.aggregate.Syllabus;
+import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
@@ -19,7 +20,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
@@ -99,8 +100,8 @@ class SyllabusServiceReverseResolutionTest {
     }
 
     @Test
-    @DisplayName("Un registro local incompleto no se presenta como sílabo oficial válido")
-    void incompleteLocalRecordIsNotReturned() {
+    @DisplayName("Ni registro local incompleto ni pasarela vacía fabrican sílabo: se declara la ausencia")
+    void unavailableSyllabusThrowsInsteadOfFabricating() {
         Syllabus incomplete = Syllabus.builder()
                 .id("100000SI82")
                 .courseCode("100000SI82")
@@ -113,13 +114,18 @@ class SyllabusServiceReverseResolutionTest {
                 .thenReturn(Optional.of(incomplete));
         lenient().when(utpPortalGateway.fetchSyllabus(anyString(), anyString(), any(), any())).thenReturn(null);
 
-        Syllabus result = syllabusService.getSyllabus(
-                "FORMACION PARA LA INVESTIGACION SISTEMAS", "sec-uuid", null, "token-utp");
+        assertThrows(SyllabusUnavailableException.class, () -> syllabusService.getSyllabus(
+                "FORMACION PARA LA INVESTIGACION SISTEMAS", "sec-uuid", null, "token-utp"));
 
-        assertNotNull(result);
-        assertTrue(result.getWeeklySchedule() == null || result.getWeeklySchedule().isEmpty(),
-                "Un registro sin cronograma no debe presentarse como sílabo oficial");
         verify(utpPortalGateway).fetchSyllabus(anyString(), anyString(), any(), any());
+        verify(syllabusRepository, never()).save(any(Syllabus.class));
+    }
+
+    @Test
+    @DisplayName("Un courseCode en blanco no genera un sílabo 'UNKNOWN' fabricado")
+    void blankCourseCodeIsRejectedWithoutFabricating() {
+        assertThrows(IllegalArgumentException.class, () -> syllabusService.getSyllabus("   ", null, null, null));
+        verify(utpPortalGateway, never()).fetchSyllabus(anyString(), anyString(), any(), any());
     }
 
     private Syllabus completeSyllabus(String code, String name) {

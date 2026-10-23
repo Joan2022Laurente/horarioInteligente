@@ -372,7 +372,11 @@ public class AcademicToolService {
                     String codeToTry = resolvedCourseCode != null ? resolvedCourseCode : cleanQuery;
                     log.info("[AcademicTool] 🔄 [PASO 4b] fetchSyllabus() JSON para [{}]...", codeToTry);
                     Syllabus apiSyllabus = utpPortalGateway.fetchSyllabus(tokenForExternalApi, codeToTry, null, null);
-                    if (apiSyllabus != null) {
+                    // Regla de honestidad de datos: solo un sílabo con contenido curricular
+                    // verificable se adopta como resultado y se persiste. Un objeto vacío
+                    // o fabricado de la pasarela se trata como MISS: no alimenta la
+                    // respuesta del agente ni envenena MySQL.
+                    if (apiSyllabus != null && apiSyllabus.isComplete()) {
                         syllabusOpt = Optional.of(apiSyllabus);
                         log.info("[AcademicTool] ✅ [PASO 4b HIT] fetchSyllabus() exitoso para [{}]. Semanas={}, Evals={}",
                                 codeToTry,
@@ -385,7 +389,8 @@ public class AcademicToolService {
                             log.debug("[AcademicTool] No se pudo persistir sílabo en base de datos: {}", persistEx.getMessage());
                         }
                     } else {
-                        log.warn("[AcademicTool] ❌ [PASO 4b MISS] fetchSyllabus() devolvió null para [{}] — API Externa no tiene este sílabo", codeToTry);
+                        log.warn("[AcademicTool] ❌ [PASO 4b MISS] fetchSyllabus() devolvió un sílabo sin contenido verificable para [{}] — no se adopta ni se persiste nada fabricado",
+                                codeToTry);
                     }
                 } else {
                     log.warn("[AcademicTool] ⏭️ [PASO 4b SKIP] fetchSyllabus() saltado — TOKEN NULO. El alumno debe iniciar sesión.");

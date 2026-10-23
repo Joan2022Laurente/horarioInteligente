@@ -53,4 +53,18 @@ public class Syllabus {
             }
         }
     }
+
+    /**
+     * Regla de negocio de honestidad de datos: un sílabo solo es presentable —o
+     * persistible— como oficial si trae contenido curricular verificable: fórmula de
+     * evaluación y cronograma semanal no vacíos.
+     *
+     * <p>"Existe un objeto" no es lo mismo que "el objeto sirve": cualquier consumo
+     * (REST, agente IA, persistencia) debe validar esta regla en lugar de aceptar un
+     * objeto vacío o fabricado presentado como sílabo oficial.</p>
+     */
+    public boolean isComplete() {
+        return formula != null && !formula.isBlank()
+                && weeklySchedule != null && !weeklySchedule.isEmpty();
+    }
 }

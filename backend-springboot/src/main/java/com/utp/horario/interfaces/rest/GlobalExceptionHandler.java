@@ -1,5 +1,6 @@
 package com.utp.horario.interfaces.rest;
 
+import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +9,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Regla de honestidad de datos: la ausencia de un sílabo oficial se declara como
+     * indisponibilidad reintentable (503) y nunca se enmascara con datos inventados.
+     */
+    @ExceptionHandler(SyllabusUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSyllabusUnavailable(SyllabusUnavailableException e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.fail(e.getMessage()));
+    }
 
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<ApiResponse<Void>> handleSecurityException(SecurityException e) {

@@ -1,6 +1,7 @@
 package com.utp.horario.application.service;
 
 import com.utp.horario.domain.model.aggregate.Syllabus;
+import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
@@ -32,7 +33,8 @@ public class SyllabusServiceImpl implements SyllabusService {
     @Override
     public Syllabus getSyllabus(String courseCode, String sectionId, String pdfUrl, String token) {
         if (courseCode == null || courseCode.isBlank()) {
-            return buildEmptySyllabus("UNKNOWN");
+            throw new IllegalArgumentException(
+                    "Identificador de curso requerido: no se puede consultar un sílabo sin courseCode.");
         }
 
         String targetCode = courseCode.trim();
@@ -60,12 +62,16 @@ public class SyllabusServiceImpl implements SyllabusService {
         log.info("[SyllabusServiceImpl] Solicitando sílabo oficial v2.0.0 para courseCode='{}' (sectionId='{}', pdfUrl='{}')",
                 targetCode, sectionId, pdfUrl);
         Syllabus fetched = utpPortalGateway.fetchSyllabus(token, targetCode, sectionId, pdfUrl);
-        if (fetched != null && fetched.getWeeklySchedule() != null && !fetched.getWeeklySchedule().isEmpty()) {
+        if (fetched != null && fetched.isComplete()) {
             log.info("[SyllabusServiceImpl] Guardando en repositorio local sílabo de [{}] obtenido de API externa", targetCode);
             return syllabusRepository.save(fetched);
         }
 
-        return buildEmptySyllabus(targetCode);
+        // 3. Regla de honestidad de datos: se declara la ausencia explícita y se deja que
+        //    el consumidor reintente. Nunca se devuelve un objeto con datos inventados.
+        throw new SyllabusUnavailableException(
+                "Sílabo no disponible para '" + targetCode
+                        + "': la pasarela oficial no entregó contenido verificable. Reintenta en unos segundos.");
     }
 
     /**
@@ -73,8 +79,7 @@ public class SyllabusServiceImpl implements SyllabusService {
      * presentarse como un sílabo oficial válido.
      */
     private Optional<Syllabus> completeSyllabus(Optional<Syllabus> syllabus) {
-        return syllabus.filter(s -> s.getWeeklySchedule() != null && !s.getWeeklySchedule().isEmpty()
-                && s.getFormula() != null && !s.getFormula().isBlank());
+        return syllabus.filter(Syllabus::isComplete);
     }
 
     /**
@@ -128,21 +133,4 @@ public class SyllabusServiceImpl implements SyllabusService {
         return syllabusRepository.save(syllabus);
     }
 
-    private Syllabus buildEmptySyllabus(String courseCode) {
-        return Syllabus.builder()
-                .id(courseCode)
-                .courseCode(courseCode)
-                .courseName(courseCode)
-                .semester("2026 - Ciclo 2 Agosto")
-                .credits(3)
-                .modality("Presencial")
-                .weeklyHours(4)
-                .careers(List.of("Ingeniería de Sistemas e Informática"))
-                .learningGoal("")
-                .formula("")
-                .evaluations(new ArrayList<>())
-                .rules(new ArrayList<>())
-                .weeklySchedule(new ArrayList<>())
-                .build();
-    }
 }
