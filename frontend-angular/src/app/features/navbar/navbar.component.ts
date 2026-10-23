@@ -4,7 +4,7 @@ import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MatrixOrbComponent } from '../ai-assistant/matrix-orb.component';
 
-export type NavigationTab = 'today' | 'weekly' | 'courses';
+export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'marketplace';
 
 @Component({
   selector: 'app-navbar',
@@ -83,6 +83,19 @@ export type NavigationTab = 'today' | 'weekly' | 'courses';
                   <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
                   <path d="M6 6h10"/>
                   <path d="M6 10h10"/>
+                </svg>
+              } @else if (tab.id === 'networking') {
+                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              } @else if (tab.id === 'marketplace') {
+                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+                  <path d="M3 6h18"/>
+                  <path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
               }
               @if (tab.dot) {
@@ -370,6 +383,8 @@ export class NavbarComponent {
     { id: 'today',       label: 'HOY' },
     { id: 'weekly',      label: 'HORARIO' },
     { id: 'courses',     label: 'CURSOS' },
+    { id: 'networking',  label: 'NETWORKING', dot: true },
+    { id: 'marketplace', label: 'MARKETPLACE' },
   ];
 
   constructor(

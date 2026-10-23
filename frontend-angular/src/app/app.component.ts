@@ -10,6 +10,8 @@ import { SettingsModalComponent } from './features/settings/settings-modal.compo
 import { AiAssistantModalComponent } from './features/ai-assistant/ai-assistant-modal.component';
 import { LoginPageComponent } from './features/auth/login-page.component';
 import { PrivacyPageComponent } from './features/privacy/privacy-page.component';
+import { NetworkingViewComponent } from './features/networking/networking-view.component';
+import { MarketplaceViewComponent } from './features/marketplace/marketplace-view.component';
 
 import { UiFeedbackService } from './core/services/ui-feedback.service';
 
@@ -25,7 +27,9 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
     SettingsModalComponent,
     AiAssistantModalComponent,
     LoginPageComponent,
-    PrivacyPageComponent
+    PrivacyPageComponent,
+    NetworkingViewComponent,
+    MarketplaceViewComponent
   ],
   template: `
     @if (showPrivacy) {
@@ -51,6 +55,10 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
             </app-weekly-schedule>
           } @else if (activeTab === 'courses') {
             <app-syllabus-view [initialCourseToOpen]="selectedCourseForSyllabus" (askAi)="openAiWithPrompt($event)"></app-syllabus-view>
+          } @else if (activeTab === 'networking') {
+            <app-networking-view></app-networking-view>
+          } @else if (activeTab === 'marketplace') {
+            <app-marketplace-view></app-marketplace-view>
           }
         </main>
 
