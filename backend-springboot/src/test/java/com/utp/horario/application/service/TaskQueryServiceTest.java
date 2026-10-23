@@ -3,7 +3,7 @@ package com.utp.horario.application.service;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.repositories.ITaskSyncRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
-import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
+import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

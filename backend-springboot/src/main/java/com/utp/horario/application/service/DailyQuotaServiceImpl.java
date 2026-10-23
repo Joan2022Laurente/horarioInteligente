@@ -1,6 +1,6 @@
 package com.utp.horario.application.service;
 
-import com.utp.horario.domain.model.value_objets.DailyQuotaStatus;
+import com.utp.horario.domain.model.value_objects.DailyQuotaStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 

@@ -3,7 +3,7 @@ package com.utp.horario.interfaces.rest;
 import com.utp.horario.application.command.AuthenticateStudentCommand;
 import com.utp.horario.application.handle.AuthenticateStudentCommandHandler;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
-import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
+import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import com.utp.horario.interfaces.rest.dto.AuthRequest;
 import lombok.RequiredArgsConstructor;

@@ -3,7 +3,7 @@ package com.utp.horario.application.handle;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

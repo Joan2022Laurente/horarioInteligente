@@ -1,10 +1,10 @@
 package com.utp.horario.interfaces.rest;
 
-import com.utp.horario.domain.model.value_objets.AiChatMessage;
-import com.utp.horario.domain.model.value_objets.DailyQuotaStatus;
+import com.utp.horario.domain.model.value_objects.AiChatMessage;
+import com.utp.horario.domain.model.value_objects.DailyQuotaStatus;
 import com.utp.horario.application.service.AiAssistantService;
 import com.utp.horario.application.service.DailyQuotaService;
-import com.utp.horario.infraestructure.security.CurrentStudent;
+import com.utp.horario.infrastructure.security.CurrentStudent;
 import com.utp.horario.interfaces.rest.dto.AiChatRequest;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ public class AiChatController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.utp.horario.application.service.StudentSessionService studentSessionService;
     private final com.utp.horario.application.service.tool.AcademicToolService academicToolService;
-    private final com.utp.horario.infraestructure.security.SecurityIdentityResolver securityIdentityResolver;
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver securityIdentityResolver;
     private final com.utp.horario.application.service.AgentOrchestratorServiceImpl agentOrchestrator;
 
     @PostMapping("/chat")

@@ -3,9 +3,9 @@ package com.utp.horario.domain.model.repositories;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
-import com.utp.horario.domain.model.value_objets.CourseSummaryDto;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
-import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
+import com.utp.horario.domain.model.value_objects.CourseSummaryDto;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
 
 import java.util.List;
 

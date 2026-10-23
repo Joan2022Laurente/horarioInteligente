@@ -8,9 +8,9 @@ import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IStudentRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
-import com.utp.horario.domain.model.value_objets.ClassSession;
-import com.utp.horario.domain.model.value_objets.Course;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.ClassSession;
+import com.utp.horario.domain.model.value_objects.Course;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -131,20 +131,20 @@ class AcademicToolServiceWeeklyScopeTest {
                 .modality("Presencial")
                 .formula("(20%)APF1 + (20%)APF2 + (20%)APF3 + (40%)PROY")
                 .evaluations(List.of(
-                        com.utp.horario.domain.model.value_objets.SyllabusEvaluation.builder()
+                        com.utp.horario.domain.model.value_objects.SyllabusEvaluation.builder()
                                 .id("APF2").type("APF2").description("AVANCE DE PROYECTO FINAL 2")
                                 .week(8).weightPercent(20).modality("Individual").observation("").build(),
-                        com.utp.horario.domain.model.value_objets.SyllabusEvaluation.builder()
+                        com.utp.horario.domain.model.value_objects.SyllabusEvaluation.builder()
                                 .id("APF3").type("APF3").description("AVANCE DE PROYECTO FINAL 3")
                                 .week(10).weightPercent(20).modality("Individual").observation("").build()))
                 .weeklySchedule(List.of(
-                        com.utp.horario.domain.model.value_objets.SyllabusWeeklySession.builder()
+                        com.utp.horario.domain.model.value_objects.SyllabusWeeklySession.builder()
                                 .week(1).session(1).unit("Unidad 1").topic("Fundamentos")
                                 .activities("Clase").build(),
-                        com.utp.horario.domain.model.value_objets.SyllabusWeeklySession.builder()
+                        com.utp.horario.domain.model.value_objects.SyllabusWeeklySession.builder()
                                 .week(8).session(1).unit("Unidad 2").topic("Persistencia y seguridad")
                                 .activities("Laboratorio").evaluation("APF2").build(),
-                        com.utp.horario.domain.model.value_objets.SyllabusWeeklySession.builder()
+                        com.utp.horario.domain.model.value_objects.SyllabusWeeklySession.builder()
                                 .week(10).session(1).unit("Unidad 3").topic("Despliegue")
                                 .activities("Taller").evaluation("APF3").build()))
                 .build();

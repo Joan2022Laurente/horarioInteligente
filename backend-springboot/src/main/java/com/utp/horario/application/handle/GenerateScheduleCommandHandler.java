@@ -4,7 +4,7 @@ import com.utp.horario.application.command.GenerateScheduleCommand;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

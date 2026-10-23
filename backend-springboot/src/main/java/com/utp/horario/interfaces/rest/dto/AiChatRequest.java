@@ -3,7 +3,7 @@ package com.utp.horario.interfaces.rest.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

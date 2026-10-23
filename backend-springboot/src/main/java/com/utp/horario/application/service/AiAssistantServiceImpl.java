@@ -2,9 +2,9 @@ package com.utp.horario.application.service;
 
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.repositories.ILlmGateway;
-import com.utp.horario.domain.model.value_objets.AiChatMessage;
-import com.utp.horario.domain.model.value_objets.DailyQuotaStatus;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.AiChatMessage;
+import com.utp.horario.domain.model.value_objects.DailyQuotaStatus;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

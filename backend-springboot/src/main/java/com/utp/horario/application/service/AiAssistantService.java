@@ -1,7 +1,7 @@
 package com.utp.horario.application.service;
 
-import com.utp.horario.domain.model.value_objets.AiChatMessage;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.AiChatMessage;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 
 import java.util.List;

@@ -81,7 +81,7 @@ public class McpServerController {
 
     private final AcademicToolService toolService;
     private final ObjectMapper objectMapper;
-    private final com.utp.horario.infraestructure.security.SecurityIdentityResolver identityResolver;
+    private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
     private final com.utp.horario.application.service.StudentSessionService studentSessionService;
 
     /**

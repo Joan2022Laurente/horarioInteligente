@@ -2,8 +2,8 @@ package com.utp.horario.interfaces.rest;
 
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.application.service.SyllabusService;
-import com.utp.horario.infraestructure.security.CurrentStudent;
-import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
+import com.utp.horario.infrastructure.security.CurrentStudent;
+import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

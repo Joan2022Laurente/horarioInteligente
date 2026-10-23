@@ -5,7 +5,7 @@ import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
-import com.utp.horario.domain.model.value_objets.SyllabusWeeklySession;
+import com.utp.horario.domain.model.value_objects.SyllabusWeeklySession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

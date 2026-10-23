@@ -1,7 +1,7 @@
 package com.utp.horario.domain.model.aggregate;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.utp.horario.domain.model.value_objets.SyllabusCorrelation;
+import com.utp.horario.domain.model.value_objects.SyllabusCorrelation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

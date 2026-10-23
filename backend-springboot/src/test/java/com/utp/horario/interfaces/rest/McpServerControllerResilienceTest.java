@@ -8,7 +8,7 @@ import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.application.service.StudentSessionService;
-import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
+import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

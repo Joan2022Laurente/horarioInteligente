@@ -1,13 +1,13 @@
 package com.utp.horario.application.service.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.utp.horario.domain.model.value_objets.ClassSession;
-import com.utp.horario.domain.model.value_objets.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.ClassSession;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.application.dtos.AcademicToolDto.*;
-import com.utp.horario.domain.model.value_objets.CourseSummaryDto;
-import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
+import com.utp.horario.domain.model.value_objects.CourseSummaryDto;
+import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IStudentRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;

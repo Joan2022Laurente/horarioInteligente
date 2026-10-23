@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.repositories.ITaskSyncRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
-import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
+import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
