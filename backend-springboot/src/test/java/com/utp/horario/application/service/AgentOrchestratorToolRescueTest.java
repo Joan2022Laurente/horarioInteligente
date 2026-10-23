@@ -3,7 +3,6 @@ package com.utp.horario.application.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.application.service.tool.AcademicToolService;
-import com.utp.horario.infraestructure.external.OpenRouterModelSelector;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,9 +31,6 @@ class AgentOrchestratorToolRescueTest {
 
     @Mock
     private DailyQuotaService quotaService;
-
-    @Mock
-    private OpenRouterModelSelector modelSelector;
 
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();

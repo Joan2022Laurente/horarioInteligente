@@ -101,39 +101,4 @@ public class AcademicToolDto {
         }
     }
 
-    public record CourseEvaluationDetailDto(
-            String shortName,
-            String name,
-            String value,
-            boolean isGraded
-    ) {}
-
-    public record CourseSummaryDto(
-            String courseId,
-            String courseCode,
-            String courseName,
-            String formula,
-            String teacher,
-            Integer credits,
-            List<CourseEvaluationDetailDto> evaluations
-    ) {}
-
-    public record UpcomingEvaluationDto(
-            String id,
-            String title,
-            String activityType,
-            int weekNumber,
-            String startAt,
-            String finishAt,
-            String courseName,
-            String courseId,
-            String sectionId,
-            String activityId,
-            String evaluationSystem,
-            String studentStatus,
-            boolean isQualified,
-            String classificationCategory,
-            String urgency,
-            int daysRemaining
-    ) {}
 }

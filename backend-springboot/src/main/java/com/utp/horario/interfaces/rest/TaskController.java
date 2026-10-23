@@ -1,7 +1,7 @@
 package com.utp.horario.interfaces.rest;
 
 import com.utp.horario.application.command.SyncTaskCommand;
-import com.utp.horario.application.dtos.AcademicToolDto.UpcomingEvaluationDto;
+import com.utp.horario.domain.model.value_objets.UpcomingEvaluationDto;
 import com.utp.horario.application.handle.SyncTaskCommandHandler;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;

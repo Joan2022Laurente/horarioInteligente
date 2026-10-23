@@ -8,7 +8,6 @@ import com.utp.horario.domain.model.value_objets.AiChatMessage;
 import com.utp.horario.domain.model.value_objets.DailyQuotaStatus;
 import com.utp.horario.domain.model.value_objets.ScheduleInterval;
 import com.utp.horario.domain.model.aggregate.Syllabus;
-import com.utp.horario.infraestructure.external.OpenRouterModelSelector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +32,6 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
     private final AcademicToolService toolService;
     private final DailyQuotaService quotaService;
-    private final OpenRouterModelSelector modelSelector;
     private final ObjectMapper objectMapper;
 
     @Value("${app.openrouter.api-url:https://openrouter.ai/api/v1/chat/completions}")
