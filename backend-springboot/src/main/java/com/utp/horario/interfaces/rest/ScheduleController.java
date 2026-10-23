@@ -2,8 +2,9 @@ package com.utp.horario.interfaces.rest;
 
 import com.utp.horario.application.command.GenerateScheduleCommand;
 import com.utp.horario.application.handle.GenerateScheduleCommandHandler;
+import com.utp.horario.application.service.ScheduleQueryService;
+import com.utp.horario.application.service.StudentSessionService;
 import com.utp.horario.domain.model.value_objets.ScheduleInterval;
-import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import com.utp.horario.infraestructure.security.CurrentStudent;
 import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
@@ -23,7 +24,8 @@ public class ScheduleController {
 
     private final GenerateScheduleCommandHandler scheduleCommandHandler;
     private final SecurityIdentityResolver identityResolver;
-    private final IUtpPortalGateway utpPortalGateway;
+    private final ScheduleQueryService scheduleQueryService;
+    private final StudentSessionService sessionService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<ScheduleInterval>> getSchedule(
@@ -31,9 +33,7 @@ public class ScheduleController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
         String token = identityResolver.extractBearerToken(authHeader);
-        if (token != null && !token.isBlank() && studentId != null) {
-            utpPortalGateway.registerStudentToken(studentId, token);
-        }
+        sessionService.registerSessionToken(studentId, token);
         ScheduleInterval schedule = scheduleCommandHandler.getStudentSchedule(studentId, period, token);
         return ResponseEntity.ok(ApiResponse.ok(schedule));
     }
@@ -45,9 +45,7 @@ public class ScheduleController {
             @RequestParam(required = false) String token,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
         String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-        if (effectiveToken != null && !effectiveToken.isBlank() && studentId != null) {
-            utpPortalGateway.registerStudentToken(studentId, effectiveToken);
-        }
+        sessionService.registerSessionToken(studentId, effectiveToken);
         GenerateScheduleCommand command = GenerateScheduleCommand.builder()
                 .studentId(studentId)
                 .period(period)
@@ -64,10 +62,7 @@ public class ScheduleController {
             @RequestParam(required = false) String token,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
         String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-        if (effectiveToken != null && !effectiveToken.isBlank() && studentId != null) {
-            utpPortalGateway.registerStudentToken(studentId, effectiveToken);
-        }
-        String icsContent = utpPortalGateway.exportCalendarIcs(effectiveToken, period);
+        String icsContent = scheduleQueryService.exportScheduleIcs(studentId, effectiveToken, period);
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=\"horario_utp.ics\"")
                 .body(icsContent);
