@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -103,7 +104,7 @@ class AcademicToolPersistenceGateTest {
         SyllabusDetailsResult result = toolService.getSyllabusDetails(STUDENT, COURSE);
 
         assertEquals("Curso no encontrado", result.courseName());
-        assertEquals(0, result.credits());
+        assertNull(result.credits());
         verify(syllabusRepository, never()).save(any(Syllabus.class));
     }
 
@@ -116,7 +117,21 @@ class AcademicToolPersistenceGateTest {
         SyllabusDetailsResult result = toolService.getSyllabusDetails(STUDENT, COURSE);
 
         assertEquals("DESARROLLO WEB INTEGRADO", result.courseName());
-        assertEquals(2, result.credits());
+        assertEquals(Integer.valueOf(2), result.credits());
         verify(syllabusRepository).save(any(Syllabus.class));
+    }
+
+    @Test
+    @DisplayName("Markdown oficial sin franja de créditos: el canal IA reporta null, no 3")
+    void markdownOnlySyllabusReportsNullCreditsInsteadOfDefault() {
+        when(gateway.fetchSyllabusMarkdown(anyString(), anyString()))
+                .thenReturn("## Cronograma del sílabo oficial\n\nSemana 1: Introducción al curso.");
+
+        SyllabusDetailsResult result = toolService.getSyllabusDetails(STUDENT, COURSE);
+
+        assertNull(result.credits());
+        assertEquals("100000ST61", result.courseCode());
+        assertEquals("Obtenido directamente desde el Sílabo Oficial UTP", result.learningGoal());
+        verify(gateway, never()).fetchSyllabus(anyString(), anyString(), any(), any());
     }
 }

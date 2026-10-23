@@ -53,10 +53,16 @@ public class AcademicToolDto {
             String evaluation
     ) {}
 
+    /**
+     * Detalle de sílabo para el canal IA. {@code credits} es {@link Integer} nullable:
+     * cuando la fuente oficial no declara créditos (markdown sin franja de créditos),
+     * se reporta {@code null} ("no indicado") y nunca un valor por defecto inflado —
+     * regla de honestidad de datos.
+     */
     public record SyllabusDetailsResult(
             String courseCode,
             String courseName,
-            int credits,
+            Integer credits,
             String formula,
             String learningGoal,
             List<EvaluationSummaryDto> evaluations,

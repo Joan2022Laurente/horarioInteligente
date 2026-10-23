@@ -286,7 +286,7 @@ public class AcademicToolService {
             return new SyllabusDetailsResult(
                     "",
                     "Curso no especificado",
-                    0,
+                    null,
                     "",
                     "Argumento obligatorio 'course_query' ausente: envia el codigo oficial de la asignatura "
                             + "(ej. 100000SI58) o su nombre natural.",
@@ -409,7 +409,7 @@ public class AcademicToolService {
             return new SyllabusDetailsResult(
                     cleanQuery,
                     "Curso no encontrado",
-                    0,
+                    null,
                     "",
                     "No se encontró el sílabo registrado para '" + cleanQuery + "'." + suggestion,
                     List.of(),
@@ -423,10 +423,11 @@ public class AcademicToolService {
         log.info("[AcademicTool] ✅ [RESULTADO FINAL] Sílabo '{}' servido desde [{}]", cleanQuery, source);
 
         Syllabus s = syllabusOpt.orElseGet(() -> {
+            // Regla de honestidad de datos: si solo hay markdown oficial sin franja de
+            // créditos, el campo queda null ("no indicado"); nunca se infla con 3.
             Syllabus fallback = new Syllabus();
             fallback.setCourseCode(courseCode);
             fallback.setCourseName(cleanQuery.toUpperCase());
-            fallback.setCredits(3);
             fallback.setFormula("");
             fallback.setLearningGoal("Obtenido directamente desde el Sílabo Oficial UTP");
             return fallback;
@@ -454,7 +455,7 @@ public class AcademicToolService {
         return applyWeekFilter(new SyllabusDetailsResult(
                 s.getCourseCode(),
                 s.getCourseName(),
-                s.getCredits() != null ? s.getCredits() : 3,
+                s.getCredits(),
                 s.getFormula() != null ? s.getFormula() : "",
                 s.getLearningGoal() != null ? s.getLearningGoal() : "No especificado",
                 evals,
