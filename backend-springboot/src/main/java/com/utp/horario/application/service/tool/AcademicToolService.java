@@ -93,40 +93,43 @@ public class AcademicToolService {
         // 1. Intento desde repositorio local MySQL / L1 Cache
         Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
 
+        if (scheduleOpt.isEmpty() || scheduleOpt.get().getClasses() == null) {
+            // Guardia de honestidad: sin horario persistido NO es "día libre"; es falta de datos.
+            log.warn("[AcademicTool] 🚫 Sin horario persistido para [{}] — se declara la ausencia", studentCode);
+            return new DayScheduleResult(studentCode, today.toString(), 0, List.of(),
+                    "No tienes un horario registrado en el sistema. Por favor sincroniza tu sesión institucional.", null);
+        }
 
-
-        if (scheduleOpt.isPresent() && scheduleOpt.get().getClasses() != null) {
-            weekNumber = scheduleOpt.get().getWeekNumber();
-            for (ClassSession c : scheduleOpt.get().getClasses()) {
-                boolean matchesDay = false;
-                if (c.getStartAt() != null) {
-                    // SOLO fecha exacta — no por dayOfWeek (causaría duplicar todos los sábados del ciclo)
-                    if (c.getStartAt().toLocalDate().equals(today)) {
-                        matchesDay = true;
-                    }
+        weekNumber = scheduleOpt.get().getWeekNumber();
+        for (ClassSession c : scheduleOpt.get().getClasses()) {
+            boolean matchesDay = false;
+            if (c.getStartAt() != null) {
+                // SOLO fecha exacta — no por dayOfWeek (causaría duplicar todos los sábados del ciclo)
+                if (c.getStartAt().toLocalDate().equals(today)) {
+                    matchesDay = true;
                 }
+            }
 
-                if (matchesDay) {
-                    String startTimeStr = c.getStartAt() != null ? c.getStartAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "08:00";
-                    String endTimeStr = c.getFinishAt() != null ? c.getFinishAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "10:00";
+            if (matchesDay) {
+                String startTimeStr = c.getStartAt() != null ? c.getStartAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "08:00";
+                String endTimeStr = c.getFinishAt() != null ? c.getFinishAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "10:00";
 
-                    dayClasses.add(new ClassSessionDto(
-                            c.getCourseCode() != null ? c.getCourseCode() : "",
-                            c.getCourseName() != null ? c.getCourseName() : "Clase UTP",
-                            startTimeStr,
-                            endTimeStr,
-                            c.getBuilding() != null && !c.getBuilding().isBlank() ? c.getBuilding() : "Campus UTP",
-                            c.getClassroom() != null && !c.getClassroom().isBlank() ? c.getClassroom() : "Aula Asignada",
-                            c.getTeacher() != null && !c.getTeacher().isBlank() ? c.getTeacher() : "Docente UTP"
-                    ));
-                }
+                dayClasses.add(new ClassSessionDto(
+                        c.getCourseCode() != null ? c.getCourseCode() : "",
+                        c.getCourseName() != null ? c.getCourseName() : "Clase UTP",
+                        startTimeStr,
+                        endTimeStr,
+                        c.getBuilding() != null && !c.getBuilding().isBlank() ? c.getBuilding() : "Campus UTP",
+                        c.getClassroom() != null && !c.getClassroom().isBlank() ? c.getClassroom() : "Aula Asignada",
+                        c.getTeacher() != null && !c.getTeacher().isBlank() ? c.getTeacher() : "Docente UTP"
+                ));
             }
         }
 
         log.info("[AcademicTool] 🔎 Clases encontradas para hoy ({}): {}", dayOfWeek, dayClasses.size());
 
         String message = dayClasses.isEmpty()
-                ? "No tienes clases programadas para el día de hoy (" + dayOfWeek + " " + today + ")."
+                ? "Hoy no tienes clases programadas en tu horario oficial. ¡Día libre!"
                 : null;
 
         return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message, weekNumber);

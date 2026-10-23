@@ -33,21 +33,14 @@ import java.util.Map;
  *   <li>Ausente, vacía o no interpretable → se resuelve dinámicamente la semana lectiva
  *       vigente del estudiante desde el Read Model persistido
  *       ({@link AcademicToolService#resolveCurrentWeek(String)}).</li>
- *   <li>Sin snapshot conocido → constante {@link #DEFAULT_CURRENT_WEEK} (último recurso;
- *       nunca un valor por defecto por encima del dato real del estudiante).</li>
+ *   <li>Sin snapshot conocido → se declara la ausencia con un error estructurado;
+ *       nunca se inventa una semana (regla de honestidad de datos, Fase 0.7).</li>
  * </ol></p>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AcademicToolDispatcher {
-
-    /**
-     * Semana lectiva por defecto. Último recurso de {@code get_upcoming_evaluations} cuando
-     * el modelo no emitió {@code current_week} y tampoco existe snapshot persistido que
-     * permita resolver la semana dinámicamente.
-     */
-    public static final int DEFAULT_CURRENT_WEEK = 6;
 
     /** Resultado acotado de una ejecución de herramienta: el JSON siempre está presente. */
     public record ToolExecution(String json, boolean isError) {
@@ -123,7 +116,16 @@ public class AcademicToolDispatcher {
                 }
 
                 case "get_upcoming_evaluations" -> {
-                    int week = resolveCurrentWeekForTool(args, studentCode);
+                    Integer week = resolveCurrentWeekForTool(args, studentCode);
+                    if (week == null) {
+                        // Honradez de datos: si el calendario académico registrado no permite
+                        // determinar la semana lectiva, se declara la ausencia. Nunca se inventa.
+                        log.warn("[ToolDispatcher] Semana lectiva no determinable para [{}] — se declara ausencia", studentCode);
+                        return ToolExecution.error(toolErrorPayload(
+                                "No se pudo determinar la semana lectiva actual a partir del calendario "
+                                        + "académico registrado. Sincroniza tu horario institucional y reintenta.",
+                                AcademicToolRegistry.getSupportedToolNames()));
+                    }
                     resultJson = objectMapper.writeValueAsString(toolService.getUpcomingEvaluations(studentCode, week));
                 }
 
@@ -173,10 +175,11 @@ public class AcademicToolDispatcher {
     /**
      * Resuelve {@code current_week}: ante un valor explícito interpretable lo acota al
      * rango lectivo 1-18; ante ausencia o valor no interpretable consulta dinámicamente
-     * la semana vigente del estudiante ({@link AcademicToolService#resolveCurrentWeek(String)});
-     * y solo si no hay snapshot conocido cae en {@link #DEFAULT_CURRENT_WEEK}.
+     * la semana vigente del estudiante ({@link AcademicToolService#resolveCurrentWeek(String)}).
+     * Devuelve {@code null} cuando el calendario registrado no permite determinar la
+     * semana: la capa de ejecución declara la ausencia en vez de inventar un valor.
      */
-    private int resolveCurrentWeekForTool(JsonNode arguments, String studentCode) {
+    private Integer resolveCurrentWeekForTool(JsonNode arguments, String studentCode) {
         JsonNode node = arguments.path("current_week");
         Integer explicitValue = null;
         if (!node.isMissingNode() && !node.isNull()) {
@@ -202,10 +205,7 @@ public class AcademicToolDispatcher {
         } catch (Exception ex) {
             log.warn("[ToolDispatcher] resolveCurrentWeek falló para {}: {}", studentCode, safeMessage(ex));
         }
-        if (dynamicWeek != null) {
-            return clampCurrentWeek(dynamicWeek);
-        }
-        return DEFAULT_CURRENT_WEEK;
+        return dynamicWeek == null ? null : clampCurrentWeek(dynamicWeek);
     }
 
     /** Acota una semana lectiva al rango institucional 1-18 (semántica histórica del MCP). */

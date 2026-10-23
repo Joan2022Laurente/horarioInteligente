@@ -317,16 +317,19 @@ class McpServerControllerResilienceTest {
     }
 
     @Test
-    @DisplayName("get_upcoming_evaluations degrada a la semana por defecto sin snapshot dinámico")
-    void nonNumericWeekDegradesToDefault() throws Exception {
+    @DisplayName("get_upcoming_evaluations sin snapshot declara la ausencia de semana (nunca se inventa)")
+    void unknownWeekWithoutSnapshotReportsAbsence() throws Exception {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
         when(toolService.resolveCurrentWeek(anyString())).thenReturn(null);
-        when(toolService.getUpcomingEvaluations(anyString(), anyInt())).thenReturn(List.of());
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
+                null, null, null, "U23307609", "Bearer U23307609",
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", "semana seis")));
 
-        verify(toolService).getUpcomingEvaluations("U23307609", 6);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = (Map<String, Object>) response.getBody().get("result");
+        assertEquals(Boolean.TRUE, result.get("isError"));
+        verify(toolService, never()).getUpcomingEvaluations(anyString(), anyInt());
     }
 
     @Test

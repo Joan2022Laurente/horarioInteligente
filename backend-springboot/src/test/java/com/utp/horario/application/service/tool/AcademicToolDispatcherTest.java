@@ -282,15 +282,17 @@ class AcademicToolDispatcherTest {
     }
 
     @Test
-    @DisplayName("sin snapshot dinámico cae en la semana por defecto 6 (último recurso)")
-    void fallsBackToStaticDefaultWithoutSnapshot() throws Exception {
+    @DisplayName("semana no determinable declara ausencia con error estructurado (nunca se inventa)")
+    void unknownWeekReturnsStructuredError() throws Exception {
         when(toolService.resolveCurrentWeek(STUDENT)).thenReturn(null);
-        when(toolService.getUpcomingEvaluations(STUDENT, AcademicToolDispatcher.DEFAULT_CURRENT_WEEK))
-                .thenReturn(List.of());
 
-        dispatcher.dispatch("get_upcoming_evaluations", args("{}"), STUDENT);
+        AcademicToolDispatcher.ToolExecution execution =
+                dispatcher.dispatch("get_upcoming_evaluations", args("{}"), STUDENT);
 
-        verify(toolService).getUpcomingEvaluations(STUDENT, 6);
+        assertTrue(execution.isError());
+        assertTrue(execution.json().contains("No se pudo determinar la semana lectiva"));
+        assertTrue(execution.json().contains("supportedTools"));
+        verify(toolService, never()).getUpcomingEvaluations(anyString(), anyInt());
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
