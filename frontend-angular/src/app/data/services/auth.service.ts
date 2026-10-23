@@ -28,6 +28,7 @@ export class AuthService {
   private readonly baseUrl = `${environment.academicApiUrl}/auth`;
 
   private currentStudentSignal = signal<StudentProfile | null>(null);
+  private pendingStudentProfile: StudentProfile | null = null;
   
   readonly currentStudent = this.currentStudentSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.currentStudentSignal() !== null);
@@ -67,8 +68,8 @@ export class AuthService {
             hasToken: !!res.data.token,
           });
 
-          this.currentStudentSignal.set(res.data);
-          localStorage.setItem('utp_auth_profile', JSON.stringify(res.data));
+          // Guardar credenciales en caché para que el interceptor inyecte Bearer en /auth/bootstrap
+          this.pendingStudentProfile = res.data;
           saveCachedStudentProfile({
             id: res.data.id || '',
             name: res.data.fullName || res.data.name || '',
@@ -87,6 +88,30 @@ export class AuthService {
         }
       })
     );
+  }
+
+  /**
+   * Fase 0.8: activa formalmente la sesión en la UI y sincroniza signals globales
+   * una vez que el pipeline de bootstrap ha concluido sus 4 pasos.
+   */
+  finalizeLogin(profile?: StudentProfile): void {
+    const prof = profile || this.pendingStudentProfile;
+    if (prof) {
+      this.currentStudentSignal.set(prof);
+      localStorage.setItem('utp_auth_profile', JSON.stringify(prof));
+      this.pendingStudentProfile = null;
+      console.log('[AuthService] 🏁 Sesión finalizada y activada en el sistema:', prof.studentCode || prof.username);
+    }
+  }
+
+  /**
+   * Cancela el intento de sesión si el usuario aborta durante el onboarding.
+   */
+  cancelPendingLogin(): void {
+    this.pendingStudentProfile = null;
+    clearAllLocalUserData();
+    localStorage.removeItem('utp_auth_profile');
+    localStorage.removeItem('utp_current_student_code');
   }
 
   /**

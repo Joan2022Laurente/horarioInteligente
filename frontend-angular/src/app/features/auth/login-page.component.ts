@@ -450,10 +450,10 @@ export class LoginPageComponent {
 
   private static buildSteps(): StepItem[] {
     return [
-      { id: 'auth', label: 'Identidad institucional', status: 'pending' },
+      { id: 'auth', label: 'Credenciales institucionales', status: 'pending' },
       { id: 'schedule', label: 'Horario académico', status: 'pending' },
-      { id: 'syllabi', label: 'Sílabos del ciclo', status: 'pending' },
-      { id: 'ready', label: 'Copiloto de IA', status: 'pending' },
+      { id: 'syllabi', label: 'Sílabos y evaluaciones', status: 'pending' },
+      { id: 'ready', label: 'Copiloto Académico IA', status: 'pending' },
     ];
   }
 
@@ -498,7 +498,7 @@ export class LoginPageComponent {
         this.isLoading = false;
         if (res.success && res.data) {
           const code = (res.data.studentCode || res.data.username || this.username).toUpperCase();
-          this.updateStep('auth', { status: 'completed', detail: `Identidad verificada: ${code}` });
+          this.updateStep('auth', { status: 'completed', detail: `Identidad verificada (${code})` });
           this.runBootstrapPhase();
         } else {
           this.failCurrentStep(res.error || 'Error al validar credenciales.');
@@ -526,14 +526,23 @@ export class LoginPageComponent {
         const summary = res.data;
         this.updateStep('schedule', {
           status: 'completed',
-          detail: `Horario oficial sincronizado (${summary.coursesCount} asignaturas)`
+          detail: `Horario detectado (${summary.coursesCount} asignaturas matriculadas)`
         });
+
+        // Transición fluida al paso 3: Sílabos y Evaluaciones
         this.currentStep = 'syllabi';
         this.updateStep('syllabi', {
-          status: 'completed',
-          detail: `Contenido curricular listo (${summary.syllabiSynced}/${summary.syllabiTotal} sílabos)`
+          status: 'active',
+          detail: 'Sincronizando sílabos y evaluaciones...'
         });
-        this.runReadyPhase();
+
+        setTimeout(() => {
+          this.updateStep('syllabi', {
+            status: 'completed',
+            detail: `Sílabos y evaluaciones sincronizados (${summary.syllabiSynced}/${summary.syllabiTotal})`
+          });
+          this.runReadyPhase();
+        }, 400);
       },
       error: (err) => {
         this.failCurrentStep(err.error?.error || 'Error de conexión durante la sincronización académica.');
@@ -541,21 +550,26 @@ export class LoginPageComponent {
     });
   }
 
-  /** Fase 4: refresca el estado local y cierra tras una micro-transición de 600 ms. */
+  /** Fase 4: activa Copiloto, refresca el estado local y cierra tras micro-transición suave. */
   private runReadyPhase(): void {
     this.currentStep = 'ready';
-    this.updateStep('ready', { status: 'completed', detail: 'Copiloto Académico IA inicializado' });
+    this.updateStep('ready', { status: 'active', detail: 'Inicializando Copiloto Académico IA...' });
 
     // Notificar al ScheduleService para refrescar sus signals locales en memoria
     // con el horario ya persistido por el Auto-Bootstrap del backend.
     this.scheduleService.getSchedule().subscribe();
 
-    // El backend YA completó el bootstrap: este timer solo da la micro-transición
-    // suave antes de ingresar al Dashboard (no es un cierre ciego).
-    this.closeTimer = setTimeout(() => {
-      this.resetStepperState();
-      this.isLoginModalOpen = false;
-    }, 600);
+    setTimeout(() => {
+      this.updateStep('ready', { status: 'completed', detail: 'Copiloto Académico IA listo para operar' });
+
+      // El backend YA completó el bootstrap: este timer da 800ms para que el usuario
+      // aprecie los 4 checks verdes antes de ingresar al Dashboard.
+      this.closeTimer = setTimeout(() => {
+        this.authService.finalizeLogin();
+        this.resetStepperState();
+        this.isLoginModalOpen = false;
+      }, 800);
+    }, 400);
   }
 
   /** Marca el paso actual como fallido y conserva los campos para reintentar. */
@@ -585,6 +599,7 @@ export class LoginPageComponent {
 
   /** Cancela el onboarding y cierra el modal (solo disponible ante error). */
   cancelFromStepper(): void {
+    this.authService.cancelPendingLogin();
     this.resetStepperState();
     this.isLoginModalOpen = false;
   }
