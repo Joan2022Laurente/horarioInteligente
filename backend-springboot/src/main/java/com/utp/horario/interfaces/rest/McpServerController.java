@@ -82,7 +82,7 @@ public class McpServerController {
     private final AcademicToolService toolService;
     private final ObjectMapper objectMapper;
     private final com.utp.horario.infraestructure.security.SecurityIdentityResolver identityResolver;
-    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
+    private final com.utp.horario.application.service.StudentSessionService studentSessionService;
 
     /**
      * Tiempo máximo de vida de una sesión SSE. Acota la ventana de exposición de los emisores y
@@ -168,14 +168,13 @@ public class McpServerController {
         }
         final String authenticatedStudentCode = resolvedStudentCode;
 
-        // El registro del token en la pasarela es best-effort: nunca debe abortar el handshake.
-        if (effectiveAuthHeader != null && !effectiveAuthHeader.isBlank()) {
-            try {
-                utpPortalGateway.registerStudentToken(authenticatedStudentCode, effectiveAuthHeader);
-            } catch (Exception ex) {
-                log.warn("[MCP-SSE] No se pudo registrar el token en la pasarela para [{}]: {}",
-                        authenticatedStudentCode, ex.getMessage());
-            }
+        // El registro del token en la administración de sesión es best-effort:
+        // nunca debe abortar el handshake.
+        try {
+            studentSessionService.registerSessionToken(authenticatedStudentCode, effectiveAuthHeader);
+        } catch (Exception ex) {
+            log.warn("[MCP-SSE] No se pudo registrar el token en la pasarela para [{}]: {}",
+                    authenticatedStudentCode, ex.getMessage());
         }
 
         String sessionId = UUID.randomUUID().toString();

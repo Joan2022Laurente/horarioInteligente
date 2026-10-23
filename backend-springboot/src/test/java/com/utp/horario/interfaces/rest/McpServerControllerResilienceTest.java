@@ -7,7 +7,7 @@ import com.utp.horario.application.dtos.AcademicToolDto.DayScheduleResult;
 import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.tool.AcademicToolService;
-import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
+import com.utp.horario.application.service.StudentSessionService;
 import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,14 +53,14 @@ class McpServerControllerResilienceTest {
     private SecurityIdentityResolver identityResolver;
 
     @Mock
-    private IUtpPortalGateway utpPortalGateway;
+    private StudentSessionService studentSessionService;
 
     private McpServerController controller;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        controller = new McpServerController(toolService, mapper, identityResolver, utpPortalGateway);
+        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

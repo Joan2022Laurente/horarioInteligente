@@ -3,8 +3,8 @@ package com.utp.horario.interfaces.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.application.dtos.AcademicToolDto.DayScheduleResult;
 import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
+import com.utp.horario.application.service.StudentSessionService;
 import com.utp.horario.application.service.tool.AcademicToolService;
-import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import com.utp.horario.infraestructure.security.SecurityIdentityResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +48,7 @@ class McpServerControllerHttpTest {
     private SecurityIdentityResolver identityResolver;
 
     @Mock
-    private IUtpPortalGateway utpPortalGateway;
+    private StudentSessionService studentSessionService;
 
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -56,7 +56,7 @@ class McpServerControllerHttpTest {
     @BeforeEach
     void setUp() {
         McpServerController controller =
-                new McpServerController(toolService, mapper, identityResolver, utpPortalGateway);
+                new McpServerController(toolService, mapper, identityResolver, studentSessionService);
         this.mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();

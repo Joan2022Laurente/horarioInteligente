@@ -25,7 +25,7 @@ public class AiChatController {
     private final AiAssistantService aiAssistantService;
     private final DailyQuotaService dailyQuotaService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-    private final com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
+    private final com.utp.horario.application.service.StudentSessionService studentSessionService;
     private final com.utp.horario.application.service.tool.AcademicToolService academicToolService;
     private final com.utp.horario.infraestructure.security.SecurityIdentityResolver securityIdentityResolver;
     private final com.utp.horario.application.service.AgentOrchestratorServiceImpl agentOrchestrator;
@@ -63,16 +63,10 @@ public class AiChatController {
 
         String effectiveStudentCode = academicToolService.resolveEffectiveStudentCode(codeCandidate);
 
-        // Registrar el token del alumno para que AcademicToolService pueda llamar a la API externa
-        if (effectiveStudentCode != null && !effectiveStudentCode.isBlank()) {
-            if (tokenCandidate != null && !tokenCandidate.isBlank()) {
-                utpPortalGateway.registerStudentToken(effectiveStudentCode, tokenCandidate);
-                log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
-            } else if (request.getToken() != null && !request.getToken().isBlank()) {
-                utpPortalGateway.registerStudentToken(effectiveStudentCode, request.getToken());
-                log.debug("[AiChatController] 🔑 Token registrado para alumno [{}]", effectiveStudentCode);
-            }
-        }
+        // Registrar el token del alumno para que la cadena de application pueda
+        // llamar a la API externa en las herramientas académicas
+        String aiSessionToken = (tokenCandidate != null && !tokenCandidate.isBlank()) ? tokenCandidate : request.getToken();
+        studentSessionService.registerSessionToken(effectiveStudentCode, aiSessionToken);
         return executeStreamEmitter(effectiveStudentCode, request.getMessage(), request.getModel(), request.getHistory());
     }
 
