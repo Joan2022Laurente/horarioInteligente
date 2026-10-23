@@ -1,5 +1,6 @@
 package com.utp.horario.application.service;
 
+import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
@@ -104,8 +105,8 @@ public class SyllabusServiceImpl implements SyllabusService {
             return List.of();
         }
 
-        Optional<ScheduleInterval> scheduleOpt = 
-                scheduleRepository.findByStudentIdAndPeriod(studentId, "2026 - Ciclo 2 Agosto");
+        Optional<ScheduleInterval> scheduleOpt =
+                scheduleRepository.findByStudentIdAndPeriod(studentId, AcademicToolService.DEFAULT_PERIOD_NAME);
 
         Set<String> enrolledCodes = new HashSet<>();
         scheduleOpt.ifPresent(schedule -> {
