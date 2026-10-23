@@ -158,6 +158,38 @@ public class AcademicToolService {
         }
     }
 
+    /**
+     * Pre-Flight Guard (Fase 0.7.1): indica si el estudiante tiene datos académicos reales
+     * en su snapshot persistido del periodo lectivo vigente (clases o cursos; un intervalo
+     * honestamente vacío cuenta como ausencia de datos). Es una consulta de lectura barata
+     * que permite al orquestador responder localmente con costo $0.00 en lugar de gastar
+     * llamadas de inferencia para que el LLM concluya que no hay nada que analizar.
+     *
+     * @param studentCode código institucional del estudiante
+     * @return {@code true} si existe horario persistido con clases o cursos declarados
+     */
+    public boolean hasPersistedSchedule(String studentCode) {
+        String code = resolveEffectiveStudentCode(studentCode);
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        try {
+            return scheduleRepository.findByStudentIdAndPeriod(code, DEFAULT_PERIOD_NAME)
+                    .map(this::intervalHasAcademicData)
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("[AcademicTool] No se pudo verificar el horario persistido de [{}]: {}", code, e.getMessage());
+            return false;
+        }
+    }
+
+    /** Criterio de datos reales: al menos una clase o un curso declarado en el intervalo. */
+    private boolean intervalHasAcademicData(ScheduleInterval schedule) {
+        boolean hasClasses = schedule.getClasses() != null && !schedule.getClasses().isEmpty();
+        boolean hasCourses = schedule.getCourses() != null && !schedule.getCourses().isEmpty();
+        return hasClasses || hasCourses;
+    }
+
     private String resolveStudentToken(String studentCode) {
         studentCode = resolveEffectiveStudentCode(studentCode);
         // 1. Caché en memoria del gateway (registrado en cada request SSE)

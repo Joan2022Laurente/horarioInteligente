@@ -62,6 +62,14 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
     private static final int MAX_ITERATIONS = 5;
 
+    /**
+     * Guía local del Pre-Flight Guard (Fase 0.7.1): respuesta instantánea y a costo $0.00
+     * cuando el estudiante aún no registra horario ni asignaturas en este ciclo.
+     */
+    private static final String PREFLIGHT_BLOCK_MESSAGE = "¡Hola! No detectamos un horario ni asignaturas "
+            + "registradas para tu cuenta en este ciclo. Por favor, ve a la sección de Horarios y sincroniza "
+            + "tu información institucional para que pueda ayudarte con tus clases, aulas, temas y evaluaciones.";
+
     // ─── Inner class: acumula los deltas de tool_call durante el streaming ───────
 
     private static class ToolCallAccumulator {
@@ -143,6 +151,19 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             ScheduleInterval schedule, Map<String, Syllabus> syllabi,
             String requestedModel, List<Map<String, String>> history) {
 
+        // ─── Pre-Flight Guard (Fase 0.7.1) ────────────────────────────────────────
+        // Sin datos académicos reales NO se gasta cuota ni se llama a OpenRouter:
+        // el estudiante recibe la guía de sincronización localmente (0 ms, $0.00).
+        if (!hasRealAcademicData(studentCode, schedule)) {
+            log.info("[AgentOrchestrator] 🛡️ Pre-Flight Guard: sin datos académicos para [{}] — respuesta local", studentCode);
+            return AiChatMessage.builder()
+                    .id(UUID.randomUUID().toString()).role("assistant")
+                    .content(PREFLIGHT_BLOCK_MESSAGE)
+                    .timestamp(LocalDateTime.now())
+                    .metadata(Map.of("preflightBlocked", true))
+                    .build();
+        }
+
         DailyQuotaStatus quota = quotaService.consumeQuota(studentCode);
         if (!quota.getAllowed()) {
             return AiChatMessage.builder()
@@ -218,6 +239,17 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             Consumer<Map<String, Object>> onToolEvent,
             Runnable onDone,
             Consumer<Throwable> onError) {
+
+        // ─── Pre-Flight Guard (Fase 0.7.1) ────────────────────────────────────────
+        // Sin datos académicos (el canal de streaming no recibe schedule: se consulta
+        // el snapshot persistido) NO se gasta cuota ni inferencia; la guía de
+        // sincronización se emite localmente por el canal de tokens.
+        if (!hasRealAcademicData(studentCode, null)) {
+            log.info("[AgentOrchestrator] 🛡️ Pre-Flight Guard (stream): sin datos académicos para [{}] — respuesta local", studentCode);
+            onToken.accept(PREFLIGHT_BLOCK_MESSAGE);
+            onDone.run();
+            return;
+        }
 
         DailyQuotaStatus quota = quotaService.consumeQuota(studentCode);
         if (!quota.getAllowed()) {
@@ -583,6 +615,29 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             payload.put("session_id", studentCode + "_" + LocalDate.now(java.time.ZoneId.of("America/Lima")));
         }
         return payload;
+    }
+
+    /**
+     * Pre-Flight Guard (Fase 0.7.1): determina si el estudiante muestra datos académicos
+     * reales antes de gastar cuota o inferencia. Fuente 1: el schedule que el cliente
+     * adjuntó a la petición (clases o cursos declarados). Fuente 2: el snapshot persistido
+     * del periodo vigente ({@link AcademicToolService#hasPersistedSchedule(String)}).
+     * La identidad `anonymous_user` o ausente se trata como sin datos (nunca se consulta
+     * nada, ni se fabrican respuestas académicas a nombre de nadie).
+     */
+    private boolean hasRealAcademicData(String studentCode, ScheduleInterval clientSchedule) {
+        if (clientSchedule != null) {
+            boolean hasClasses = clientSchedule.getClasses() != null && !clientSchedule.getClasses().isEmpty();
+            boolean hasCourses = clientSchedule.getCourses() != null && !clientSchedule.getCourses().isEmpty();
+            if (hasClasses || hasCourses) {
+                return true;
+            }
+        }
+        String code = toolService.resolveEffectiveStudentCode(studentCode);
+        if (code == null || "anonymous_user".equalsIgnoreCase(code)) {
+            return false;
+        }
+        return toolService.hasPersistedSchedule(code);
     }
 
     private String getSystemPrompt() {
