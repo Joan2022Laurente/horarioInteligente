@@ -1,5 +1,7 @@
 package com.utp.horario.interfaces.rest;
 
+import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
+import com.utp.horario.domain.model.exceptions.StudentNotFoundException;
 import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
@@ -7,16 +9,48 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Mapeo centralizado de excepciones hacia respuestas HTTP semánticas con el sobre
+ * estándar {@link ApiResponse}. Toda la traducción de errores de una sola capa
+ * (interfaces) vive aquí; las capas de abajo solo lanzan excepciones de dominio o
+ * de Java estándar, nunca construyen envelopes HTTP.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
-     * Regla de honestidad de datos: la ausencia de un sílabo oficial se declara como
+     * Regla de honestidad de datos: la ausencia de sílabo oficial se declara como
      * indisponibilidad reintentable (503) y nunca se enmascara con datos inventados.
      */
     @ExceptionHandler(SyllabusUnavailableException.class)
     public ResponseEntity<ApiResponse<Void>> handleSyllabusUnavailable(SyllabusUnavailableException e) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.fail(e.getMessage()));
+    }
+
+    /**
+     * Regla de honestidad de datos: la ausencia del horario oficial se declara como
+     * indisponibilidad reintentable (503) y nunca se enmascara con datos inventados.
+     */
+    @ExceptionHandler(ScheduleUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleScheduleUnavailable(ScheduleUnavailableException e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.fail(e.getMessage()));
+    }
+
+    /**
+     * Datos de entrada inválidos (parámetros requeridos, identidad mal formada): 400
+     * explícito, distinto de errores internos.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.fail(e.getMessage()));
+    }
+
+    /**
+     * Entidad de dominio no encontrada en una consulta de identidad real: 404.
+     */
+    @ExceptionHandler(StudentNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStudentNotFound(StudentNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.fail(e.getMessage()));
     }
 
     @ExceptionHandler(SecurityException.class)

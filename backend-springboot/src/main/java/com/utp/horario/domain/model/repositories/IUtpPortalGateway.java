@@ -11,6 +11,13 @@ import java.util.List;
 
 public interface IUtpPortalGateway {
     StudentProfile login(String username, String password);
+
+    /**
+     * Contrato de honestidad: devuelve el horario oficial del periodo, o {@code null}
+     * si la pasarela no pudo entregarlo (fallo de red, timeout, error upstream).
+     * El consumidor debe degradar al Read Model local o declarar la ausencia;
+     * nunca persistir ni presentar objetos fabricados.
+     */
     ScheduleInterval fetchSchedule(String token, String period);
     List<TaskSyncItem> fetchTasks(String token, String sectionId);
     Syllabus fetchSyllabus(String token, String courseCode, String sectionId, String pdfUrl);

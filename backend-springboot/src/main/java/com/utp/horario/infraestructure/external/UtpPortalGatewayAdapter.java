@@ -25,7 +25,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,16 +148,11 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
             log.error("[UtpPortalGatewayAdapter] Error al obtener horario de API Externa: {}", e.getMessage());
         }
 
-        return ScheduleInterval.builder()
-                .id("interval-empty")
-                .periodName(period != null ? period : "2026 - Ciclo 2 Agosto")
-                .weekNumber(1)
-                .totalWeeks(18)
-                .startDate(LocalDate.parse("2026-08-17"))
-                .endDate(LocalDate.parse("2026-12-20"))
-                .classes(new ArrayList<>())
-                .courses(new ArrayList<>())
-                .build();
+        // Regla de honestidad de datos: si la pasarela no entrega horario se responde
+        // null (MISS reintentable) y NUNCA un intervalo fabricado con fechas
+        // hardcodeadas. La capa de aplicación degrada al Read Model local o declara
+        // la ausencia (ScheduleUnavailableException en sincronización explícita).
+        return null;
     }
 
     @Override
