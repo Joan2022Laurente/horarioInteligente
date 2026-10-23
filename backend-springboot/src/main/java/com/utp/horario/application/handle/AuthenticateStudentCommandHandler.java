@@ -2,9 +2,7 @@ package com.utp.horario.application.handle;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.utp.horario.application.assembler.StudentAssembler;
 import com.utp.horario.application.command.AuthenticateStudentCommand;
-import com.utp.horario.application.dtos.StudentDto;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.domain.model.exceptions.StudentNotFoundException;
 import com.utp.horario.domain.model.repositories.IStudentRepository;
@@ -24,7 +22,6 @@ public class AuthenticateStudentCommandHandler {
 
     private final IStudentRepository repository;
     private final IUtpPortalGateway utpPortalGateway;
-    private final StudentAssembler assembler;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public StudentProfile handle(AuthenticateStudentCommand command) {
@@ -35,10 +32,6 @@ public class AuthenticateStudentCommandHandler {
             saved.setToken(token);
         }
         return saved != null ? saved : profile;
-    }
-
-    public StudentDto handleAsDto(AuthenticateStudentCommand command) {
-        return assembler.toDto(handle(command));
     }
 
     public StudentProfile authenticateWithToken(String token) {

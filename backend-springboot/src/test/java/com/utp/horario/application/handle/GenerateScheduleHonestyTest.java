@@ -1,6 +1,5 @@
 package com.utp.horario.application.handle;
 
-import com.utp.horario.application.assembler.ScheduleAssembler;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
@@ -47,7 +46,7 @@ class GenerateScheduleHonestyTest {
     void setUp() {
         repository = Mockito.mock(IScheduleRepository.class);
         gateway = Mockito.mock(IUtpPortalGateway.class);
-        handler = new GenerateScheduleCommandHandler(repository, gateway, Mockito.mock(ScheduleAssembler.class));
+        handler = new GenerateScheduleCommandHandler(repository, gateway);
     }
 
     private ScheduleInterval realInterval() {

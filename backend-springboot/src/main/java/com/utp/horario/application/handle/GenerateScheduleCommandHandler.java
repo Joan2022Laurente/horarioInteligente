@@ -1,8 +1,6 @@
 package com.utp.horario.application.handle;
 
-import com.utp.horario.application.assembler.ScheduleAssembler;
 import com.utp.horario.application.command.GenerateScheduleCommand;
-import com.utp.horario.application.dtos.ScheduleDto;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
@@ -20,15 +18,9 @@ public class GenerateScheduleCommandHandler {
 
     private final IScheduleRepository repository;
     private final IUtpPortalGateway utpPortalGateway;
-    private final ScheduleAssembler assembler;
 
     public ScheduleInterval handle(GenerateScheduleCommand command) {
         return syncScheduleFromUtp(command.getStudentId(), command.getToken(), command.getPeriod());
-    }
-
-    public ScheduleDto handleAsDto(GenerateScheduleCommand command) {
-        ScheduleInterval interval = handle(command);
-        return assembler.toDto(interval);
     }
 
     /**
