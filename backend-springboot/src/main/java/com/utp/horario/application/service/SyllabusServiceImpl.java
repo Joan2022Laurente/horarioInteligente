@@ -31,6 +31,11 @@ public class SyllabusServiceImpl implements SyllabusService {
     }
 
     @Override
+    public String getSyllabusMarkdown(String courseCode, String token) {
+        return utpPortalGateway.fetchSyllabusMarkdown(token, courseCode);
+    }
+
+    @Override
     public Syllabus getSyllabus(String courseCode, String sectionId, String pdfUrl, String token) {
         if (courseCode == null || courseCode.isBlank()) {
             throw new IllegalArgumentException(
