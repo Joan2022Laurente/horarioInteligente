@@ -2,6 +2,7 @@ package com.utp.horario.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.domain.model.value_objects.AiChatMessage;
@@ -33,6 +34,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
     private final AcademicToolService toolService;
     private final DailyQuotaService quotaService;
     private final ObjectMapper objectMapper;
+    private final AcademicToolDispatcher toolDispatcher;
 
     @Value("${app.openrouter.api-url:https://openrouter.ai/api/v1/chat/completions}")
     private String openRouterApiUrl;
@@ -190,7 +192,9 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                     String functionName = call.at("/function/name").asText();
                     JsonNode argsNode = objectMapper.readTree(call.at("/function/arguments").asText());
                     toolsExecuted.add(functionName);
-                    String toolResultJson = executeTool(functionName, argsNode, studentCode);
+                    // El despachador nunca lanza: un fallo de herramienta degenera en JSON con
+                    // isError=true que el LLM explica al estudiante (el ciclo ReAct no se aborta).
+                    String toolResultJson = toolDispatcher.dispatch(functionName, argsNode, studentCode).json();
                     Map<String, Object> detail = new LinkedHashMap<>();
                     detail.put("name", functionName); detail.put("arguments", argsNode); detail.put("result", toolResultJson);
                     toolDetails.add(detail);
@@ -255,7 +259,8 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                         }
 
                         try {
-                            String toolResult = executeTool(acc.name, argsNode, studentCode);
+                            // El despachador nunca lanza; el catch se mantiene como red de seguridad.
+                            String toolResult = toolDispatcher.dispatch(acc.name, argsNode, studentCode).json();
                             long duration = System.currentTimeMillis() - startMs;
                             if (onToolEvent != null) {
                                 onToolEvent.accept(buildFriendlyActivityEvent(acc.id, "done", acc.name, argsNode, duration));
@@ -578,60 +583,6 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             payload.put("session_id", studentCode + "_" + LocalDate.now(java.time.ZoneId.of("America/Lima")));
         }
         return payload;
-    }
-
-    private String executeTool(String toolName, JsonNode args, String studentCode) throws Exception {
-        return switch (toolName) {
-            case "get_enrolled_courses" -> objectMapper.writeValueAsString(toolService.getEnrolledCourses(studentCode));
-            case "get_today_schedule" -> {
-                String date = args.has("date")
-                        ? args.path("date").asText()
-                        : LocalDate.now(java.time.ZoneId.of("America/Lima")).toString();
-                yield objectMapper.writeValueAsString(toolService.getTodaySchedule(studentCode, date));
-            }
-            case "get_syllabus_details" -> {
-                String query = AcademicToolRegistry.resolveCourseQuery(args);
-                Integer week = readWeekArgument(args);
-                yield objectMapper.writeValueAsString(week == null
-                        ? toolService.getSyllabusDetails(studentCode, query)
-                        : toolService.getSyllabusDetails(studentCode, query, week));
-            }
-            case "get_upcoming_evaluations" -> {
-                int week = args.has("current_week") ? args.path("current_week").asInt() : 6;
-                yield objectMapper.writeValueAsString(toolService.getUpcomingEvaluations(studentCode, week));
-            }
-            default -> "{\"error\": \"Herramienta desconocida\"}";
-        };
-    }
-
-    /**
-     * Lee el argumento opcional {@code week} emitido por el modelo. Acepta numero o cadena
-     * numerica y acota el rango al periodo lectivo institucional (1 a 18). Ante un valor no
-     * interpretable devuelve {@code null}, con lo que la herramienta conserva su
-     * comportamiento completo.
-     */
-    private Integer readWeekArgument(JsonNode args) {
-        if (args == null) return null;
-        JsonNode node = args.path("week");
-        if (node.isMissingNode() || node.isNull()) return null;
-        int value;
-        if (node.isNumber()) {
-            value = node.asInt();
-        } else {
-            String raw = node.asText("").trim();
-            if (raw.isEmpty()) return null;
-            try {
-                value = Integer.parseInt(raw);
-            } catch (NumberFormatException e) {
-                log.warn("[AgentOrchestrator] 'week' no numérico ('{}'), se consulta el sílabo completo", raw);
-                return null;
-            }
-        }
-        if (value < 1 || value > 18) {
-            log.warn("[AgentOrchestrator] 'week' fuera de rango ({}), se consulta el sílabo completo", value);
-            return null;
-        }
-        return value;
     }
 
     private String getSystemPrompt() {

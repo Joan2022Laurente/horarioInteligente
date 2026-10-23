@@ -3,7 +3,7 @@ package com.utp.horario.interfaces.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.NullNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,16 +57,6 @@ public class McpServerController {
     /** Versión semántica del servidor MCP. */
     static final String SERVER_VERSION = "1.0.0";
 
-    /** Zona horaria institucional de la universidad (America/Lima). */
-    static final ZoneId LIMA_ZONE = ZoneId.of("America/Lima");
-
-    /** Semana lectiva por defecto ante argumentos ausentes o no parseables. */
-    static final int DEFAULT_CURRENT_WEEK = 6;
-
-    /** Rango lectivo válido de semanas (1 a 18). */
-    static final int MIN_CURRENT_WEEK = 1;
-    static final int MAX_CURRENT_WEEK = 18;
-
     /** Códigos de error JSON-RPC 2.0 utilizados por el servidor. */
     private static final int PARSE_ERROR = -32700;
     private static final int INVALID_REQUEST = -32600;
@@ -83,6 +69,7 @@ public class McpServerController {
     private final ObjectMapper objectMapper;
     private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
     private final com.utp.horario.application.service.StudentSessionService studentSessionService;
+    private final AcademicToolDispatcher toolDispatcher;
 
     /**
      * Tiempo máximo de vida de una sesión SSE. Acota la ventana de exposición de los emisores y
@@ -420,254 +407,18 @@ public class McpServerController {
     }
 
     /**
-     * Ejecución determinista de una herramienta académica con validación defensiva de argumentos.
+     * Delegación al despachador unificado de herramientas (Fase 0.6): el mismo motor de
+     * validación y ejecución sirve tanto al chat web como al servidor MCP.
      */
     private ToolOutcome executeTool(String toolName, JsonNode arguments, String studentCode) {
-        if (toolName == null || toolName.isBlank()) {
-            return ToolOutcome.error(toolErrorPayload(
-                    "Nombre de herramienta ausente en la solicitud tools/call.",
-                    AcademicToolRegistry.getSupportedToolNames()));
-        }
-
-        if (!AcademicToolRegistry.isSupportedTool(toolName)) {
-            log.warn("[MCP-JSONRPC] Herramienta solicitada no soportada: {}", toolName);
-            return ToolOutcome.error(toolErrorPayload(
-                    "Herramienta no implementada en el servidor MCP: " + toolName,
-                    AcademicToolRegistry.getSupportedToolNames()));
-        }
-
-        if (studentCode == null || studentCode.isBlank()) {
-            return ToolOutcome.error(toolErrorPayload(
-                    "No se identificó una sesión de estudiante activa. Inicia sesión en el portal UTP "
-                            + "o invoca el servidor MCP con un código de estudiante con registro persistido.",
-                    AcademicToolRegistry.getSupportedToolNames()));
-        }
-
-        try {
-            String resultJson;
-            switch (toolName) {
-                case "get_enrolled_courses" ->
-                        resultJson = objectMapper.writeValueAsString(toolService.getEnrolledCourses(studentCode));
-
-                case "get_today_schedule" -> {
-                    String date = readDateArgument(arguments);
-                    if (date == null) {
-                        return ToolOutcome.error(toolErrorPayload(
-                                "Argumento 'date' inválido. Se espera una fecha en formato ISO YYYY-MM-DD.",
-                                AcademicToolRegistry.getSupportedToolNames()));
-                    }
-                    resultJson = objectMapper.writeValueAsString(toolService.getTodaySchedule(studentCode, date));
-                }
-
-                case "get_syllabus_details" -> {
-                    String query = AcademicToolRegistry.resolveCourseQuery(arguments).trim();
-                    if (query.isEmpty()) {
-                        return ToolOutcome.error(toolErrorPayload(
-                                "Argumento obligatorio 'course_query' ausente. Envía el código oficial "
-                                        + "de la asignatura (ej. 100000SI58) o su nombre natural.",
-                                AcademicToolRegistry.getSupportedToolNames()));
-                    }
-                    Integer week = readOptionalWeekArgument(arguments);
-                    resultJson = objectMapper.writeValueAsString(week == null
-                            ? toolService.getSyllabusDetails(studentCode, query)
-                            : toolService.getSyllabusDetails(studentCode, query, week));
-                }
-
-                case "get_upcoming_evaluations" -> {
-                    int week = readCurrentWeekArgument(arguments);
-                    resultJson = objectMapper.writeValueAsString(toolService.getUpcomingEvaluations(studentCode, week));
-                }
-
-                default -> {
-                    log.warn("[MCP-JSONRPC] Herramienta solicitada no soportada: {}", toolName);
-                    return ToolOutcome.error(toolErrorPayload(
-                            "Herramienta no implementada en el servidor MCP: " + toolName,
-                            AcademicToolRegistry.getSupportedToolNames()));
-                }
-            }
-
-            boolean empty = isEmptyPayload(resultJson);
-            String finalJson = empty ? enrichEmptyPayload(resultJson, studentCode) : resultJson;
-            return new ToolOutcome(finalJson, empty);
-        } catch (Exception ex) {
-            log.error("[MCP-JSONRPC] Error ejecutando tool {}: {}", toolName, ex.getMessage(), ex);
-            return ToolOutcome.error(toolErrorPayload(
-                    "Error ejecutando " + toolName + ": " + safeMessage(ex),
-                    AcademicToolRegistry.getSupportedToolNames()));
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Lectura defensiva de argumentos
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Lee el argumento opcional {@code date}. Devuelve {@code null} si el formato es inválido.
-     */
-    private String readDateArgument(JsonNode arguments) {
-        JsonNode node = arguments.path("date");
-        if (node.isMissingNode() || node.isNull()) {
-            return LocalDate.now(LIMA_ZONE).toString();
-        }
-        String raw = node.asText("").trim();
-        if (raw.isEmpty()) {
-            return LocalDate.now(LIMA_ZONE).toString();
-        }
-        try {
-            return LocalDate.parse(raw, DateTimeFormatter.ISO_LOCAL_DATE).toString();
-        } catch (DateTimeParseException e) {
-            log.warn("[MCP-JSONRPC] Formato de fecha inválido recibido: '{}'", raw);
-            return null;
-        }
-    }
-
-    /**
-     * Lee el argumento obligatorio {@code current_week} tolerando números y cadenas numéricas.
-     * Ante un valor no interpretable se degrada a la semana lectiva por defecto.
-     */
-    private int readCurrentWeekArgument(JsonNode arguments) {
-        JsonNode node = arguments.path("current_week");
-        if (node.isMissingNode() || node.isNull()) {
-            return DEFAULT_CURRENT_WEEK;
-        }
-        int value;
-        if (node.isNumber()) {
-            value = node.asInt();
-        } else {
-            String raw = node.asText("").trim();
-            if (raw.isEmpty()) {
-                return DEFAULT_CURRENT_WEEK;
-            }
-            try {
-                value = Integer.parseInt(raw);
-            } catch (NumberFormatException e) {
-                log.warn("[MCP-JSONRPC] 'current_week' no numérico ('{}'), se usa la semana por defecto", raw);
-                return DEFAULT_CURRENT_WEEK;
-            }
-        }
-        if (value < MIN_CURRENT_WEEK) {
-            return MIN_CURRENT_WEEK;
-        }
-        if (value > MAX_CURRENT_WEEK) {
-            return MAX_CURRENT_WEEK;
-        }
-        return value;
-    }
-
-    /**
-     * Lee el argumento opcional {@code week} (semana lectiva). Acepta numero o cadena
-     * numerica; ante un valor no interpretable devuelve {@code null} para preservar el
-     * comportamiento historico de la herramienta (sílabo completo).
-     */
-    private Integer readOptionalWeekArgument(JsonNode arguments) {
-        JsonNode node = arguments.path("week");
-        if (node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        int value;
-        if (node.isNumber()) {
-            value = node.asInt();
-        } else {
-            String raw = node.asText("").trim();
-            if (raw.isEmpty()) {
-                return null;
-            }
-            try {
-                value = Integer.parseInt(raw);
-            } catch (NumberFormatException e) {
-                log.warn("[MCP-JSONRPC] 'week' no numérico ('{}'), se ignora el filtro por semana", raw);
-                return null;
-            }
-        }
-        if (value < 1 || value > 18) {
-            log.warn("[MCP-JSONRPC] 'week' fuera del rango lectivo ({}), se ignora el filtro por semana", value);
-            return null;
-        }
-        return value;
+        AcademicToolDispatcher.ToolExecution execution =
+                toolDispatcher.dispatch(toolName, arguments, studentCode);
+        return new ToolOutcome(execution.json(), execution.isError());
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Utilidades de soporte
     // ─────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Detecta payloads sin información útil para no presentarlos como respuesta satisfactoria.
-     */
-    private boolean isEmptyPayload(String json) {
-        try {
-            JsonNode node = objectMapper.readTree(json);
-            if (node == null || node.isMissingNode() || node.isNull()) {
-                return true;
-            }
-            if (node.isArray()) {
-                return node.isEmpty();
-            }
-            if (node.isObject()) {
-                if (node.path("totalClasses").asInt(-1) == 0) {
-                    return true;
-                }
-                if (node.path("totalCourses").asInt(-1) == 0) {
-                    return true;
-                }
-                if (node.has("evaluations") && node.path("evaluations").isArray()
-                        && node.path("evaluations").isEmpty()) {
-                    return true;
-                }
-                if (node.has("weeklySchedule") && node.path("weeklySchedule").isArray()
-                        && node.path("weeklySchedule").isEmpty()) {
-                    return true;
-                }
-                JsonNode message = node.path("message");
-                if (message.isTextual() && !message.asText("").isBlank()) {
-                    return true;
-                }
-            }
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * Añade un mensaje explicativo a un payload vacío para que el cliente MCP reciba un motivo
-     * legible del resultado y no una estructura vacía sin contexto.
-     */
-    private String enrichEmptyPayload(String json, String studentCode) {
-        try {
-            JsonNode parsed = objectMapper.readTree(json);
-            if (parsed != null && parsed.isObject()) {
-                ObjectNode node = (ObjectNode) parsed;
-                JsonNode message = node.path("message");
-                if (!(message.isTextual() && !message.asText("").isBlank())) {
-                    node.put("message", "No se encontraron datos persistidos para el estudiante "
-                            + (studentCode == null ? "desconocido" : studentCode)
-                            + ". Sincroniza el horario o el sílabo desde la aplicación antes de consultar.");
-                }
-                return objectMapper.writeValueAsString(node);
-            }
-            Map<String, Object> envelope = new LinkedHashMap<>();
-            envelope.put("result", parsed);
-            envelope.put("message", "No se encontraron datos persistidos para el estudiante "
-                    + (studentCode == null ? "desconocido" : studentCode) + ".");
-            return objectMapper.writeValueAsString(envelope);
-        } catch (Exception e) {
-            return json;
-        }
-    }
-
-    /**
-     * Construye el payload de error de una herramienta, incluyendo las herramientas realmente soportadas.
-     */
-    private String toolErrorPayload(String message, List<String> supportedTools) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("error", message);
-        payload.put("supportedTools", supportedTools);
-        try {
-            return objectMapper.writeValueAsString(payload);
-        } catch (Exception e) {
-            return "{\"error\":\"" + message + "\"}";
-        }
-    }
 
     private Map<String, Object> jsonRpcError(int code, String message) {
         Map<String, Object> error = new LinkedHashMap<>();

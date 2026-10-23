@@ -2,11 +2,12 @@ package com.utp.horario.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,10 +36,18 @@ class AgentOrchestratorToolRescueTest {
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
 
-    @InjectMocks
     private AgentOrchestratorServiceImpl orchestrator;
 
     private final ObjectMapper mapper = new ObjectMapper();
+
+    @BeforeEach
+    void setUp() {
+        // Despachador real sobre los mismos mocks: el orquestador consume la unificación
+        // del motor de herramientas de la Fase 0.6 (paridad chat web / MCP).
+        orchestrator = new AgentOrchestratorServiceImpl(
+                toolService, quotaService, objectMapper,
+                new AcademicToolDispatcher(toolService, objectMapper));
+    }
 
     @Test
     @DisplayName("Recupera la invocacion de un bloque de codigo json con parametros")

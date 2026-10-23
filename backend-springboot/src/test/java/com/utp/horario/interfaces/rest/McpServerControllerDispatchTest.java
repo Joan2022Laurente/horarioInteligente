@@ -6,6 +6,7 @@ import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
 import com.utp.horario.application.dtos.AcademicToolDto.SyllabusDetailsResult;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.StudentSessionService;
+import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +58,8 @@ class McpServerControllerDispatchTest {
 
     @BeforeEach
     void setUp() {
-        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService);
+        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService,
+                new AcademicToolDispatcher(toolService, mapper));
     }
 
     @Test

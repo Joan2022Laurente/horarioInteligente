@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.utp.horario.application.dtos.AcademicToolDto.DayScheduleResult;
 import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
+import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.application.service.StudentSessionService;
 import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
@@ -60,7 +61,8 @@ class McpServerControllerResilienceTest {
 
     @BeforeEach
     void setUp() {
-        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService);
+        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService,
+                new AcademicToolDispatcher(toolService, mapper));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -302,9 +304,23 @@ class McpServerControllerResilienceTest {
     }
 
     @Test
-    @DisplayName("get_upcoming_evaluations degrada a la semana por defecto ante valores no parseables")
+    @DisplayName("get_upcoming_evaluations ante valor no interpretable resuelve la semana dinámicamente")
+    void nonNumericWeekResolvesDynamically() throws Exception {
+        when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
+        when(toolService.resolveCurrentWeek(anyString())).thenReturn(4);
+        when(toolService.getUpcomingEvaluations(anyString(), anyInt())).thenReturn(List.of());
+
+        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+                rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", "semana seis")));
+
+        verify(toolService).getUpcomingEvaluations("U23307609", 4);
+    }
+
+    @Test
+    @DisplayName("get_upcoming_evaluations degrada a la semana por defecto sin snapshot dinámico")
     void nonNumericWeekDegradesToDefault() throws Exception {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
+        when(toolService.resolveCurrentWeek(anyString())).thenReturn(null);
         when(toolService.getUpcomingEvaluations(anyString(), anyInt())).thenReturn(List.of());
 
         controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
