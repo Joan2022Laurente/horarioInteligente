@@ -23,6 +23,8 @@ DROP TABLE IF EXISTS schedule_courses;
 DROP TABLE IF EXISTS student_schedules;
 DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS marketplace_items;
+DROP TABLE IF EXISTS student_networking_profiles;
+DROP TABLE IF EXISTS study_beacons;
 DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS syllabus_evaluations;
 DROP TABLE IF EXISTS syllabus_weekly_sessions;
@@ -234,6 +236,52 @@ CREATE TABLE marketplace_items (
     INDEX idx_marketplace_seller (seller_student_code)
 ) ENGINE=InnoDB;
 
+-- ----------------------------------------------------------------------------
+-- 6. TABLA: study_beacons (Mesas de Estudio activas en campus - Networking)
+-- ----------------------------------------------------------------------------
+CREATE TABLE study_beacons (
+    id VARCHAR(64) PRIMARY KEY,
+    host_id VARCHAR(32) NOT NULL,
+    host_name VARCHAR(128),
+    host_avatar VARCHAR(16),
+    campus VARCHAR(64) NOT NULL,
+    location_name VARCHAR(128) NOT NULL,
+    course_name VARCHAR(128) NOT NULL,
+    section_code VARCHAR(32),
+    objective TEXT,
+    max_collaborators INT,
+    current_collaborators INT,
+    status VARCHAR(32),
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_beacon_campus_status (campus, status),
+    INDEX idx_beacon_course (course_name),
+    INDEX idx_beacon_host (host_id)
+) ENGINE=InnoDB;
+
+-- ----------------------------------------------------------------------------
+-- 7. TABLA: student_networking_profiles (Perfiles de Matching Dual - Networking)
+-- ----------------------------------------------------------------------------
+CREATE TABLE student_networking_profiles (
+    student_code VARCHAR(32) PRIMARY KEY,
+    full_name VARCHAR(128) NOT NULL,
+    avatar_letter VARCHAR(8),
+    career VARCHAR(128),
+    campus VARCHAR(64),
+    cycle INT,
+    program VARCHAR(64),
+    enrolled_courses_json TEXT,
+    free_windows_json TEXT,
+    skills_json TEXT,
+    match_intent VARCHAR(64),
+    contact_channels_json TEXT,
+    ghost_mode BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at DATETIME,
+    INDEX idx_netprofile_campus (campus),
+    INDEX idx_netprofile_intent (match_intent),
+    INDEX idx_netprofile_ghost (ghost_mode)
+) ENGINE=InnoDB;
+
 -- ============================================================================
 -- INSERCIÓN DE DATOS DE EJEMPLO REALES PARA DEMOSTRACIÓN DOCENTE
 -- Sílabos con contenido relacional normalizado (evaluaciones y cronograma
@@ -388,6 +436,14 @@ VALUES
 
 -- 4. Consultar marketplace académico:
 -- SELECT title, tutor_name, category, price FROM marketplace_items;
+
+-- 4b. Consultar mesas de estudio activas en campus (Networking Fase 1.0):
+-- SELECT host_id, location_name, course_name, current_collaborators, status
+-- FROM study_beacons WHERE status = 'ACTIVE' ORDER BY created_at DESC;
+
+-- 4c. Perfiles candidatos al Matching Dual (sin ghost mode):
+-- SELECT student_code, full_name, career, campus, match_intent
+-- FROM student_networking_profiles WHERE ghost_mode = FALSE;
 
 -- 5. Consultar horario sincronizado:
 -- SELECT student_code, period_name, last_synced_date FROM student_schedules;
