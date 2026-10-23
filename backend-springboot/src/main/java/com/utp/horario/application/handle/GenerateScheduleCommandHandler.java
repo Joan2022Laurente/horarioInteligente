@@ -38,6 +38,18 @@ public class GenerateScheduleCommandHandler {
             throw new IllegalArgumentException("Identidad de estudiante inválida para consultar horario");
         }
 
+        // Lectura local-first (vista HOY): el snapshot sincronizado hoy ya está en
+        // MySQL (el bootstrap del login lo garantiza) y se sirve en milisegundos.
+        // Sin snapshot vigente se mantiene la regla previa: pasarela con sesión y,
+        // ante fallo, degradación al Read Model local o intervalo honesto de ausencia.
+        Optional<ScheduleInterval> fresh =
+                repository.findByStudentIdAndPeriodSyncedSince(studentId, period, LocalDate.now());
+        if (fresh.isPresent()) {
+            log.info("[GenerateSchedule] ⚡ Local-first Read Model: horario vigente en BD para [{}/{}] (sincronizado hoy), sin llamada a la pasarela",
+                    studentId, period);
+            return fresh.get();
+        }
+
         if (token != null && !token.isBlank()) {
             ScheduleInterval interval = utpPortalGateway.fetchSchedule(token, period);
             if (interval != null) {

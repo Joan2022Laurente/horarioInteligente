@@ -662,6 +662,11 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   activeSection: TodayTabSection = 'todayClasses';
   taskFilter: 'all' | 'homework' | 'forum' | 'graded' = 'all';
 
+  /** Telemetría [TODAY-VIEW] (F12): arrancada del skeleton de horario y de la petición de tareas. */
+  private scheduleSkeletonStart = 0;
+  private tasksRequestStart = 0;
+  private tasksArrived = true;
+
   readonly todayStore = inject(TodayStore);
 
   get now(): Date {
@@ -730,10 +735,12 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   }
 
   refreshData(): void {
+    const refreshStartedAt = performance.now();
     const cachedCalendar = getCachedCalendarData();
     const interval = cachedCalendar?.data?.current_interval || this.scheduleService.currentInterval();
     if (interval && interval.events && interval.events.length > 0) {
       this.isLoading = false;
+      console.log(`[TODAY-VIEW] ⚡ Horario pintado de inmediato desde LocalStorage (${interval.events.length} evento/s, ${(performance.now() - refreshStartedAt).toFixed(1)}ms, skeleton innecesario)`);
       const regularEvents = interval.events.filter(e => !e.isLongLasting && e.modality !== 'VT');
       this.currentInterval = {
         ...interval,
@@ -744,7 +751,9 @@ export class TodayViewComponent implements OnInit, OnDestroy {
       this.periodName = this.currentInterval.period_name || '2026 - Ciclo 2 Agosto';
       this.calculateCurrentBanner();
     } else {
+      this.scheduleSkeletonStart = refreshStartedAt;
       this.isLoading = true;
+      console.log('[TODAY-VIEW] ⏳ Skeletons activados. Esperando: [Horario, Tareas]');
       this.loadScheduleFromBackend();
     }
 
@@ -771,9 +780,13 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   }
 
   private loadTasksFromBackend(enrolledKeys: Set<string>): void {
+    this.tasksArrived = false;
     const targetWeek = this.currentWeek || 1;
+    this.tasksRequestStart = performance.now();
     this.taskService.getActivitiesByWeek(targetWeek).subscribe({
       next: (res) => {
+        this.tasksArrived = true;
+        console.log(`[TODAY-VIEW] 📥 Tareas/actividades recibidas en ${Math.round(performance.now() - this.tasksRequestStart)}ms (${res.data?.length ?? 0} ítems, semana ${targetWeek})`);
         if (res.success && res.data && res.data.length > 0) {
           const dynamicTasks: TaskWithSyllabusContext[] = res.data.map((u: any) => {
             const isDelivered = u.isDelivered || u.studentStatus === 'DELIVERED' || u.studentStatus === 'SUBMITTED' || u.homeworkStatus === 'DELIVERED';
@@ -831,9 +844,11 @@ export class TodayViewComponent implements OnInit, OnDestroy {
             return true;
           });
         } else {
-          // Fallback a /tasks
+          // Fallback a /tasks (Read Model local con fallback del portal)
+          console.warn(`[TODAY-VIEW] ⚠️ Actividades vacías para la semana ${targetWeek}: degradando a GET /tasks...`);
           this.taskService.getTasks().subscribe({
             next: (taskRes) => {
+              console.log(`[TODAY-VIEW] 📥 Tareas (fallback /tasks) recibidas en ${Math.round(performance.now() - this.tasksRequestStart)}ms (${taskRes.data?.length ?? 0} ítems)`);
               if (taskRes.success && taskRes.data && taskRes.data.length > 0) {
                 this.synchronizedTasks = taskRes.data.map((t: any) => {
                   const week = t.week || this.currentWeek || 1;
@@ -878,6 +893,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
         }
       },
       error: () => {
+        console.warn(`[TODAY-VIEW] ⏭️ Error consultando actividades (semana ${targetWeek}) tras ${Math.round(performance.now() - this.tasksRequestStart)}ms: se sirve el fallback local`);
         const fallback = getSynchronizedStudentTasks();
         this.synchronizedTasks = enrolledKeys.size > 0
           ? fallback.filter(t => {
@@ -894,7 +910,11 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   loadScheduleFromBackend(): void {
     this.scheduleService.getSchedule().subscribe({
       next: (res) => {
+        const skeletonHeldMs = Math.round(performance.now() - this.scheduleSkeletonStart);
         this.isLoading = false;
+        const stillWaiting = this.tasksArrived ? [] : ['Tareas'];
+        console.log(`[TODAY-VIEW] 📥 Horario recibido en ${skeletonHeldMs}ms${stillWaiting.length ? `. Aún esperando: [${stillWaiting.join(', ')}]` : ''}`);
+        console.log(`[TODAY-VIEW] ✨ Skeletons apagados tras ${skeletonHeldMs}ms totales.`);
         if (res.success && res.data) {
           this.currentWeek = res.data.weekNumber || 1;
           this.totalWeeks = res.data.totalWeeks || 18;
@@ -956,7 +976,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isLoading = false;
-        console.warn('Error al cargar horario desde backend:', err);
+        console.warn(`[TODAY-VIEW] ⏭️ Horario falló tras ${Math.round(performance.now() - this.scheduleSkeletonStart)}ms: skeletons apagados sin datos`, err);
       }
     });
   }

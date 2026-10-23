@@ -74,6 +74,34 @@ class GenerateScheduleHonestyTest {
     }
 
     @Test
+    @DisplayName("Lectura local-first: snapshot sincronizado hoy se sirve de BD sin tocar la pasarela (vista HOY)")
+    void localReadServesFreshSnapshotWithoutGateway() {
+        when(repository.findByStudentIdAndPeriodSyncedSince(eq(STUDENT), eq(PERIOD), any(LocalDate.class)))
+                .thenReturn(Optional.of(realInterval()));
+
+        ScheduleInterval result = handler.getStudentSchedule(STUDENT, PERIOD, TOKEN);
+
+        assertEquals("interval-123", result.getId());
+        verify(gateway, never()).fetchSchedule(anyString(), anyString());
+        verify(repository, never()).save(anyString(), any(ScheduleInterval.class));
+    }
+
+    @Test
+    @DisplayName("Lectura con snapshot vencido: mantiene la regla previa (pasarela con sesión, degradación honesta)")
+    void staleSnapshotKeepsExistingFreshnessFlow() {
+        when(repository.findByStudentIdAndPeriodSyncedSince(eq(STUDENT), eq(PERIOD), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+        ScheduleInterval official = realInterval();
+        when(gateway.fetchSchedule(TOKEN, PERIOD)).thenReturn(official);
+        when(repository.save(eq(STUDENT), eq(official))).thenReturn(official);
+
+        ScheduleInterval result = handler.getStudentSchedule(STUDENT, PERIOD, TOKEN);
+
+        assertEquals("interval-123", result.getId());
+        verify(repository).save(STUDENT, official);
+    }
+
+    @Test
     @DisplayName("Gateway y copia local vacíos: intervalo honesto sin fechas inventadas ni fabricado 'interval-empty'")
     void totalMissReturnsHonestEmptyIntervalWithoutFabrication() {
         when(gateway.fetchSchedule(TOKEN, PERIOD)).thenReturn(null);

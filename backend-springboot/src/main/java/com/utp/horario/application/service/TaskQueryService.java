@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -71,9 +72,45 @@ public class TaskQueryService {
     public List<TaskSyncItem> getActivities(String studentId, String resolvedToken,
                                             String intervalMode, Integer week,
                                             String status, Boolean onlyGraded, String type) {
-        return utpPortalGateway.fetchActivities(
+        // Lectura local-first (vista HOY): si MySQL ya tiene actividades del
+        // estudiante sincronizadas hoy y cubre la semana pedida, se filtran en
+        // memoria (Read Model) y se sirven en milisegundos, sin scraping externo.
+        // Los filtros finos (status/onlyGraded/type) conservan la semántica de la
+        // pasarela, así que solo el patrón week+otros-nulos accede al Read Model.
+        if (studentId != null && !studentId.isBlank() && status == null && onlyGraded == null && type == null && intervalMode == null) {
+            List<TaskSyncItem> syncedToday = taskRepository.findByStudentIdSyncedSince(studentId, LocalDate.now());
+            List<TaskSyncItem> weekRows = week == null
+                    ? syncedToday
+                    : syncedToday.stream().filter(task -> week.equals(task.getWeek())).toList();
+            if (!weekRows.isEmpty()) {
+                log.info("[TaskQueryService] ⚡ Local-first Read Model: {} actividad(es) servidas de MySQL para [{}] semana {}",
+                        weekRows.size(), studentId, week);
+                return weekRows;
+            }
+            // Ventana de semana no cubierta por la vigencia del día: refetch remoto.
+        }
+
+        List<TaskSyncItem> remote = utpPortalGateway.fetchActivities(
                 effectiveSessionToken(studentId, resolvedToken),
                 intervalMode, week, status, onlyGraded, type);
+        persistActivities(studentId, remote);
+        return remote;
+    }
+
+    /**
+     * Persistencia de la respuesta oficial de la pasarela: estampa la vigencia del
+     * día vía mapper y aísla las filas por estudiante.Las lecturas posteriores del
+     * día se resuelven desde MySQL en milisegundos.
+     */
+    private void persistActivities(String studentId, List<TaskSyncItem> remote) {
+        if (remote == null || remote.isEmpty()
+                || studentId == null || studentId.isBlank() || "current-student".equalsIgnoreCase(studentId)) {
+            return;
+        }
+        remote.forEach(task -> task.setStudentId(studentId));
+        taskRepository.saveAll(remote);
+        log.info("[TaskQueryService] 💾 {} actividad(es) oficiales persistidas para [{}] — lecturas posteriores serán local-first",
+                remote.size(), studentId);
     }
 
     /** Detalle oficial de una actividad/entrega; {@code null} = MISS (el cliente responde 404). */

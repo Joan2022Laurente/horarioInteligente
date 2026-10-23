@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -36,6 +37,9 @@ public class TaskSyncEntity {
     private Double maxScore;
     private Double score;
     private Boolean isDelivered;
+
+    /** Marca de vigencia del Read Model: día de la última sincronización oficial de la fila. */
+    private LocalDate lastSyncedDate;
 
     // Campos de correlación con el sílabo oficial
     private String evaluationType;

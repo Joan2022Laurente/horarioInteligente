@@ -2,6 +2,7 @@ package com.utp.horario.application.service;
 
 import com.utp.horario.application.dtos.SessionBootstrapDto.SessionBootstrapResult;
 import com.utp.horario.application.handle.GenerateScheduleCommandHandler;
+import com.utp.horario.application.handle.SyncTaskCommandHandler;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
@@ -54,11 +55,14 @@ class SessionBootstrapServiceTest {
     @Mock
     private SyllabusService syllabusService;
 
+    @Mock
+    private SyncTaskCommandHandler taskPrimerHandler;
+
     private SessionBootstrapService bootstrapService;
 
     @BeforeEach
     void setUp() {
-        bootstrapService = new SessionBootstrapService(scheduleSyncHandler, syllabusService);
+        bootstrapService = new SessionBootstrapService(scheduleSyncHandler, syllabusService, taskPrimerHandler);
     }
 
     // El Paso 1 del bootstrap fija la ventana de vigencia en el día en curso.

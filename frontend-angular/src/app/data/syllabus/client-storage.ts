@@ -99,9 +99,20 @@ export function getAllCachedSyllabi(): Record<string, ParsedSyllabus> {
 
 /**
  * Busca un sílabo específico en localStorage por nombre o código de curso.
+ * Telemetría [CACHE-CHECK] por consulta de sílabo (HIT/MISS con ms).
  */
 export function getCachedSyllabus(courseNameOrCode: string): ParsedSyllabus | null {
   if (typeof window === 'undefined' || !courseNameOrCode) return null;
+
+  const startedAt = performance.now();
+  const settle = (hit: boolean, source: string): void => {
+    const elapsedMs = Math.round((performance.now() - startedAt) * 10) / 10;
+    if (hit) {
+      console.log(`[CACHE-CHECK] utp_syllabus_live_* ← '${courseNameOrCode}': HIT (${source}, ${elapsedMs}ms)`);
+    } else {
+      console.log(`[CACHE-CHECK] utp_syllabus_live_* ← '${courseNameOrCode}': MISS (${elapsedMs}ms) -> se consultará al backend/pasarela`);
+    }
+  };
 
   const normalized = normalizeKey(courseNameOrCode);
 
@@ -109,6 +120,7 @@ export function getCachedSyllabus(courseNameOrCode: string): ParsedSyllabus | nu
   const directKey = `${SYLLABUS_STORAGE_PREFIX}${courseNameOrCode.toUpperCase().trim()}`;
   const direct = getStorageItem<ParsedSyllabus>(directKey);
   if (direct?.formula && direct.weeklySchedule && direct.weeklySchedule.length > 0) {
+    settle(true, 'clave directa');
     return direct;
   }
 
@@ -123,10 +135,12 @@ export function getCachedSyllabus(courseNameOrCode: string): ParsedSyllabus | nu
       (sCode && (sCode === normalized || normalized.includes(sCode))) ||
       (sName && (sName === normalized || sName.includes(normalized) || normalized.includes(sName)))
     ) {
+      settle(true, 'mapa normalizado');
       return syllabus;
     }
   }
 
+  settle(false, '-');
   return null;
 }
 
@@ -136,6 +150,7 @@ export function getCachedSyllabus(courseNameOrCode: string): ParsedSyllabus | nu
 export function saveCachedSyllabus(courseIdOrName: string, syllabus: ParsedSyllabus): void {
   if (typeof window === 'undefined' || !courseIdOrName) return;
 
+  const startedAt = performance.now();
   const key = `${SYLLABUS_STORAGE_PREFIX}${courseIdOrName.toUpperCase().trim()}`;
   setStorageItem(key, syllabus);
 
@@ -145,16 +160,27 @@ export function saveCachedSyllabus(courseIdOrName: string, syllabus: ParsedSylla
       setStorageItem(codeKey, syllabus);
     }
   }
+
+  console.log(`[CACHE-CHECK] ${SYLLABUS_STORAGE_PREFIX}* ← sílabo de '${courseIdOrName}': REFRESH (persistido en ${Math.round(performance.now() - startedAt)}ms)`);
 }
 
 /**
  * Obtiene el calendario y eventos guardados en localStorage para el estudiante actual.
+ * Telemetría [CACHE-CHECK]: reporta HIT/MISS con latencia de lectura exacta (F12).
  */
 export function getCachedCalendarData(studentCode?: string): UTPCalendarResponse | null {
+  const startedAt = performance.now();
   const key = getTenantCalendarKey(studentCode);
   let data = getStorageItem<UTPCalendarResponse>(key);
   if (!data && key !== CALENDAR_STORAGE_KEY) {
     data = getStorageItem<UTPCalendarResponse>(CALENDAR_STORAGE_KEY);
+  }
+  const elapsedMs = Math.round((performance.now() - startedAt) * 10) / 10;
+  const events = data?.data?.current_interval?.events?.length ?? 0;
+  if (data) {
+    console.log(`[CACHE-CHECK] ${key}: HIT (cargado desde LocalStorage en ${elapsedMs}ms, ${events} evento/s)`);
+  } else {
+    console.log(`[CACHE-CHECK] ${key}: MISS (LocalStorage vacío para la clave del tenant) -> consultando al backend (MySQL local-first)...`);
   }
   return data;
 }
@@ -163,8 +189,10 @@ export function getCachedCalendarData(studentCode?: string): UTPCalendarResponse
  * Guarda el calendario y eventos en localStorage particionado por estudiante.
  */
 export function saveCachedCalendarData(data: UTPCalendarResponse, studentCode?: string): void {
+  const startedAt = performance.now();
   const key = getTenantCalendarKey(studentCode);
   setStorageItem(key, data);
+  console.log(`[CACHE-CHECK] ${key}: REFRESH (calendario persistido en LocalStorage en ${Math.round(performance.now() - startedAt)}ms)`);
 }
 
 /**

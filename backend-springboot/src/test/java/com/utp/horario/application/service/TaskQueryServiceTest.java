@@ -9,12 +9,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -115,7 +117,7 @@ class TaskQueryServiceTest {
     }
 
     @Test
-    @DisplayName("Actividades oficiales: delega con el token efectivo y respeta los filtros")
+    @DisplayName("Actividades oficiales: delega con el token efectivo y respeta los filtros; persiste para lecturas siguientes")
     void getActivitiesDelegatesWithEffectiveTokenAndFilters() {
         List<TaskSyncItem> official = List.of(TaskSyncItem.builder().id("a-1").title("Práctica semanal").build());
         when(gateway.getStudentToken(STUDENT)).thenReturn("session-token");
@@ -126,5 +128,65 @@ class TaskQueryServiceTest {
 
         assertSame(official, result);
         verify(gateway).fetchActivities("session-token", "week", 3, "PENDING", true, "PC");
+        verify(taskRepository).saveAll(official);
+        assertEquals(STUDENT, official.get(0).getStudentId(), "Aislamiento multi-tenant estampado antes de persistir");
+    }
+
+    @Test
+    @DisplayName("Local-first: actividades sincronizadas hoy con semana cubierta se sirven de MySQL sin pasarela")
+    void localFirstServesSyncedTodayActivities() {
+        List<TaskSyncItem> synced = List.of(TaskSyncItem.builder().id("a-1").week(11).build());
+        when(taskRepository.findByStudentIdSyncedSince(eq(STUDENT), any(LocalDate.class))).thenReturn(synced);
+
+        List<TaskSyncItem> result = queryService.getActivities(STUDENT, "Bearer tok", null, 11, null, null, null);
+
+        assertEquals(synced, result, "Mismas actividades servidas del Read Model (listado derivado del filtro de semana)");
+        verifyNoInteractions(gateway);
+        verify(taskRepository, never()).saveAll(Mockito.anyList());
+    }
+
+    @Test
+    @DisplayName("Local-first: semana no cubierta por la vigencia del día dispara refetch remoto y persiste")
+    void uncoveredWeekTriggersRemoteFetchAndPersist() {
+        when(taskRepository.findByStudentIdSyncedSince(eq(STUDENT), any(LocalDate.class)))
+                .thenReturn(List.of(TaskSyncItem.builder().id("a-1").week(10).build()));
+        List<TaskSyncItem> remote = List.of(TaskSyncItem.builder().id("a-2").week(11).build());
+        when(gateway.fetchActivities(eq("Bearer tok"), Mockito.isNull(), eq(11), Mockito.isNull(), Mockito.isNull(), Mockito.isNull()))
+                .thenReturn(remote);
+
+        List<TaskSyncItem> result = queryService.getActivities(STUDENT, "Bearer tok", null, 11, null, null, null);
+
+        assertSame(remote, result);
+        verify(taskRepository).saveAll(remote);
+        assertEquals(STUDENT, remote.get(0).getStudentId(), "Aislamiento multi-tenant estampado antes de persistir");
+    }
+
+    @Test
+    @DisplayName("Local-first: filtros finos (status/onlyGraded/type) conservan la semántica de la pasarela")
+    void fineFiltersKeepPortalSemantics() {
+        when(taskRepository.findByStudentIdSyncedSince(eq(STUDENT), any(LocalDate.class)))
+                .thenReturn(List.of(TaskSyncItem.builder().id("a-1").week(11).build()));
+        when(gateway.getStudentToken(STUDENT)).thenReturn("session-token");
+        when(gateway.fetchActivities(eq("session-token"), Mockito.isNull(), eq(11), eq("PENDING"), eq(true), eq("PC")))
+                .thenReturn(List.of());
+
+        List<TaskSyncItem> result = queryService.getActivities(STUDENT, null, null, 11, "PENDING", true, "PC");
+
+        assertTrue(result.isEmpty());
+        verify(taskRepository, never()).saveAll(Mockito.anyList());
+    }
+
+    @Test
+    @DisplayName("Local-first: filas sin marca de vigencia quedan vencidas; se refresca remoto de una vez")
+    void staleRowsNeverServeAsFresh() {
+        when(taskRepository.findByStudentIdSyncedSince(eq(STUDENT), any(LocalDate.class))).thenReturn(List.of());
+        List<TaskSyncItem> remote = List.of(TaskSyncItem.builder().id("a-3").week(12).build());
+        when(gateway.fetchActivities(eq("Bearer tok"), Mockito.isNull(), eq(12), Mockito.isNull(), Mockito.isNull(), Mockito.isNull()))
+                .thenReturn(remote);
+
+        List<TaskSyncItem> result = queryService.getActivities(STUDENT, "Bearer tok", null, 12, null, null, null);
+
+        assertSame(remote, result);
+        verify(taskRepository).saveAll(remote);
     }
 }

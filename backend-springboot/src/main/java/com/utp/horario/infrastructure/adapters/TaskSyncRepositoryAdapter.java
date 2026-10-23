@@ -5,11 +5,14 @@ import com.utp.horario.domain.model.repositories.ITaskSyncRepository;
 import com.utp.horario.infrastructure.entities.TaskSyncEntity;
 import com.utp.horario.infrastructure.mappers.TaskSyncMapper;
 import com.utp.horario.infrastructure.repositories.JPATaskRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Repository
 public class TaskSyncRepositoryAdapter implements ITaskSyncRepository {
 
@@ -37,6 +40,26 @@ public class TaskSyncRepositoryAdapter implements ITaskSyncRepository {
     @Override
     public List<TaskSyncItem> findByStudentId(String studentId) {
         return jpa.findByStudentId(studentId).stream().map(mapper::toDomain).toList();
+    }
+
+    /**
+     * Caché persistida vigente: contrasta la marca {@code lastSyncedDate} de cada
+     * fila. Las filas legacy (sin marca) quedan excluidas — se consideran vencidas
+     * hasta la próxima sincronización oficial, coherente con la política del
+     * horario ({@code findByStudentIdAndPeriodSyncedSince}).
+     */
+    @Override
+    public List<TaskSyncItem> findByStudentIdSyncedSince(String studentId, LocalDate minSyncDate) {
+        try {
+            return jpa.findByStudentId(studentId).stream()
+                    .filter(entity -> entity.getLastSyncedDate() != null
+                            && !entity.getLastSyncedDate().isBefore(minSyncDate))
+                    .map(mapper::toDomain)
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Error validando vigencia de actividades en base de datos para [{}]: {}", studentId, e.getMessage());
+            return List.of();
+        }
     }
 
     @Override

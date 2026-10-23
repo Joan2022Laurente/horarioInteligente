@@ -2,8 +2,10 @@ package com.utp.horario.application.service;
 
 import com.utp.horario.application.dtos.SessionBootstrapDto.SessionBootstrapResult;
 import com.utp.horario.application.handle.GenerateScheduleCommandHandler;
+import com.utp.horario.application.handle.SyncTaskCommandHandler;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.domain.model.aggregate.Syllabus;
+import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.value_objects.ClassSession;
 import com.utp.horario.domain.model.value_objects.Course;
@@ -45,6 +47,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  *       pasarela y solo los faltantes se descargan, en paralelo, con un presupuesto de
  *       espera acotado — los pendientes concluyen en segundo plano y quedan
  *       reintentables, para que el login no quede bloqueado por un PDF remoto.</li>
+ *   <li><b>Pre-sync de actividades (segundo plano):</b> se lanzan, sin bloquear el
+ *       login, las descargas de tareas/actividades oficiales, que persisten con
+ *       vigencia del día; la vista HOY sirve del Read Model de MySQL sin
+ *       scraping remoto.</li>
  * </ol>
  *
  * <p><b>Regla de honestidad:</b> el resultado reporta los faltantes pero nunca inventa
@@ -72,6 +78,7 @@ public class SessionBootstrapService {
 
     private final GenerateScheduleCommandHandler scheduleSyncHandler;
     private final SyllabusService syllabusService;
+    private final SyncTaskCommandHandler taskPrimerHandler;
 
     public SessionBootstrapResult bootstrapStudentData(String studentCode, String token, String period) {
         if (studentCode == null || studentCode.isBlank() || "current-student".equalsIgnoreCase(studentCode)) {
@@ -100,9 +107,42 @@ public class SessionBootstrapService {
         // Paso 3: sílabos locales-first, faltantes en paralelo
         int synced = resolveSyllabiConcurrently(targets, token);
 
+        // Paso 4 (no bloqueante): pre-sincronización de actividades/tareas oficiales en
+        // segundo plano — la vista HOY servirá del Read Model de MySQL sin scraping.
+        launchActivitiesPrimer(studentCode, token);
+
         log.info("[SessionBootstrap] ✔ Bootstrap integral de [{}] completado: sílabos {}/{}",
                 studentCode, synced, targets.size());
         return new SessionBootstrapResult(true, targets.size(), synced, targets.size());
+    }
+
+    /**
+     * Pre-sync disparo-olvidado de las actividades oficiales: se descargan y
+     * persisten en segundo plano con vigencia del día (last_synced_date). No
+     * bloquea ni amplía el presupuesto del login; si aún no concluye cuando la
+     * vista HOY consulta actividades, esa primera consulta responde desde la
+     * pasarela y persiste, y todas las siguientes del día son Read Model local.
+     */
+    private void launchActivitiesPrimer(String studentCode, String token) {
+        if (token == null || token.isBlank()) {
+            log.info("[SessionBootstrap] ℹ️ Sin token de sesión: no se lanza el pre-sync de actividades de [{}]", studentCode);
+            return;
+        }
+        ExecutorService pool = Executors.newFixedThreadPool(1);
+        try {
+            pool.submit(() -> {
+                try {
+                    List<TaskSyncItem> persisted = taskPrimerHandler.syncTasksFromUtp(studentCode, token, null);
+                    log.info("[SessionBootstrap] 📦 Pre-sync de actividades en segundo plano: {} fila(s) vigentes para [{}]",
+                            persisted != null ? persisted.size() : 0, studentCode);
+                } catch (Exception ex) {
+                    log.warn("[SessionBootstrap] ⚠️ Pre-sync de actividades pendiente para [{}]: {}",
+                            studentCode, safeMessage(ex));
+                }
+            });
+        } finally {
+            pool.shutdown();
+        }
     }
 
     /**

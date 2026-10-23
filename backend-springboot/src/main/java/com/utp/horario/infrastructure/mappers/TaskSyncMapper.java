@@ -5,6 +5,8 @@ import com.utp.horario.domain.model.value_objects.SyllabusCorrelation;
 import com.utp.horario.infrastructure.entities.TaskSyncEntity;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+
 @Component
 public class TaskSyncMapper {
 
@@ -33,6 +35,9 @@ public class TaskSyncMapper {
                 .maxScore(d.getMaxScore())
                 .score(d.getScore())
                 .isDelivered(d.getIsDelivered())
+                // Vigencia del Read Model (Fase Local-First): cada escritura relacional
+                // estampa el día de la sincronización oficial consultada.
+                .lastSyncedDate(LocalDate.now())
                 .evaluationType(sc != null ? sc.getEvaluationType() : null)
                 .weightPercent(sc != null ? sc.getWeightPercent() : null)
                 .evaluationDescription(sc != null ? sc.getEvaluationDescription() : null)
