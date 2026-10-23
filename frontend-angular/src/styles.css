@@ -598,6 +598,10 @@ video {
   pointer-events: auto;
 }
 
+.visible{
+  visibility: visible;
+}
+
 .static{
   position: static;
 }
@@ -685,6 +689,10 @@ video {
 
 .right-3{
   right: 0.75rem;
+}
+
+.right-4{
+  right: 1rem;
 }
 
 .right-5{
@@ -1556,6 +1564,14 @@ video {
   border-radius: var(--r-3xl);
 }
 
+.rounded-\[var\(--r-lg\)\]{
+  border-radius: var(--r-lg);
+}
+
+.rounded-\[var\(--r-md\)\]{
+  border-radius: var(--r-md);
+}
+
 .rounded-full{
   border-radius: var(--r-pill);
 }
@@ -1652,6 +1668,10 @@ video {
   border-color: rgb(255 87 34 / var(--tw-border-opacity, 1));
 }
 
+.border-\[rgba\(187\2c 244\2c 81\2c 0\.3\)\]{
+  border-color: rgba(187,244,81,0.3);
+}
+
 .border-\[var\(--accent-lime\)\]{
   border-color: var(--accent-lime);
 }
@@ -1662,6 +1682,10 @@ video {
 
 .border-\[var\(--badge-orange-border\)\]{
   border-color: var(--badge-orange-border);
+}
+
+.border-\[var\(--border-medium\)\]{
+  border-color: var(--border-medium);
 }
 
 .border-\[var\(--border-subtle\)\]{
@@ -1694,6 +1718,11 @@ video {
 
 .border-emerald-500\/30{
   border-color: rgb(16 185 129 / 0.3);
+}
+
+.border-neutral-600{
+  --tw-border-opacity: 1;
+  border-color: rgb(82 82 82 / var(--tw-border-opacity, 1));
 }
 
 .border-neutral-700\/40{
@@ -2025,6 +2054,11 @@ video {
 
 .bg-emerald-950\/90{
   background-color: rgb(2 44 34 / 0.9);
+}
+
+.bg-neutral-800{
+  --tw-bg-opacity: 1;
+  background-color: rgb(38 38 38 / var(--tw-bg-opacity, 1));
 }
 
 .bg-neutral-800\/50{
@@ -2789,6 +2823,14 @@ video {
   opacity: 1;
 }
 
+.opacity-30{
+  opacity: 0.3;
+}
+
+.opacity-40{
+  opacity: 0.4;
+}
+
 .opacity-60{
   opacity: 0.6;
 }
@@ -2810,6 +2852,12 @@ video {
 .shadow-2xl{
   --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-\[0_0_15px_rgba\(187\2c 244\2c 81\2c 0\.08\)\]{
+  --tw-shadow: 0 0 15px rgba(187,244,81,0.08);
+  --tw-shadow-colored: 0 0 15px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
@@ -3862,6 +3910,10 @@ h1, h2, h3, h4, h5, h6 {
 
   .sm\:rounded-2xl{
     border-radius: var(--r-2xl);
+  }
+
+  .sm\:p-3{
+    padding: 0.75rem;
   }
 
   .sm\:p-3\.5{

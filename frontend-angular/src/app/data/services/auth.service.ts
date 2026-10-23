@@ -6,6 +6,21 @@ import { getCachedStudentProfile, saveCachedStudentProfile, clearAllLocalUserDat
 import { AppDiagnosticLogger } from '@data/diagnostic-logger';
 import { environment } from '@env/environment';
 
+/**
+ * Fase 0.8: resumen del pipeline Auto-Bootstrap Integral de sesión, entregado
+ * por el backend en `POST /auth/bootstrap` (envuelto en ApiResponse). Los datos
+ * que muestra el Stepper de Onboarding provienen EXACTAMENTE de este contrato:
+ * - `scheduleSynced`: horario lectivo sincronizado desde la pasarela institucional.
+ * - `coursesCount`: asignaturas matriculadas detectadas.
+ * - `syllabiSynced / syllabiTotal`: sílabos listos sobre el total esperado.
+ */
+export interface SessionBootstrapResult {
+  scheduleSynced: boolean;
+  coursesCount: number;
+  syllabiSynced: number;
+  syllabiTotal: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -72,6 +87,16 @@ export class AuthService {
         }
       })
     );
+  }
+
+  /**
+   * Fase 0.8: ejecuta el Auto-Bootstrap Integral de la sesión recién autenticada
+   * (sincroniza horario oficial y sílabos dentro del backend) y devuelve el resumen
+   * del pipeline para alimentar el Stepper de Onboarding en tiempo real del login.
+   */
+  bootstrapSession(): Observable<ApiResponse<SessionBootstrapResult>> {
+    console.log('[AuthService] 🚀 Iniciando Auto-Bootstrap de sesión...');
+    return this.http.post<ApiResponse<SessionBootstrapResult>>(`${this.baseUrl}/bootstrap`, {});
   }
 
   /**

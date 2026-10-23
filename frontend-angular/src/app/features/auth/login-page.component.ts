@@ -4,6 +4,22 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 
+/**
+ * Fase 0.8: máquina de estados del Stepper de Login en Tiempo Real.
+ * `idle`: sin onboarding en curso; `auth`: login institucional; `schedule` y
+ * `syllabi`: Auto-Bootstrap Integral (POST /auth/bootstrap); `ready`: Copiloto
+ * listo; `error`: cualquier fase interrumpida (el paso visible pasa a `failed`).
+ */
+export type LoginStep = 'idle' | 'auth' | 'schedule' | 'syllabi' | 'ready' | 'error';
+
+/** Item visible del Stepper de Onboarding dentro del modal de login. */
+export interface StepItem {
+  id: LoginStep;
+  label: string;
+  detail?: string;
+  status: 'pending' | 'active' | 'completed' | 'failed';
+}
+
 @Component({
   selector: 'app-login-page',
   standalone: true,
@@ -169,148 +185,224 @@ import { ScheduleService } from '@data/services/schedule.service';
       @if (isLoginModalOpen) {
         <div 
           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in duration-150 font-sans"
-          (click)="isLoginModalOpen = false"
+          (click)="attemptCloseModal()"
         >
           <div 
             class="relative w-full max-w-md rounded-2xl bg-[#09090c]/95 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-4 sm:space-y-5"
             (click)="$event.stopPropagation()"
           >
-            <!-- Header del Modal -->
-            <div class="flex items-start justify-between">
-              <div class="space-y-1 text-left">
-                <h2 class="text-base sm:text-lg font-bold tracking-tight text-white">
-                  Acceso Institucional
-                </h2>
-                <p class="text-xs text-neutral-400">
-                  Ingresa con tus credenciales oficiales de UTP Class
-                </p>
-              </div>
+            <!-- Botón de cierre: cancela ante error; bloqueado durante el proceso activo -->
+            <button
+              type="button"
+              (click)="attemptCloseModal()"
+              [attr.aria-label]="isClosable ? 'Cerrar modal' : 'Sincronización en curso'"
+              [class.pointer-events-none]="!isClosable"
+              [class.opacity-30]="!isClosable"
+              class="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer bg-transparent border-none"
+            >
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+              </svg>
+            </button>
 
-              <button
-                type="button"
-                (click)="isLoginModalOpen = false"
-                class="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer bg-transparent border-none"
-                aria-label="Cerrar modal"
-              >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 6 6 18"/>
-                  <path d="m6 6 12 12"/>
-                </svg>
-              </button>
-            </div>
+            @if (isBootstrapping) {
+              <!-- Fase 0.8: Stepper de Onboarding en Tiempo Real -->
+              <div class="space-y-4 py-2">
+                <!-- Cabecera de estado -->
+                <div class="text-left space-y-1">
+                  <h3 class="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
+                    <span class="inline-block h-2 w-2 rounded-full bg-[var(--accent-lime)] animate-ping"></span>
+                    Preparando tu espacio universitario
+                  </h3>
+                  <p class="text-[11px] sm:text-xs text-neutral-400">
+                    Sincronizando tus datos oficiales de UTP Class en tiempo real
+                  </p>
+                </div>
 
-            <!-- Mensajes de Estado -->
-            @if (errorMessage) {
-              <div class="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-3 flex items-start gap-2.5 text-xs text-rose-300">
-                <svg class="h-4 w-4 shrink-0 mt-0.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" x2="12" y1="8" y2="12"/>
-                  <line x1="12" x2="12.01" y1="16" y2="16"/>
-                </svg>
-                <span>{{ errorMessage }}</span>
-              </div>
-            }
+                <!-- Lista vertical del Stepper -->
+                <div class="space-y-2.5 pt-2">
+                  @for (step of steps; track step.id) {
+                    <div 
+                      class="flex items-start gap-3 p-2.5 sm:p-3 rounded-[var(--r-lg)] transition-all duration-300"
+                      [ngClass]="{
+                        'bg-[var(--surface-card)] border border-[var(--border-subtle)] opacity-40': step.status === 'pending',
+                        'bg-[var(--surface-subtle)] border border-[rgba(187,244,81,0.3)] shadow-[0_0_15px_rgba(187,244,81,0.08)]': step.status === 'active',
+                        'bg-[var(--surface-card)] border border-emerald-500/20': step.status === 'completed',
+                        'bg-rose-500/10 border border-rose-500/30': step.status === 'failed'
+                      }"
+                    >
+                      <!-- Icono de estado -->
+                      <div class="mt-0.5 shrink-0">
+                        @if (step.status === 'completed') {
+                          <svg class="h-4 w-4 text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M20 6 9 17l-5-5"/>
+                          </svg>
+                        } @else if (step.status === 'active') {
+                          <div class="h-4 w-4 border-2 border-[var(--accent-lime)] border-t-transparent rounded-full animate-spin"></div>
+                        } @else if (step.status === 'failed') {
+                          <svg class="h-4 w-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                        } @else {
+                          <div class="h-4 w-4 rounded-full border border-neutral-600 bg-neutral-800"></div>
+                        }
+                      </div>
 
-            @if (successMessage) {
-              <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-3 flex items-start gap-2.5 text-xs text-emerald-300">
-                <svg class="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                <span>{{ successMessage }}</span>
-              </div>
-            }
-
-            <!-- Formulario -->
-            <form (ngSubmit)="handleLogin()" class="space-y-3.5 sm:space-y-4 text-left">
-              <div>
-                <label class="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  Código de Alumno
-                </label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                      <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    [(ngModel)]="username"
-                    name="username"
-                    placeholder="u123456789"
-                    [disabled]="isLoading"
-                    required
-                    class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
-                  />
+                      <!-- Textos -->
+                      <div class="text-left flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-white truncate">{{ step.label }}</p>
+                        @if (step.detail) {
+                          <p class="text-[10px] sm:text-[11px] text-neutral-400 tracking-wide mt-0.5 font-mono truncate">
+                            {{ step.detail }}
+                          </p>
+                        }
+                      </div>
+                    </div>
+                  }
                 </div>
               </div>
 
-              <div>
-                <label class="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  Contraseña Institucional
-                </label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              <!-- Error y acciones: Reintentar sin borrar campos / cancelar ante falla -->
+              @if (hasStepFailed) {
+                <div class="space-y-3">
+                  <div class="rounded-[var(--r-lg)] bg-rose-500/10 border border-rose-500/30 p-3 flex items-start gap-2.5">
+                    <svg class="h-4 w-4 shrink-0 mt-0.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
+                    <p class="text-xs text-rose-300 leading-normal flex-1 min-w-0">{{ bootstrapError }}</p>
                   </div>
-                  <input
-                    type="password"
-                    [(ngModel)]="password"
-                    name="password"
-                    placeholder="Tu contraseña de UTP Class"
-                    [disabled]="isLoading"
-                    required
-                    class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
-                  />
-                </div>
-              </div>
 
-              <button
-                type="submit"
-                [disabled]="isLoading"
-                class="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-3 sm:py-3.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer uppercase tracking-wider border-none"
-              >
-                @if (isLoading) {
-                  <span class="h-4 w-4 border-2 border-[#0a0a0c] border-t-transparent rounded-full animate-spin"></span>
-                  <span>Validando con UTP...</span>
-                } @else {
-                  <span>Ingresar</span>
-                  <svg class="h-4 w-4 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M5 12h14"/>
-                    <path d="m12 5 7 7-7 7"/>
+                  <div class="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      (click)="retryFailedStep()"
+                      class="flex-1 inline-flex items-center justify-center gap-2 rounded-[var(--r-md)] bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-2.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] cursor-pointer uppercase tracking-wider border-none"
+                    >
+                      <svg class="h-3.5 w-3.5 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+                        <path d="M21 3v6h-6"/>
+                      </svg>
+                      <span>Reintentar</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="cancelFromStepper()"
+                      class="flex-1 inline-flex items-center justify-center rounded-[var(--r-md)] py-2.5 text-xs font-semibold text-neutral-300 border border-[var(--border-medium)] hover:text-white hover:bg-white/5 transition cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else {
+              <!-- Mensajes de Estado -->
+              @if (errorMessage) {
+                <div class="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-3 flex items-start gap-2.5 text-xs text-rose-300">
+                  <svg class="h-4 w-4 shrink-0 mt-0.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" x2="12" y1="8" y2="12"/>
+                    <line x1="12" x2="12.01" y1="16" y2="16"/>
                   </svg>
-                }
-              </button>
-            </form>
+                  <span>{{ errorMessage }}</span>
+                </div>
+              }
 
-            <!-- Pie de Privacidad -->
-            <div class="pt-1.5 text-center text-neutral-400 space-y-1 select-none">
-              <p class="text-[10px] text-neutral-400 leading-normal max-w-xs mx-auto">
-                Validación oficial en tiempo real. Tu contraseña no se almacena en ninguna base de datos.
-              </p>
-              <div class="pt-0.5">
+              <!-- Formulario -->
+              <form (ngSubmit)="handleLogin()" class="space-y-3.5 sm:space-y-4 text-left">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-300 mb-1.5">
+                    Código de Alumno
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      [(ngModel)]="username"
+                      name="username"
+                      placeholder="u123456789"
+                      [disabled]="isLoading"
+                      required
+                      class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-300 mb-1.5">
+                    Contraseña Institucional
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    </div>
+                    <input
+                      type="password"
+                      [(ngModel)]="password"
+                      name="password"
+                      placeholder="Tu contraseña de UTP Class"
+                      [disabled]="isLoading"
+                      required
+                      class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
+                    />
+                  </div>
+                </div>
+
                 <button
-                  type="button"
-                  (click)="openPrivacy.emit(); isLoginModalOpen = false"
-                  class="inline-flex items-center gap-1 text-[10px] text-[var(--accent-lime)] hover:underline font-medium cursor-pointer transition bg-transparent border-none"
+                  type="submit"
+                  [disabled]="isLoading"
+                  class="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-3 sm:py-3.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer uppercase tracking-wider border-none"
                 >
-                  <span>Conoce nuestras Políticas de Privacidad y Seguridad</span>
-                  <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14"/>
-                    <path d="m12 5 7 7-7 7"/>
-                  </svg>
+                  @if (isLoading) {
+                    <span class="h-4 w-4 border-2 border-[#0a0a0c] border-t-transparent rounded-full animate-spin"></span>
+                    <span>Validando con UTP...</span>
+                  } @else {
+                    <span>Ingresar</span>
+                    <svg class="h-4 w-4 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M5 12h14"/>
+                      <path d="m12 5 7 7-7 7"/>
+                    </svg>
+                  }
                 </button>
+              </form>
+
+              <!-- Pie de Privacidad -->
+              <div class="pt-1.5 text-center text-neutral-400 space-y-1 select-none">
+                <p class="text-[10px] text-neutral-400 leading-normal max-w-xs mx-auto">
+                  Validación oficial en tiempo real. Tu contraseña no se almacena en ninguna base de datos.
+                </p>
+                <div class="pt-0.5">
+                  <button
+                    type="button"
+                    (click)="openPrivacy.emit(); isLoginModalOpen = false"
+                    class="inline-flex items-center gap-1 text-[10px] text-[var(--accent-lime)] hover:underline font-medium cursor-pointer transition bg-transparent border-none"
+                  >
+                    <span>Conoce nuestras Políticas de Privacidad y Seguridad</span>
+                    <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 12h14"/>
+                      <path d="m12 5 7 7-7 7"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
+            }
 
           </div>
         </div>
       }
-
     </div>
   `
 })
@@ -322,41 +414,203 @@ export class LoginPageComponent {
   password = '';
   isLoading = false;
   errorMessage: string | null = null;
-  successMessage: string | null = null;
+
+  // ─── Fase 0.8: Stepper de Login en Tiempo Real ───────────────────────────
+  // El backend ya terminó el Auto-Bootstrap Integral (POST /auth/bootstrap) y el
+  // Pre-Flight Guard garantiza que el Copiloto nunca aterriza con datos vacíos;
+  // aquí se refleja el avance real sin spinner ciego ni setTimeout arbitrarios.
+  steps: StepItem[] = LoginPageComponent.buildSteps();
+  isBootstrapping = false;
+  currentStep: LoginStep = 'idle';
+  failedStep: LoginStep | null = null;
+  bootstrapError: string | null = null;
+  private closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private authService: AuthService,
     private scheduleService: ScheduleService
   ) {}
 
+  /** Hay al menos una fase interrumpida (muestra Reintentar/Cancelar). */
+  get hasStepFailed(): boolean {
+    return this.failedStep !== null;
+  }
+
+  /**
+   * Criterio de Fase 0.8: el modal cierra SOLO cuando el backend completa el
+   * bootstrap (micro-transición de 600 ms) o cuando el usuario cancela ante
+   * error. A mitad del proceso activo el cierre queda bloqueado.
+   */
+  get isClosable(): boolean {
+    if (!this.isBootstrapping) {
+      return true;
+    }
+    return this.hasStepFailed || this.isReadyCompleted;
+  }
+
+  private static buildSteps(): StepItem[] {
+    return [
+      { id: 'auth', label: 'Identidad institucional', status: 'pending' },
+      { id: 'schedule', label: 'Horario académico', status: 'pending' },
+      { id: 'syllabi', label: 'Sílabos del ciclo', status: 'pending' },
+      { id: 'ready', label: 'Copiloto de IA', status: 'pending' },
+    ];
+  }
+
+  private get isReadyCompleted(): boolean {
+    return this.stepById('ready')?.status === 'completed';
+  }
+
+  private stepById(id: LoginStep): StepItem | undefined {
+    return this.steps.find((step) => step.id === id);
+  }
+
+  private updateStep(id: LoginStep, patch: Partial<StepItem>): void {
+    const index = this.steps.findIndex((step) => step.id === id);
+    if (index >= 0) {
+      this.steps[index] = { ...this.steps[index], ...patch };
+    }
+  }
+
+  /** Pipeline completo: validación → auth (login institucional) → bootstrap → ready. */
   handleLogin(): void {
+    // El reintento (campos intactos) cruza esta barrera; el doble envío NO.
+    if (this.isBootstrapping && !this.hasStepFailed) {
+      return;
+    }
     if (!this.username.trim() || !this.password.trim()) {
       this.errorMessage = 'Ingresa tu código de alumno y contraseña institucional.';
       return;
     }
 
+    this.clearCloseTimer();
     this.isLoading = true;
     this.errorMessage = null;
-    this.successMessage = null;
+    this.isBootstrapping = true;
+    this.failedStep = null;
+    this.bootstrapError = null;
+    this.currentStep = 'auth';
+    this.steps = LoginPageComponent.buildSteps();
+    this.updateStep('auth', { status: 'active', detail: 'Verificando credenciales institucionales...' });
 
     this.authService.login({ username: this.username, password: this.password }).subscribe({
       next: (res) => {
         this.isLoading = false;
-        if (res.success) {
-          this.successMessage = `¡Bienvenido, ${res.data.fullName}! Sincronizando tu horario y asignaturas...`;
-          // Iniciar de inmediato la sincronización y persistencia de horario para este alumno específico
-          this.scheduleService.getSchedule().subscribe();
-          setTimeout(() => {
-            this.isLoginModalOpen = false;
-          }, 800);
+        if (res.success && res.data) {
+          const code = (res.data.studentCode || res.data.username || this.username).toUpperCase();
+          this.updateStep('auth', { status: 'completed', detail: `Identidad verificada: ${code}` });
+          this.runBootstrapPhase();
         } else {
-          this.errorMessage = res.error || 'Error al validar credenciales.';
+          this.failCurrentStep(res.error || 'Error al validar credenciales.');
         }
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.error || 'Error de conexión con el servidor Spring Boot.';
+        this.failCurrentStep(err.error?.error || 'Error de conexión con el servidor Spring Boot.');
       }
     });
+  }
+
+  /** Fases 2 y 3 (schedule + syllabi) del Auto-Bootstrap Integral del backend. */
+  private runBootstrapPhase(): void {
+    this.currentStep = 'schedule';
+    this.updateStep('schedule', { status: 'active', detail: 'Sincronizando horario y asignaturas...' });
+
+    this.authService.bootstrapSession().subscribe({
+      next: (res) => {
+        if (!res.success || !res.data) {
+          this.failCurrentStep(res.error || 'No se pudo sincronizar tu información académica.');
+          return;
+        }
+
+        const summary = res.data;
+        this.updateStep('schedule', {
+          status: 'completed',
+          detail: `Horario oficial sincronizado (${summary.coursesCount} asignaturas)`
+        });
+        this.currentStep = 'syllabi';
+        this.updateStep('syllabi', {
+          status: 'completed',
+          detail: `Contenido curricular listo (${summary.syllabiSynced}/${summary.syllabiTotal} sílabos)`
+        });
+        this.runReadyPhase();
+      },
+      error: (err) => {
+        this.failCurrentStep(err.error?.error || 'Error de conexión durante la sincronización académica.');
+      }
+    });
+  }
+
+  /** Fase 4: refresca el estado local y cierra tras una micro-transición de 600 ms. */
+  private runReadyPhase(): void {
+    this.currentStep = 'ready';
+    this.updateStep('ready', { status: 'completed', detail: 'Copiloto Académico IA inicializado' });
+
+    // Notificar al ScheduleService para refrescar sus signals locales en memoria
+    // con el horario ya persistido por el Auto-Bootstrap del backend.
+    this.scheduleService.getSchedule().subscribe();
+
+    // El backend YA completó el bootstrap: este timer solo da la micro-transición
+    // suave antes de ingresar al Dashboard (no es un cierre ciego).
+    this.closeTimer = setTimeout(() => {
+      this.resetStepperState();
+      this.isLoginModalOpen = false;
+    }, 600);
+  }
+
+  /** Marca el paso actual como fallido y conserva los campos para reintentar. */
+  private failCurrentStep(message: string): void {
+    this.updateStep(this.currentStep, { status: 'failed' });
+    this.failedStep = this.currentStep;
+    this.bootstrapError = message;
+  }
+
+  /** Reintenta la fase fallida SIN borrar los campos del formulario. */
+  retryFailedStep(): void {
+    if (!this.hasStepFailed) {
+      return;
+    }
+    const retryStep = this.failedStep;
+    this.failedStep = null;
+    this.bootstrapError = null;
+    if (retryStep === 'auth') {
+      // Identidad pendiente: re-ejecuta login + bootstrap con los campos intactos.
+      this.handleLogin();
+      return;
+    }
+    // Identidad ya verificada y token cacheado para el interceptor: el reintento
+    // no repite credenciales, continúa en la sincronización académica.
+    this.runBootstrapPhase();
+  }
+
+  /** Cancela el onboarding y cierra el modal (solo disponible ante error). */
+  cancelFromStepper(): void {
+    this.resetStepperState();
+    this.isLoginModalOpen = false;
+  }
+
+  /** Punto único de cierre del modal: bloqueado durante el bootstrap activo. */
+  attemptCloseModal(): void {
+    if (!this.isClosable) {
+      return;
+    }
+    this.cancelFromStepper();
+  }
+
+  /** Restaura la máquina de estados; los campos del formulario nunca se borran. */
+  private resetStepperState(): void {
+    this.clearCloseTimer();
+    this.isBootstrapping = false;
+    this.currentStep = 'idle';
+    this.failedStep = null;
+    this.bootstrapError = null;
+    this.steps = LoginPageComponent.buildSteps();
+  }
+
+  private clearCloseTimer(): void {
+    if (this.closeTimer !== null) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
   }
 }
