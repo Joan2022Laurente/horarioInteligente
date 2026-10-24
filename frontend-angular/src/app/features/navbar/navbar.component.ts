@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MatrixOrbComponent } from '../ai-assistant/matrix-orb.component';
@@ -9,7 +10,7 @@ export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'mar
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, MatrixOrbComponent],
+  imports: [CommonModule, LucideAngularModule, MatrixOrbComponent],
   template: `
     <header class="pill-navbar-root">
       <div class="navbar-container">
@@ -66,37 +67,15 @@ export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'mar
           >
             <div class="dock-icon-wrapper">
               @if (tab.id === 'today') {
-                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                  <line x1="16" x2="16" y1="2" y2="6"/>
-                  <line x1="8" x2="8" y1="2" y2="6"/>
-                  <line x1="3" x2="21" y1="10" y2="10"/>
-                  <path d="m9 16 2 2 4-4"/>
-                </svg>
+                <lucide-icon name="calendar-check" class="dock-icon"></lucide-icon>
               } @else if (tab.id === 'weekly') {
-                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
+                <lucide-icon name="calendar" class="dock-icon"></lucide-icon>
               } @else if (tab.id === 'courses') {
-                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
-                  <path d="M6 6h10"/>
-                  <path d="M6 10h10"/>
-                </svg>
+                <lucide-icon name="book-open" class="dock-icon"></lucide-icon>
               } @else if (tab.id === 'networking') {
-                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
+                <lucide-icon name="users" class="dock-icon"></lucide-icon>
               } @else if (tab.id === 'marketplace') {
-                <svg class="dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
-                  <path d="M3 6h18"/>
-                  <path d="M16 10a4 4 0 0 1-8 0"/>
-                </svg>
+                <lucide-icon name="shopping-bag" class="dock-icon"></lucide-icon>
               }
               @if (tab.dot) {
                 <span class="dock-ping-dot"></span>

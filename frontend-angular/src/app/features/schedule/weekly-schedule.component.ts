@@ -1,19 +1,20 @@
 import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { UTPEvent, UTPCurrentInterval, ProcessedCourse } from '@domain/models/utp.model';
 import { ClassDetailModalComponent } from './class-detail-modal.component';
+import { ScheduleControlsComponent } from './components/schedule-controls.component';
+import { ScheduleCardComponent } from './components/schedule-card.component';
 import { 
   getEventsByWeek, 
   getEventsByDateRange,
-  formatScheduleTimeRange, 
   parseEventTitle, 
   formatCourseName, 
   DAYS_OF_WEEK, 
   parseDate, 
   getProcessedCourses 
 } from '@data/schedule-parser';
-import { resolveEventLocation, getClassroomLocation } from '@data/classroom-helper';
 import { getCachedCalendarData } from '@data/syllabus/client-storage';
 import { getAuroraStyle } from '@data/aurora.helper';
 import { ScheduleService } from '@data/services/schedule.service';
@@ -23,197 +24,61 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
 @Component({
   selector: 'app-weekly-schedule',
   standalone: true,
-  imports: [CommonModule, FormsModule, ClassDetailModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    LucideAngularModule,
+    ClassDetailModalComponent,
+    ScheduleControlsComponent,
+    ScheduleCardComponent
+  ],
   template: `
-    <div class="space-y-6 text-white font-sans text-left">
-      
-      <!-- Barra de Control de Semana & Filtros -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
-        
-        <!-- Selector de Semana -->
-        <div class="flex items-center gap-2">
-          <div class="flex items-center bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-md p-1 shadow-none">
-            <button
-              (click)="changeWeek(selectedWeek - 1)"
-              [disabled]="selectedWeek <= 1"
-              aria-label="Semana anterior"
-              class="flex h-8 w-8 items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)] transition disabled:opacity-20 border-none bg-transparent cursor-pointer"
-            >
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
+    <div class="space-y-8 text-white font-sans text-left">
+      <!-- 1. Controles: Navegación de Semana, Modalidades y Exportación -->
+      <app-schedule-controls
+        [currentWeek]="currentWeek"
+        [totalWeeks]="totalWeeks"
+        [selectedWeek]="selectedWeek"
+        [selectedModality]="selectedModality"
+        [isExporting]="isExporting()"
+        (weekChange)="selectedWeek = $event"
+        (modalityChange)="selectedModality = $event"
+        (exportRequested)="exportToGoogleCalendar()"
+      />
 
-            <div class="flex items-center gap-2 px-3">
-              <svg class="h-4 w-4 text-[var(--accent-orange)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>
-              </svg>
-              <select
-                [(ngModel)]="selectedWeek"
-                (ngModelChange)="onWeekChange()"
-                aria-label="Seleccionar semana académica"
-                class="bg-transparent border-0 text-xs font-bold text-white focus:outline-none cursor-pointer"
-              >
-                @for (w of totalWeeksArray; track w) {
-                  <option [value]="w" class="bg-[var(--surface-card)] text-white">
-                    Semana {{ w }} {{ w === currentWeek ? '(Actual)' : '' }}
-                  </option>
-                }
-              </select>
-            </div>
-
-            <button
-              (click)="changeWeek(selectedWeek + 1)"
-              [disabled]="selectedWeek >= totalWeeks"
-              aria-label="Semana siguiente"
-              class="flex h-8 w-8 items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)] transition disabled:opacity-20 border-none bg-transparent cursor-pointer"
-            >
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-            </button>
-          </div>
-
-          @if (selectedWeek === currentWeek) {
-            <span class="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent-lime)] text-black font-extrabold px-3 py-1 text-[11px] shadow-none">
-              <span class="h-1.5 w-1.5 rounded-full bg-black animate-pulse"></span>
-              En curso
-            </span>
-          }
-        </div>
-
-        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <!-- Filtros de Modalidad con Segmented Controls -->
-          <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-md overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
-            <button
-              (click)="selectedModality = 'ALL'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
-              [ngClass]="selectedModality === 'ALL' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-            >
-              Todas
-            </button>
-            <button
-              (click)="selectedModality = 'P'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
-              [ngClass]="selectedModality === 'P' ? 'bg-[var(--accent-emerald)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-            >
-              Presenciales
-            </button>
-            <button
-              (click)="selectedModality = 'R'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
-              [ngClass]="selectedModality === 'R' ? 'bg-[var(--accent-orange)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-            >
-              Zoom
-            </button>
-            <button
-              (click)="selectedModality = 'VT'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-lg font-bold border-none"
-              [ngClass]="selectedModality === 'VT' ? 'bg-[var(--accent-purple)] text-white font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-            >
-              Virtuales
-            </button>
-          </div>
-
-          <!-- Botón Exportar a Google Calendar (.ics) -->
-          <button
-            (click)="exportToGoogleCalendar()"
-            [disabled]="isExporting()"
-            title="Exportar horario oficial a Google Calendar o Outlook (.ics)"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-2 rounded-lg font-bold border border-[var(--border-subtle)] bg-[var(--surface-card)] hover:bg-[var(--surface-subtle)] text-xs text-white disabled:opacity-50"
-          >
-            @if (isExporting()) {
-              <svg class="h-3.5 w-3.5 animate-spin text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
-              </svg>
-              <span>Exportando...</span>
-            } @else {
-              <svg class="h-3.5 w-3.5 text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                <line x1="16" x2="16" y1="2" y2="6"/>
-                <line x1="8" x2="8" y1="2" y2="6"/>
-                <line x1="3" x2="21" y1="10" y2="10"/>
-                <path d="M12 14v4M10 16l2-2 2 2"/>
-              </svg>
-              <span>Exportar a Google Calendar (.ics)</span>
-            }
-          </button>
-        </div>
-
-      </div>
-
-      <!-- Grid Semanal (Lunes a Domingo - 7 Días) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3 sm:gap-4">
+      <!-- 2. Grid Semanal de 7 Días (Lunes a Domingo) con separación de filas generosa -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3.5 sm:gap-4.5">
         @for (dayNum of daysToDisplay; track dayNum) {
-          <div class="flex flex-col space-y-2.5">
-            <!-- Header Minimalista del Día -->
-            <div class="pb-2 flex items-center justify-between border-b border-[var(--border-subtle)]">
+          <div class="flex flex-col">
+            <!-- Header del Día (Flat design, cero borders) -->
+            <div class="pb-2.5 flex items-center justify-between">
               <div class="flex items-center gap-1.5">
                 <span class="text-xs font-bold tracking-tight" [ngClass]="isToday(dayNum) ? 'text-white' : 'text-neutral-400'">
                   {{ getDayName(dayNum) }}
                 </span>
                 @if (isToday(dayNum)) {
-                  <span class="inline-flex items-center px-1.5 py-0.5 rounded-xs text-[9px] font-bold bg-white text-black leading-none">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-[var(--r-xs)] text-[10px] font-bold bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] leading-none">
                     Hoy
                   </span>
                 }
               </div>
             </div>
 
-            <!-- Lista de Sesiones -->
-            <div class="space-y-2.5 flex-1">
+            <!-- Lista de Sesiones del Día con gap-4 vertical entre filas -->
+            <div class="flex flex-col gap-4 flex-1">
               @if (getEventsForDayNumber(dayNum).length === 0) {
-                <div class="h-28 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-subtle)] flex items-center justify-center text-center text-xs text-neutral-600 font-medium select-none">
+                <div class="h-28 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)]/60 flex items-center justify-center text-center text-xs text-neutral-600 font-medium select-none">
                   Sin clases
                 </div>
               } @else {
                 @for (evt of getEventsForDayNumber(dayNum); track evt.id) {
-                  <div
-                    (click)="selectedEventForModal = evt"
-                    class="group relative rounded-2xl border p-3.5 transition-all duration-300 space-y-2.5 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
-                    [ngClass]="isSessionActive(evt, dayNum) ? 'aurora-ambient-card' : 'bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border-[var(--border-subtle)] hover:border-neutral-500'"
-                    [ngStyle]="isSessionActive(evt, dayNum) ? getCardAuroraStyle(evt.id) : null"
-                  >
-                    <div class="flex items-center justify-between gap-1">
-                      @if (evt.modality === 'P') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                          Presencial
-                        </span>
-                      } @else if (evt.modality === 'R') {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
-                          Zoom
-                        </span>
-                      } @else {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
-                          Virtual
-                        </span>
-                      }
-
-                      @if (evt.modality === 'R' && evt.metadata?.zoomLink) {
-                        <button
-                          (click)="openZoom($event, evt.metadata?.zoomLink)"
-                          title="Unirse directo a Zoom"
-                          aria-label="Unirse a Zoom"
-                          class="flex h-6 w-6 items-center justify-center rounded-lg bg-white/[0.08] hover:bg-white/[0.18] text-white border border-white/[0.14] backdrop-blur-md transition shrink-0 border-none cursor-pointer"
-                        >
-                          <svg class="h-3.5 w-3.5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
-                        </button>
-                      } @else {
-                        <span class="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200 transition-colors truncate max-w-[80px]">
-                          {{ evt.modality === 'P' ? getLocationForEvent(evt).aula.replace('Aula ', '') : 'Digital' }}
-                        </span>
-                      }
-                    </div>
-
-                    <h4 class="text-xs font-bold text-white group-hover:text-neutral-100 leading-snug line-clamp-2 transition-colors">
-                      {{ getParsedTitle(evt.title) }}
-                    </h4>
-
-                    <div class="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 whitespace-nowrap">
-                      <svg class="h-3 w-3 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      <span class="truncate">{{ formatScheduleTimeRange(evt.startAt, evt.finishAt) }}</span>
-                    </div>
-                  </div>
+                  <app-schedule-card
+                    [evt]="evt"
+                    [isActive]="isSessionActive(evt, dayNum)"
+                    [auroraStyle]="isSessionActive(evt, dayNum) ? getCardAuroraStyle(evt.id) : null"
+                    (cardClick)="selectedEventForModal = $event"
+                    (zoomClick)="openZoomDirect($event)"
+                  />
                 }
               }
             </div>
@@ -221,9 +86,9 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
         }
       </div>
 
-      <!-- Sección Asignaturas Virtuales 24/7 -->
+      <!-- 3. Asignaturas Virtuales 24/7 Asíncronas (Flat design, cero borders) -->
       @if (virtual247Courses.length > 0) {
-        <div class="pt-4 border-t border-[var(--border-subtle)] space-y-3">
+        <div class="pt-6 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold tracking-tight text-neutral-400 uppercase">
               Asignaturas Virtuales 24/7
@@ -233,15 +98,15 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
             </span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4.5">
             @for (course of virtual247Courses; track course.courseId) {
               <div
                 (click)="openVirtualCourseModal(course)"
-                class="group relative rounded-2xl border p-3.5 transition-all duration-300 space-y-2.5 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0 bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border-[var(--border-subtle)] hover:border-neutral-500"
+                class="group relative rounded-[var(--r-2xl)] p-4 transition-all duration-300 space-y-3 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0 bg-[var(--utopik-carbon-black)] hover:bg-[#282c20]"
               >
-                <div class="flex items-center justify-between gap-1">
-                  <span class="inline-flex items-center gap-1 text-[10px] font-medium text-white/90 bg-white/[0.06] border border-white/[0.12] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                    <svg class="h-2.5 w-2.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
+                <div class="flex items-center justify-between gap-1.5">
+                  <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--utopik-platinum)]">
+                    <lucide-icon name="wifi" class="h-3 w-3"></lucide-icon>
                     24/7 Asíncrono
                   </span>
 
@@ -250,16 +115,13 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   </span>
                 </div>
 
-                <h4 class="text-xs font-bold text-white group-hover:text-neutral-100 leading-snug line-clamp-2 transition-colors">
+                <h4 class="text-xs font-bold text-white group-hover:text-[var(--utopik-green-yellow)] leading-snug line-clamp-2 transition-colors">
                   {{ formatCourseName(course.name) }}
                 </h4>
 
-                <div class="flex items-center justify-between text-[11px] font-medium text-neutral-400">
+                <div class="flex items-center justify-between text-xs font-mono text-neutral-400">
                   <div class="flex items-center gap-1.5 truncate">
-                    <svg class="h-3 w-3 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12 6 12 12 16 14"/>
-                    </svg>
+                    <lucide-icon name="clock" class="h-3.5 w-3.5 text-neutral-500 shrink-0"></lucide-icon>
                     <span class="truncate">Sin horario fijo</span>
                   </div>
                   @if (course.sectionCode) {
@@ -272,7 +134,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
         </div>
       }
 
-      <!-- Modal de Detalle de Clase (full-featured) -->
+      <!-- 4. Modal de Detalle de Clase -->
       <app-class-detail-modal
         [isOpen]="!!selectedEventForModal"
         [event]="selectedEventForModal"
@@ -281,7 +143,6 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
         (close)="selectedEventForModal = null"
         (openGlobalAi)="openAi.emit($event)"
       />
-
     </div>
   `
 })
@@ -290,6 +151,7 @@ export class WeeklyScheduleComponent implements OnInit {
   @Input() courses?: ProcessedCourse[];
   @Output() openAi = new EventEmitter<string>();
   @Output() openSyllabus = new EventEmitter<string>();
+
   currentWeek = 6;
   totalWeeks = 18;
   selectedWeek = 6;
@@ -307,32 +169,6 @@ export class WeeklyScheduleComponent implements OnInit {
   readonly isExporting = signal<boolean>(false);
 
   constructor(public scheduleService: ScheduleService) {}
-
-  exportToGoogleCalendar(): void {
-    if (this.isExporting()) return;
-    this.isExporting.set(true);
-    const period = this.scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto';
-
-    this.scheduleService.exportCalendarIcs(period).subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `horario_utp_${period.replace(/\s+/g, '_')}.ics`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        this.isExporting.set(false);
-        this.feedback.success('Horario exportado', 'Archivo .ics descargado exitosamente para Google Calendar.');
-      },
-      error: (err) => {
-        console.error('[WeeklySchedule] Error exportando horario a .ics:', err);
-        this.isExporting.set(false);
-        this.feedback.error('Error al exportar', 'No se pudo generar el archivo .ics de tu horario.');
-      }
-    });
-  }
 
   ngOnInit(): void {
     this.hydrateFromCacheOrInterval();
@@ -427,16 +263,6 @@ export class WeeklyScheduleComponent implements OnInit {
     this.virtual247Courses = unique;
   }
 
-  get totalWeeksArray(): number[] {
-    return Array.from({ length: this.totalWeeks }, (_, i) => i + 1);
-  }
-
-  changeWeek(w: number): void {
-    this.selectedWeek = Math.max(1, Math.min(this.totalWeeks, w));
-  }
-
-  onWeekChange(): void {}
-
   getDayName(dayNum: number): string {
     return DAYS_OF_WEEK[dayNum] || '';
   }
@@ -448,13 +274,11 @@ export class WeeklyScheduleComponent implements OnInit {
   getEventsForDayNumber(dayNum: number): UTPEvent[] {
     let weekEvents: UTPEvent[] = [];
 
-    // 1. Intentar filtrar por rango de fecha exacto de la semana seleccionada
     const startOfPeriodStr = this.currentInterval?.start_of_period || this.startOfInterval;
     if (startOfPeriodStr) {
       const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
       const baseMs = parseDate(startOfPeriodStr).getTime();
       
-      // Determinar el inicio de la semana 1 del periodo
       const periodStartMs = this.currentInterval?.start_of_period 
         ? baseMs
         : baseMs - (this.currentWeek - 1) * WEEK_MS;
@@ -465,13 +289,10 @@ export class WeeklyScheduleComponent implements OnInit {
       weekEvents = getEventsByDateRange(this.events, targetWeekStartMs, targetWeekEndMs);
     }
 
-    // 2. Si no hubo eventos por fecha, intentar por etiqueta (Semana X)
     if (weekEvents.length === 0) {
       weekEvents = getEventsByWeek(this.events, this.selectedWeek);
     }
 
-    // 3. Si aún no hay eventos (ej. se cargó únicamente la plantilla semanal recurrente de 1 semana):
-    //    Renderizar el patrón recurrente semanal deduplicado por slot horario (1 sesión por horario y curso)
     if (weekEvents.length === 0 && this.events.length > 0) {
       const seenSlots = new Set<string>();
       const templateEvents: UTPEvent[] = [];
@@ -490,17 +311,14 @@ export class WeeklyScheduleComponent implements OnInit {
       weekEvents = templateEvents;
     }
 
-    // 4. Filtrar por modalidad seleccionada
     const filtered = this.selectedModality === 'ALL' 
       ? weekEvents 
       : weekEvents.filter(e => e.modality === this.selectedModality);
 
-    // 5. Filtrar por día específico de la semana (excluyendo asignaturas virtuales 24/7 asíncronas)
     return filtered.filter(evt => {
       const d = parseDate(evt.startAt);
       if (d.getDay() !== dayNum) return false;
 
-      // Excluir asignaturas 24/7 asíncronas de la cuadrícula de horas
       if (evt.modality === 'VT') return false;
       const cleanTitle = normalizeKey(parseEventTitle(evt.title).cleanTitle);
       const is247 = this.virtual247Courses.some(v => {
@@ -509,22 +327,6 @@ export class WeeklyScheduleComponent implements OnInit {
       });
       return !is247;
     });
-  }
-
-  getParsedTitle(title: string): string {
-    return parseEventTitle(title).cleanTitle;
-  }
-
-  formatScheduleTimeRange(start: string, finish: string): string {
-    return formatScheduleTimeRange(start, finish);
-  }
-
-  formatCourseName(name: string): string {
-    return formatCourseName(name);
-  }
-
-  getLocationForEvent(evt: UTPEvent) {
-    return resolveEventLocation(evt);
   }
 
   isSessionActive(evt: UTPEvent, dayNum: number): boolean {
@@ -544,22 +346,43 @@ export class WeeklyScheduleComponent implements OnInit {
     return getAuroraStyle(seed);
   }
 
-  openZoom(e: Event, link?: string): void {
-    e.stopPropagation();
+  formatCourseName(name: string): string {
+    return formatCourseName(name);
+  }
+
+  openZoomDirect(link: string): void {
     if (link) window.open(link, '_blank');
   }
 
-  onOpenSyllabus(courseName: string): void {
-    this.openSyllabus.emit(courseName);
-  }
+  exportToGoogleCalendar(): void {
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    const period = this.scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto';
 
-  onAskAiClick(prompt: string): void {
-    this.openAi.emit(prompt);
+    this.scheduleService.exportCalendarIcs(period).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `horario_utp_${period.replace(/\s+/g, '_')}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.isExporting.set(false);
+        this.feedback.success('Horario exportado', 'Archivo .ics descargado exitosamente para Google Calendar.');
+      },
+      error: (err) => {
+        console.error('[WeeklySchedule] Error exportando horario a .ics:', err);
+        this.isExporting.set(false);
+        this.feedback.error('Error al exportar', 'No se pudo generar el archivo .ics de tu horario.');
+      }
+    });
   }
 
   openVirtualCourseModal(course: ProcessedCourse): void {
     const existingEvt = this.events.find(e => {
-      const title = this.getParsedTitle(e.title).toLowerCase();
+      const title = parseEventTitle(e.title).cleanTitle.toLowerCase();
       return title.includes(course.name.toLowerCase()) || course.name.toLowerCase().includes(title);
     });
 

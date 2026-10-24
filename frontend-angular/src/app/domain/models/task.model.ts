@@ -63,5 +63,11 @@ export interface TaskSyncItem {
   urgency?: string;
   daysRemaining?: number;
   syllabusCorrelation?: SyllabusCorrelation;
+  studentStatus?: string;
+  weekNumber?: number;
+  activityType?: string;
+  activityId?: string;
+  finishAt?: string;
+  startAt?: string;
 }
 

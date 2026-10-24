@@ -5,6 +5,27 @@
 @tailwind utilities;
 
 :root {
+  /* ───────────────────────────────────────────────────────────────────────────
+     PALETA OFICIAL UTOPIK (Orden de Protagonismo Solicitado)
+     1. Onyx (#0a0a0c) - Fondo base principal / Negro profundo
+     2. Platinum (#e8e9eb) - Contraste editorial claro / Superficie y texto principal
+     3. Green-Yellow (#bbf451) - Acento primario energético / Verde Lima característico
+     4. Carbon-Black (#1e2019) - Superficie secundaria profunda con matiz oliva cálido
+     5. Sandy-Brown (#ee964b) - Acento complementario cálido / Ámbar arena
+     ─────────────────────────────────────────────────────────────────────────── */
+  --utopik-onyx: #0a0a0c;
+  --utopik-platinum: #e8e9eb;
+  --utopik-green-yellow: #bbf451;
+  --utopik-carbon-black: #1e2019;
+  --utopik-sandy-brown: #ee964b;
+
+  /* Aliases semánticos para landing y app */
+  --color-onyx: #0a0a0c;
+  --color-platinum: #e8e9eb;
+  --color-green-yellow: #bbf451;
+  --color-carbon-black: #1e2019;
+  --color-sandy-brown: #ee964b;
+
   /* Pure Solid Dark Surfaces (Zero Transparency) */
   --bg-main: #0a0a0c;
   --surface-card: #141417;
@@ -399,21 +420,36 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
 }
 
-/* Badges de Modalidad Sólidos (Cero Opacidad / Colores de Sistema) */
+/* Badges de Modalidad Flat (Cero Bordes / Paleta Oficial Utopik) */
 .badge-solid-presencial {
-  background-color: var(--badge-solid-presencial-bg) !important;
-  border: 1px solid var(--badge-solid-presencial-border) !important;
-  color: var(--badge-solid-presencial-text) !important;
+  background-color: rgba(187, 244, 81, 0.12) !important;
+  border: none !important;
+  color: var(--utopik-green-yellow) !important;
 }
 
 .badge-solid-zoom {
-  background-color: var(--badge-solid-zoom-bg) !important;
-  border: 1px solid var(--badge-solid-zoom-border) !important;
-  color: var(--badge-solid-zoom-text) !important;
+  background-color: rgba(238, 150, 75, 0.14) !important;
+  border: none !important;
+  color: var(--utopik-sandy-brown) !important;
 }
 
 .badge-solid-virtual {
-  background-color: var(--badge-solid-virtual-bg) !important;
-  border: 1px solid var(--badge-solid-virtual-border) !important;
-  color: var(--badge-solid-virtual-text) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  color: var(--utopik-platinum) !important;
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   AUTO TARGET SNAP SCROLL (Desktop >= 1024px)
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  html.utopik-snap-scroll {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+  html.utopik-snap-scroll .utopik-sector {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
+

@@ -10,6 +10,7 @@ import {
   CourseEvaluation,
   ChatMessage
 } from '@domain/models/utp.model';
+import { TaskSyncItem } from '@domain/models/task.model';
 import { 
   getCurrentAndNextClass, 
   getEventsForDay, 
@@ -28,629 +29,595 @@ import { ScheduleService } from '@data/services/schedule.service';
 import { TaskService } from '@data/services/task.service';
 import { ClassDetailModalComponent } from '@features/schedule/class-detail-modal.component';
 import { TodayStore } from './today.store';
+import { LucideAngularModule } from 'lucide-angular';
 
 export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
 @Component({
   selector: 'app-today-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, ClassDetailModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    ClassDetailModalComponent, 
+    LucideAngularModule
+  ],
   template: `
     <div class="space-y-6 text-white font-sans text-left">
       @if (isLoading) {
         <!-- Skeleton Loading State -->
         <div class="space-y-6 animate-pulse">
-          <div class="rounded-3xl p-6 bg-[#141417] border border-white/5 space-y-4">
+          <div class="rounded-[var(--r-3xl)] p-6 bg-[var(--utopik-carbon-black)] space-y-4">
             <div class="flex items-center gap-2">
               <div class="h-5 w-24 bg-white/10 rounded-full"></div>
               <div class="h-5 w-20 bg-white/10 rounded-full"></div>
             </div>
-            <div class="h-7 w-2/3 bg-white/10 rounded-xl"></div>
-            <div class="h-4 w-1/3 bg-white/5 rounded-lg"></div>
+            <div class="h-7 w-2/3 bg-white/10 rounded-[var(--r-xl)]"></div>
+            <div class="h-4 w-1/3 bg-white/5 rounded-[var(--r-md)]"></div>
           </div>
 
           <div class="space-y-3">
-            <div class="h-6 w-48 bg-white/10 rounded-lg"></div>
+            <div class="h-6 w-48 bg-white/10 rounded-[var(--r-md)]"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="h-32 rounded-2xl bg-[#141417] border border-white/5 p-4 space-y-3">
-                <div class="h-4 w-1/4 bg-white/10 rounded"></div>
-                <div class="h-5 w-3/4 bg-white/10 rounded"></div>
+              <div class="h-32 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] p-4 space-y-3">
+                <div class="h-4 w-1/4 bg-white/10 rounded-[var(--r-sm)]"></div>
+                <div class="h-5 w-3/4 bg-white/10 rounded-[var(--r-sm)]"></div>
               </div>
-              <div class="h-32 rounded-2xl bg-[#141417] border border-white/5 p-4 space-y-3">
-                <div class="h-4 w-1/4 bg-white/10 rounded"></div>
-                <div class="h-5 w-3/4 bg-white/10 rounded"></div>
+              <div class="h-32 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] p-4 space-y-3">
+                <div class="h-4 w-1/4 bg-white/10 rounded-[var(--r-sm)]"></div>
+                <div class="h-5 w-3/4 bg-white/10 rounded-[var(--r-sm)]"></div>
               </div>
             </div>
           </div>
         </div>
       } @else {
-        <!-- 1. Hero Status Banner (Aurora Ambient Card) -->
+        <!-- 1. Hero Status Banner -->
         @if (bannerClass) {
-        <div 
-          class="aurora-ambient-card rounded-3xl p-5 sm:p-6 transition-all duration-300 shadow-none"
-          [ngStyle]="auroraStyle"
-        >
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="space-y-2 min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                @if (isLiveNow) {
-                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
-                    <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
-                    En vivo • Quedan {{ minutesRemainingCurrent }}m
-                  </span>
-                } @else {
-                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.08] border border-white/[0.16] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
-                    <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-                    </svg>
-                    {{ minutesToNext !== null && minutesToNext <= 120 ? 'Próxima clase en ' + minutesToNext + ' min' : 'Siguiente sesión' | uppercase }}
-                  </span>
-                }
+          <div 
+            class="rounded-[var(--r-3xl)] p-5 sm:p-6 transition-all duration-300 shadow-none bg-[var(--utopik-carbon-black)]"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="space-y-2 min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  @if (isLiveNow) {
+                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                      <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-green-yellow)] animate-pulse"></span>
+                      En vivo • Quedan {{ minutesRemainingCurrent }}m
+                    </span>
+                  } @else {
+                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                      <lucide-icon name="flame" class="h-3 w-3 text-white/80"></lucide-icon>
+                      {{ minutesToNext !== null && minutesToNext <= 120 ? 'Próxima clase en ' + minutesToNext + ' min' : ('Siguiente sesión' | uppercase) }}
+                    </span>
+                  }
 
-                @if (bannerClass.modality === 'P') {
-                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
-                    <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    Presencial
+                  @if (bannerClass.modality === 'P') {
+                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                      <lucide-icon name="map-pin" class="h-3 w-3 text-white/80"></lucide-icon>
+                      Presencial
+                    </span>
+                  } @else if (bannerClass.modality === 'R') {
+                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                      <lucide-icon name="video" class="h-3 w-3 text-white/80"></lucide-icon>
+                      Remoto Zoom
+                    </span>
+                  } @else {
+                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                      <lucide-icon name="wifi" class="h-3 w-3 text-white/80"></lucide-icon>
+                      Virtual
+                    </span>
+                  }
+                </div>
+
+                <h3 class="text-base sm:text-lg font-black text-white leading-tight">
+                  {{ parsedBannerTitle }}
+                </h3>
+
+                <p class="text-xs text-neutral-400 flex items-center gap-2 font-mono">
+                  <span class="text-neutral-300 font-medium">
+                    {{ formatTime(bannerClass.startAt) }} – {{ formatTime(bannerClass.finishAt) }}
                   </span>
-                } @else if (bannerClass.modality === 'R') {
-                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
-                    <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="m22 8-6 4 6 4V8Z"/>
-                      <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                    </svg>
-                    Remoto Zoom
-                  </span>
-                } @else {
-                  <span class="inline-flex items-center gap-1.5 rounded-sm bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.14] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
-                    <svg class="h-3 w-3 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="2"/>
-                      <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
-                    </svg>
-                    Virtual
-                  </span>
-                }
+                </p>
               </div>
 
-              <h3 class="text-base sm:text-lg font-black text-white leading-tight">
-                {{ parsedBannerTitle }}
-              </h3>
-
-              <p class="text-xs text-neutral-400 flex items-center gap-2 font-mono">
-                <span class="text-neutral-300 font-medium">
-                  {{ formatTime(bannerClass.startAt) }} – {{ formatTime(bannerClass.finishAt) }}
-                </span>
-              </p>
-            </div>
-
-            <div class="flex items-center gap-2 shrink-0">
-              @if (bannerClass.metadata?.zoomLink) {
-                <a
-                  [href]="bannerClass.metadata?.zoomLink"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.16] text-white border border-white/[0.16] backdrop-blur-md px-3.5 py-2 text-xs font-semibold shadow-none transition active:scale-95 no-underline"
+              <div class="flex items-center gap-2 shrink-0">
+                @if (bannerClass.metadata?.zoomLink) {
+                  <a
+                    [href]="bannerClass.metadata?.zoomLink"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 rounded-[var(--r-xl)] bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold shadow-none transition active:scale-95 no-underline"
+                  >
+                    <lucide-icon name="video" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
+                    <span>Unirse a Zoom</span>
+                  </a>
+                }
+                <button
+                  (click)="onAskAiClick('¿Qué temas tocan hoy en ' + parsedBannerTitle + ' y qué preguntas clave debería hacer en clase?')"
+                  class="inline-flex items-center gap-1.5 rounded-[var(--r-xl)] bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold transition shadow-none active:scale-95 cursor-pointer"
                 >
-                  <svg class="h-3.5 w-3.5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="m22 8-6 4 6 4V8Z"/>
-                    <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                  </svg>
-                  <span>Unirse a Zoom</span>
-                </a>
-              }
-              <button
-                (click)="onAskAiClick('¿Qué temas tocan hoy en ' + parsedBannerTitle + ' y qué preguntas clave debería hacer en clase?')"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.16] text-white border border-white/[0.16] backdrop-blur-md px-3.5 py-2 text-xs font-semibold transition shadow-none active:scale-95 cursor-pointer"
-              >
-                <svg class="h-3.5 w-3.5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-                </svg>
-                <span>Consultar IA</span>
-              </button>
+                  <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
+                  <span>Consultar IA</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- 2. Flat Navigation Tabs -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-        <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-md overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
-          <button
-            (click)="activeSection = 'todayClasses'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="activeSection === 'todayClasses' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-          >
-            <span>Clases de Hoy</span>
-            <span class="ml-0.5 text-[10px]" [ngClass]="activeSection === 'todayClasses' ? 'opacity-80' : 'opacity-60'">({{ todayEvents.length }})</span>
-          </button>
-
-          <button
-            (click)="activeSection = 'tasks'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="activeSection === 'tasks' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-          >
-            <span>Tareas</span>
-            <span class="ml-0.5 text-[10px]" [ngClass]="activeSection === 'tasks' ? 'opacity-80' : 'opacity-60'">({{ synchronizedTasks.length }})</span>
-          </button>
-
-          <button
-            (click)="activeSection = 'evaluations'"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-xl font-bold border-none"
-            [ngClass]="activeSection === 'evaluations' ? 'bg-white text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-          >
-            <span>Evaluaciones</span>
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2 text-xs text-neutral-500 font-mono self-end sm:self-auto">
-          <span>Semana {{ currentWeek }} de {{ totalWeeks }}</span>
-          <span>•</span>
-          <span>{{ periodName }}</span>
-        </div>
-      </div>
-
-      <!-- 3. Section Content -->
-      
-      <!-- TAB: Clases de Hoy -->
-      @if (activeSection === 'todayClasses') {
-        <div class="space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3">
-            <h3 class="text-sm sm:text-base font-bold text-white">
-              Horario del Día: <span class="capitalize text-neutral-300 font-normal">{{ formattedTodayDate }}</span>
-            </h3>
+        <!-- 2. Flat Navigation Tabs -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+          <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] p-1 rounded-[var(--r-sm)] overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
             <button
-              (click)="navigateToWeekly.emit()"
-              class="text-xs text-[var(--accent-blue)] hover:text-[var(--accent-blue-hover)] font-semibold transition-colors self-start sm:self-auto bg-transparent border-none cursor-pointer"
+              (click)="activeSection = 'todayClasses'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-[var(--r-xl)] font-bold"
+              [ngClass]="activeSection === 'todayClasses' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
             >
-              Ver horario semanal completo →
+              <span>Clases de Hoy</span>
+              <span class="ml-0.5 text-[10px]" [ngClass]="activeSection === 'todayClasses' ? 'opacity-80' : 'opacity-60'">({{ todayEvents.length }})</span>
+            </button>
+
+            <button
+              (click)="activeSection = 'tasks'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-[var(--r-xl)] font-bold"
+              [ngClass]="activeSection === 'tasks' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
+            >
+              <span>Tareas</span>
+              <span class="ml-0.5 text-[10px]" [ngClass]="activeSection === 'tasks' ? 'opacity-80' : 'opacity-60'">({{ synchronizedTasks.length }})</span>
+            </button>
+
+            <button
+              (click)="activeSection = 'evaluations'"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-[var(--r-xl)] font-bold"
+              [ngClass]="activeSection === 'evaluations' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
+            >
+              <span>Evaluaciones</span>
             </button>
           </div>
 
-          @if (todayEvents.length === 0) {
-            <div class="py-16 text-center rounded-2xl bg-[var(--surface-card)] border border-[var(--border-subtle)] p-8 space-y-3 shadow-none">
-              <svg class="h-10 w-10 mx-auto text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                <line x1="16" x2="16" y1="2" y2="6"/>
-                <line x1="8" x2="8" y1="2" y2="6"/>
-                <line x1="3" x2="21" y1="10" y2="10"/>
-              </svg>
-              <p class="text-base font-bold text-white">¡No tienes sesiones programadas para hoy!</p>
-              <p class="text-xs text-neutral-400">Aprovecha para avanzar en tus entregables y proyectos.</p>
-            </div>
-          } @else {
-            <div class="space-y-3">
-              @for (ev of todayEvents; track ev.id) {
-                <div
-                  (click)="selectedEventForModal = ev"
-                  class="group p-3.5 sm:p-5 rounded-2xl flex items-center justify-between gap-3 transition-all duration-300 shadow-none cursor-pointer"
-                  [ngClass]="isSessionActive(ev) ? 'bg-[var(--surface-card-hover)] border border-white/20' : 'bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border border-[var(--border-subtle)] hover:border-white/20'"
-                >
-                  <div class="space-y-1 min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      @if (ev.modality === 'P') {
-                        <span class="inline-flex items-center gap-1.5 rounded-sm badge-solid-presencial px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
-                          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-                          </svg>
-                          Presencial
-                        </span>
-                      } @else if (ev.modality === 'R') {
-                        <span class="inline-flex items-center gap-1.5 rounded-sm badge-solid-zoom px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
-                          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                          </svg>
-                          Remoto Zoom
-                        </span>
-                      } @else {
-                        <span class="inline-flex items-center gap-1.5 rounded-sm badge-solid-virtual px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
-                          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/>
-                          </svg>
-                          Virtual
-                        </span>
-                      }
-
-                      <span class="font-mono text-[11px] sm:text-xs text-neutral-400 font-bold whitespace-nowrap">
-                        {{ formatTime(ev.startAt) }} – {{ formatTime(ev.finishAt) }}
-                      </span>
-
-                      @if (ev.modality === 'P') {
-                        <span class="text-[10px] sm:text-[11px] font-mono text-neutral-400 truncate">
-                          • {{ getLocationForEvent(ev).aula }} ({{ getLocationForEvent(ev).pabellon }})
-                        </span>
-                      }
-
-                      @if (isSessionActive(ev)) {
-                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] border border-white/[0.14] px-2 py-0.5 rounded-sm backdrop-blur-md">
-                          <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
-                          Sesión Actual
-                        </span>
-                      }
-                    </div>
-
-                    <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-[var(--accent-lime)] transition-colors leading-snug truncate">
-                      {{ getParsedTitle(ev.title) }}
-                    </h4>
-                  </div>
-
-                  <div class="flex items-center gap-2 shrink-0">
-                    @if (ev.modality === 'R' && ev.metadata?.zoomLink) {
-                      <button
-                        (click)="openZoomDirect($event, ev.metadata?.zoomLink)"
-                        title="Unirse directo a Zoom"
-                        aria-label="Unirse a Zoom"
-                        class="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md shadow-none transition active:scale-95 shrink-0 cursor-pointer"
-                      >
-                        <svg class="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                        </svg>
-                      </button>
-                    }
-                    <svg class="h-4 w-4 text-neutral-500 group-hover:text-white transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="m9 18 6-6-6-6"/>
-                    </svg>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      }
-
-      <!-- TAB: Tareas -->
-      @if (activeSection === 'tasks') {
-        <div class="space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-            <div class="flex items-center gap-2">
-              <h3 class="text-sm sm:text-base font-bold text-white">
-                Entregables y Tareas
-              </h3>
-              <span class="text-xs text-neutral-500 font-medium">
-                ({{ filteredTasks.length }} de {{ synchronizedTasks.length }})
-              </span>
-            </div>
-
-            <div class="inline-flex items-center gap-1 bg-[var(--surface-card)] border border-[var(--border-subtle)] p-1 rounded-md text-[11px] font-bold">
-              <button
-                (click)="taskFilter = 'all'"
-                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
-                [ngClass]="taskFilter === 'all' ? 'bg-white text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-              >
-                Todas ({{ synchronizedTasks.length }})
-              </button>
-              <button
-                (click)="taskFilter = 'homework'"
-                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
-                [ngClass]="taskFilter === 'homework' ? 'bg-blue-500/20 text-blue-400 font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-              >
-                Tareas ({{ homeworkTasksCount }})
-              </button>
-              <button
-                (click)="taskFilter = 'forum'"
-                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
-                [ngClass]="taskFilter === 'forum' ? 'bg-purple-500/20 text-purple-400 font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-              >
-                Foros ({{ forumTasksCount }})
-              </button>
-              <button
-                (click)="taskFilter = 'graded'"
-                class="px-3 py-1 rounded-xl transition cursor-pointer border-none"
-                [ngClass]="taskFilter === 'graded' ? 'bg-[rgba(255,87,34,0.15)] text-[#ff7043] font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-[var(--surface-subtle)]'"
-              >
-                Calificadas ({{ gradedTasksCount }})
-              </button>
-            </div>
+          <div class="flex items-center gap-2 text-xs text-neutral-500 font-mono self-end sm:self-auto">
+            <span>Semana {{ currentWeek }} de {{ totalWeeks }}</span>
+            <span>•</span>
+            <span>{{ periodName }}</span>
           </div>
+        </div>
 
-          <div class="space-y-2.5">
-            @if (filteredTasks.length === 0) {
-              <div class="p-8 text-center rounded-2xl bg-[var(--surface-card)] border border-[var(--border-subtle)] text-xs text-neutral-400">
-                No hay actividades en esta categoría.
+        <!-- 3. Section Content -->
+        
+        <!-- TAB: Clases de Hoy -->
+        @if (activeSection === 'todayClasses') {
+          <div class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3">
+              <h3 class="text-sm sm:text-base font-bold text-white">
+                Horario del Día: <span class="capitalize text-neutral-300 font-normal">{{ formattedTodayDate }}</span>
+              </h3>
+              <button
+                (click)="navigateToWeekly.emit()"
+                class="text-xs text-[var(--utopik-green-yellow)] hover:underline font-semibold transition-colors self-start sm:self-auto bg-transparent cursor-pointer"
+              >
+                Ver horario semanal completo →
+              </button>
+            </div>
+
+            @if (todayEvents.length === 0) {
+              <div class="py-16 text-center rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] p-8 space-y-3 shadow-none">
+                <lucide-icon name="calendar" class="h-10 w-10 mx-auto text-neutral-600"></lucide-icon>
+                <p class="text-base font-bold text-white">¡No tienes sesiones programadas para hoy!</p>
+                <p class="text-xs text-neutral-400">Aprovecha para avanzar en tus entregables y proyectos.</p>
               </div>
             } @else {
-              @for (item of filteredTasks; track item.task.id) {
-                <div class="rounded-2xl bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border border-[var(--border-subtle)] hover:border-white/20 transition-colors p-4 sm:p-5 shadow-none text-white">
-                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div class="space-y-1 flex-1 min-w-0">
-                      <div class="flex flex-wrap items-center gap-2 text-xs">
-                        <span class="font-semibold text-neutral-400">{{ item.task.courseName }}</span>
-                        <span class="text-neutral-600">•</span>
-                        <span class="text-neutral-400">Semana {{ item.task.week }}</span>
-
-                        <!-- Badge: Tipo de Actividad (FORUM / TAREA) -->
-                        @if (item.task.activityType === 'FORUM') {
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold text-[10.5px]">
-                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                            <span>Foro</span>
+              <div class="space-y-3">
+                @for (ev of todayEvents; track ev.id) {
+                  <div
+                    (click)="selectedEventForModal = ev"
+                    class="group p-3.5 sm:p-5 rounded-[var(--r-2xl)] flex items-center justify-between gap-3 transition-all duration-300 shadow-none cursor-pointer"
+                    [ngClass]="isSessionActive(ev) ? 'bg-[#25281e]' : 'bg-[var(--utopik-carbon-black)] hover:bg-[#25281e]'"
+                  >
+                    <div class="space-y-1 min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        @if (ev.modality === 'P') {
+                          <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] badge-solid-presencial px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
+                            <lucide-icon name="map-pin" class="h-3 w-3"></lucide-icon>
+                            Presencial
+                          </span>
+                        } @else if (ev.modality === 'R') {
+                          <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] badge-solid-zoom px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
+                            <lucide-icon name="video" class="h-3 w-3"></lucide-icon>
+                            Remoto Zoom
                           </span>
                         } @else {
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 font-bold text-[10.5px]">
-                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            <span>Tarea</span>
+                          <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] badge-solid-virtual px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
+                            <lucide-icon name="wifi" class="h-3 w-3"></lucide-icon>
+                            Virtual
                           </span>
                         }
 
-                        @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
-                          <span class="text-neutral-600">•</span>
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 font-bold text-[11px]">
-                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                              <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
-                            </svg>
-                            <span>Entregado</span>
+                        <span class="font-mono text-[11px] sm:text-xs text-neutral-400 font-bold whitespace-nowrap">
+                          {{ formatTime(ev.startAt) }} – {{ formatTime(ev.finishAt) }}
+                        </span>
+
+                        @if (ev.modality === 'P') {
+                          <span class="text-[10px] sm:text-[11px] font-mono text-neutral-400 truncate">
+                            • {{ getLocationForEvent(ev).aula }} ({{ getLocationForEvent(ev).pabellon }})
                           </span>
                         }
 
-                        @if (item.task.evaluationSystem) {
-                          <span class="text-neutral-600">•</span>
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-sm bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
-                            {{ item.task.evaluationSystem }}
-                            @if (item.syllabusContext.formulaWeight) {
-                              ({{ item.syllabusContext.formulaWeight }}%)
-                            }
-                          </span>
-                        } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
-                          <span class="text-neutral-600">•</span>
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-sm bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] text-[var(--badge-orange-text)] font-bold text-[11px]">
-                            {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
-                          </span>
-                        }
-
-                        @if (item.task.status !== 'submitted' && getTaskUrgency(item.task)) {
-                          <span class="text-neutral-600">•</span>
-                          <span class="text-[11px] font-medium" [ngClass]="getTaskUrgency(item.task)?.badgeVariant === 'orange' ? 'text-[var(--badge-orange-text)]' : 'text-neutral-400'">
-                            {{ getTaskUrgency(item.task)?.label }}
+                        @if (isSessionActive(ev)) {
+                          <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] px-2 py-0.5 rounded-[var(--r-xs)] backdrop-blur-md">
+                            <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-green-yellow)] animate-pulse"></span>
+                            Sesión Actual
                           </span>
                         }
                       </div>
 
-                      <h4 class="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
-                        {{ item.task.title }}
+                      <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-[var(--utopik-green-yellow)] transition-colors leading-snug truncate">
+                        {{ getParsedTitle(ev.title) }}
                       </h4>
                     </div>
 
-                    <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                      @if (item.task.instructionsHtml) {
+                    <div class="flex items-center gap-2 shrink-0">
+                      @if (ev.modality === 'R' && ev.metadata?.zoomLink) {
                         <button
-                          (click)="selectedTaskForInstructions = item.task"
-                          class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-subtle)] hover:bg-white hover:text-black border border-[var(--border-subtle)] px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                          (click)="openZoomDirect($event, ev.metadata?.zoomLink)"
+                          title="Unirse directo a Zoom"
+                          aria-label="Unirse a Zoom"
+                          class="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-[var(--r-md)] bg-white/10 hover:bg-white/20 text-white backdrop-blur-md shadow-none transition active:scale-95 shrink-0 cursor-pointer"
                         >
-                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-                          </svg>
-                          <span>Indicaciones</span>
+                          <lucide-icon name="video" class="h-3.5 w-3.5 text-white"></lucide-icon>
                         </button>
                       }
-
-                      @if (item.task.rubric) {
-                        <button
-                          (click)="openRubric(item.task.rubric, item.task.title, item.task.courseName)"
-                          class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-subtle)] hover:bg-white hover:text-black border border-[var(--border-subtle)] px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
-                        >
-                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
-                          </svg>
-                          <span>Rúbrica</span>
-                        </button>
-                      }
-
-                      <button
-                        (click)="onAskAiClick('¿Cómo resuelvo la actividad &quot;' + item.task.title + '&quot; del curso &quot;' + item.task.courseName + '&quot; según el sílabo y rúbrica oficial?')"
-                        title="Consultar al Copiloto IA"
-                        class="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] border border-[var(--border-subtle)] text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
-                      >
-                        <svg class="h-3.5 w-3.5 text-[var(--accent-orange)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-                        </svg>
-                      </button>
-
-                      <button
-                        (click)="expandedTaskIds[item.task.id] = !expandedTaskIds[item.task.id]"
-                        title="Ver detalles del sílabo"
-                        class="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] border border-[var(--border-subtle)] text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
-                      >
-                        @if (expandedTaskIds[item.task.id]) {
-                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
-                        } @else {
-                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                        }
-                      </button>
+                      <lucide-icon name="chevron-right" class="h-4 w-4 text-neutral-500 group-hover:text-white transition-colors shrink-0"></lucide-icon>
                     </div>
                   </div>
+                }
+              </div>
+            }
+          </div>
+        }
 
-                  @if (expandedTaskIds[item.task.id]) {
-                    <div class="mt-4 pt-4 border-t border-[var(--border-subtle)] text-xs space-y-2 text-neutral-300">
-                      @if (item.task.syllabusCorrelation; as sc) {
-                        <div class="flex flex-wrap items-center gap-2 text-neutral-400">
-                          <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
-                          </svg>
-                          <span class="font-bold text-white">Contexto del Sílabo:</span>
-                          <span>{{ sc.syllabusUnit || item.syllabusContext.unitTitle }}</span>
-                          @if (sc.weightPercent) {
-                            <span class="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-[10.5px]">
-                              {{ sc.evaluationType }} ({{ sc.weightPercent }}%)
+        <!-- TAB: Tareas -->
+        @if (activeSection === 'tasks') {
+          <div class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm sm:text-base font-bold text-white">
+                  Entregables y Tareas
+                </h3>
+                <span class="text-xs text-neutral-500 font-medium">
+                  ({{ filteredTasks.length }} de {{ synchronizedTasks.length }})
+                </span>
+              </div>
+
+              <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] p-1 rounded-[var(--r-sm)] text-[11px] font-bold">
+                <button
+                  (click)="taskFilter = 'all'"
+                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  [ngClass]="taskFilter === 'all' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
+                >
+                  Todas ({{ synchronizedTasks.length }})
+                </button>
+                <button
+                  (click)="taskFilter = 'homework'"
+                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  [ngClass]="taskFilter === 'homework' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
+                >
+                  Tareas ({{ homeworkTasksCount }})
+                </button>
+                <button
+                  (click)="taskFilter = 'forum'"
+                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  [ngClass]="taskFilter === 'forum' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
+                >
+                  Foros ({{ forumTasksCount }})
+                </button>
+                <button
+                  (click)="taskFilter = 'graded'"
+                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  [ngClass]="taskFilter === 'graded' ? 'bg-[var(--utopik-sandy-brown)]/20 text-[var(--utopik-sandy-brown)] font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
+                >
+                  Calificadas ({{ gradedTasksCount }})
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2.5">
+              @if (filteredTasks.length === 0) {
+                <div class="p-8 text-center rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-xs text-neutral-400">
+                  No hay actividades en esta categoría.
+                </div>
+              } @else {
+                @for (item of filteredTasks; track item.task.id) {
+                  <div class="rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] transition-colors p-4 sm:p-5 shadow-none text-white">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div class="space-y-1 flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                          <span class="font-semibold text-neutral-400">{{ item.task.courseName }}</span>
+                          <span class="text-neutral-600">•</span>
+                          <span class="text-neutral-400">Semana {{ item.task.week }}</span>
+
+                          <!-- Badge: Tipo de Actividad (FORUM / TAREA) -->
+                          @if (item.task.activityType === 'FORUM') {
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-sm)] bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
+                              <lucide-icon name="message-square" class="h-3 w-3"></lucide-icon>
+                              <span>Foro</span>
+                            </span>
+                          } @else {
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-sm)] bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
+                              <lucide-icon name="file-text" class="h-3 w-3"></lucide-icon>
+                              <span>Tarea</span>
                             </span>
                           }
-                          @if (item.task.courseCode) {
-                            <span class="text-neutral-500 font-mono text-[10.5px]">({{ item.task.courseCode }})</span>
+
+                          @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
+                            <span class="text-neutral-600">•</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-xs)] bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] font-bold text-[11px]">
+                              <lucide-icon name="check-circle-2" class="h-3 w-3"></lucide-icon>
+                              <span>Entregado</span>
+                            </span>
+                          }
+
+                          @if (item.task.evaluationSystem) {
+                            <span class="text-neutral-600">•</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[var(--r-xs)] bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
+                              {{ item.task.evaluationSystem }}
+                              @if (item.syllabusContext.formulaWeight) {
+                                ({{ item.syllabusContext.formulaWeight }}%)
+                              }
+                            </span>
+                          } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
+                            <span class="text-neutral-600">•</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[var(--r-xs)] bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
+                              {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
+                            </span>
+                          }
+
+                          @if (item.task.status !== 'submitted' && getTaskUrgency(item.task)) {
+                            <span class="text-neutral-600">•</span>
+                            <span class="text-[11px] font-medium" [ngClass]="getTaskUrgency(item.task)?.badgeVariant === 'orange' ? 'text-[var(--utopik-sandy-brown)]' : 'text-neutral-400'">
+                              {{ getTaskUrgency(item.task)?.label }}
+                            </span>
                           }
                         </div>
-                        @if (sc.syllabusTopic) {
-                          <p class="text-neutral-400 pl-5">
-                            • Tema del sílabo: <span class="text-neutral-200">{{ sc.syllabusTopic }}</span>
-                          </p>
-                        } @else if (item.syllabusContext.sessionTopics.length > 0) {
-                          <p class="text-neutral-400 pl-5">
-                            • Tema de la semana: <span class="text-neutral-200">{{ item.syllabusContext.sessionTopics[0] }}</span>
-                          </p>
+
+                        <h4 class="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
+                          {{ item.task.title }}
+                        </h4>
+                      </div>
+
+                      <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
+                        @if (item.task.instructionsHtml) {
+                          <button
+                            (click)="selectedTaskForInstructions = item.task"
+                            class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                          >
+                            <lucide-icon name="file-text" class="h-3.5 w-3.5"></lucide-icon>
+                            <span>Indicaciones</span>
+                          </button>
                         }
-                        @if (sc.evaluationDescription) {
-                          <p class="text-neutral-400 pl-5">
-                            • Evaluación oficial: <span class="text-neutral-300">{{ sc.evaluationDescription }}</span>
-                          </p>
+
+                        @if (item.task.rubric) {
+                          <button
+                            (click)="openRubric(item.task.rubric, item.task.title, item.task.courseName)"
+                            class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                          >
+                            <lucide-icon name="award" class="h-3.5 w-3.5"></lucide-icon>
+                            <span>Rúbrica</span>
+                          </button>
                         }
-                      } @else {
-                        <div class="flex items-center gap-2 text-neutral-400">
-                          <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
-                          </svg>
-                          <span class="font-bold text-white">Contexto del Sílabo:</span>
-                          <span>{{ item.syllabusContext.unitTitle }}</span>
-                        </div>
-                        @if (item.syllabusContext.sessionTopics.length > 0) {
-                          <p class="text-neutral-400 pl-5">
-                            • Tema de la semana: {{ item.syllabusContext.sessionTopics[0] }}
-                          </p>
-                        }
-                      }
+
+                        <button
+                          (click)="onAskAiClick('¿Cómo resuelvo la actividad &quot;' + item.task.title + '&quot; del curso &quot;' + item.task.courseName + '&quot; según el sílabo y rúbrica oficial?')"
+                          title="Consultar al Copiloto IA"
+                          class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
+                        >
+                          <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-[var(--utopik-sandy-brown)]"></lucide-icon>
+                        </button>
+
+                        <button
+                          (click)="expandedTaskIds[item.task.id] = !expandedTaskIds[item.task.id]"
+                          title="Ver detalles del sílabo"
+                          class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
+                        >
+                          @if (expandedTaskIds[item.task.id]) {
+                            <lucide-icon name="chevron-up" class="h-3.5 w-3.5"></lucide-icon>
+                          } @else {
+                            <lucide-icon name="chevron-down" class="h-3.5 w-3.5"></lucide-icon>
+                          }
+                        </button>
+                      </div>
                     </div>
-                  }
-                </div>
-              }
-            }
-          </div>
-        </div>
-      }
 
-      <!-- TAB: Evaluaciones -->
-      @if (activeSection === 'evaluations') {
-        <div class="space-y-4">
-          <div class="flex items-center justify-between pb-1">
-            <h3 class="text-base sm:text-lg font-bold text-white">
-              Evaluaciones Oficiales ({{ sortedEvaluations.length }})
-            </h3>
-          </div>
-
-          <div class="space-y-2.5">
-            @for (ev of sortedEvaluations; track ev.id) {
-              <div class="p-4 sm:p-5 rounded-2xl bg-[var(--surface-card)] hover:bg-[var(--surface-card-hover)] border border-[var(--border-subtle)] hover:border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors shadow-none">
-                <div class="space-y-1">
-                  <div class="flex flex-wrap items-center gap-2 text-xs">
-                    <span class="font-semibold text-neutral-400">{{ ev.courseName.split(' - ')[0] }}</span>
-                    <span class="text-neutral-600">•</span>
-                    <span class="font-semibold" [ngClass]="ev.week === currentWeek ? 'text-[var(--accent-lime)]' : ev.week - currentWeek === 1 ? 'text-[var(--accent-orange)]' : 'text-neutral-400'">
-                      Semana {{ ev.week }} {{ ev.week === currentWeek ? '(Esta semana)' : '' }}
-                    </span>
-                    <span class="text-neutral-600">•</span>
-                    <span class="font-bold text-[var(--badge-orange-text)] bg-[var(--badge-orange-bg)] border border-[var(--badge-orange-border)] px-2 py-0.5 rounded-md text-[11px]">
-                      {{ ev.code }} ({{ ev.weightPercent }}%)
-                    </span>
-                  </div>
-
-                  <h4 class="text-sm font-bold text-white leading-snug">{{ ev.fullName }}</h4>
-                  @if (ev.description) {
-                    <p class="text-xs text-neutral-400 max-w-2xl leading-relaxed">{{ ev.description }}</p>
-                  }
-                </div>
-
-                <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                  <button
-                    (click)="selectedCourseForSyllabus = ev.courseName; isSyllabusModalOpen = true"
-                    class="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
-                  >
-                    <svg class="h-3.5 w-3.5 text-[var(--accent-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>
-                    </svg>
-                    <span>Sílabo</span>
-                  </button>
-                  <button
-                    (click)="onAskAiClick('¿Cómo prepararme para ' + ev.code + ' (' + ev.fullName + ') de ' + ev.courseName + ' y qué rúbrica evalúa la UTP para sacar 20?')"
-                    title="Consultar al Copiloto IA"
-                    class="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-subtle)] hover:bg-[var(--surface-muted)] border border-[var(--border-subtle)] text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
-                  >
-                    <svg class="h-3.5 w-3.5 text-[var(--accent-orange)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- MODAL: Detalle de Clase -->
-      <app-class-detail-modal
-        [isOpen]="!!selectedEventForModal"
-        [event]="selectedEventForModal"
-        [weekNumber]="currentWeek"
-        [interval]="currentInterval"
-        (close)="selectedEventForModal = null"
-        (openGlobalAi)="onAskAiClick($event)"
-      />
-
-      <!-- MODAL: Rúbrica -->
-      @if (activeRubric) {
-        <div 
-          class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md"
-          (click)="activeRubric = null"
-        >
-          <div 
-            class="relative flex flex-col w-full max-w-3xl max-h-[85vh] rounded-2xl bg-[#111114] text-white shadow-2xl overflow-hidden border border-white/10"
-            (click)="$event.stopPropagation()"
-          >
-            <div class="bg-[#16161a] px-6 py-4 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h3 class="text-base font-bold text-white">{{ activeRubric.taskTitle }}</h3>
-                <p class="text-xs text-neutral-400">{{ activeRubric.courseName }} • Rúbrica Oficial (Total: {{ activeRubric.rubric.totalPoints }} pts)</p>
-              </div>
-              <button (click)="activeRubric = null" class="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer">✕</button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-4">
-              @for (crit of activeRubric.rubric.criteria; track crit.id) {
-                <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-                  <div class="flex justify-between items-center">
-                    <h4 class="text-sm font-bold text-white">{{ crit.title }}</h4>
-                    <span class="text-xs font-bold text-[var(--accent-lime)]">Max: {{ crit.maxPoints }} pts</span>
-                  </div>
-                  <p class="text-xs text-neutral-400">{{ crit.description }}</p>
-                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                    @for (lvl of crit.levels; track lvl.name) {
-                      <div class="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
-                        <div class="flex justify-between text-[11px] font-bold">
-                          <span class="text-neutral-200">{{ lvl.name }}</span>
-                          <span class="text-[var(--accent-lime)]">{{ lvl.points }} pts</span>
-                        </div>
-                        <p class="text-[10px] text-neutral-400 leading-snug">{{ lvl.description }}</p>
+                    @if (expandedTaskIds[item.task.id]) {
+                      <div class="mt-4 pt-4 text-xs space-y-2 text-neutral-300">
+                        @if (item.task.syllabusCorrelation; as sc) {
+                          <div class="flex flex-wrap items-center gap-2 text-neutral-400">
+                            <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
+                            <span class="font-bold text-white">Contexto del Sílabo:</span>
+                            <span>{{ sc.syllabusUnit || item.syllabusContext.unitTitle }}</span>
+                            @if (sc.weightPercent) {
+                              <span class="px-2 py-0.5 rounded-[var(--r-sm)] bg-[var(--utopik-sandy-brown)]/10 text-[var(--utopik-sandy-brown)] font-bold text-[10.5px]">
+                                {{ sc.evaluationType }} ({{ sc.weightPercent }}%)
+                              </span>
+                            }
+                            @if (item.task.courseCode) {
+                              <span class="text-neutral-500 font-mono text-[10.5px]">({{ item.task.courseCode }})</span>
+                            }
+                          </div>
+                          @if (sc.syllabusTopic) {
+                            <p class="text-neutral-400 pl-5">
+                              • Tema del sílabo: <span class="text-neutral-200">{{ sc.syllabusTopic }}</span>
+                            </p>
+                          } @else if (item.syllabusContext.sessionTopics.length > 0) {
+                            <p class="text-neutral-400 pl-5">
+                              • Tema de la semana: <span class="text-neutral-200">{{ item.syllabusContext.sessionTopics[0] }}</span>
+                            </p>
+                          }
+                          @if (sc.evaluationDescription) {
+                            <p class="text-neutral-400 pl-5">
+                              • Evaluación oficial: <span class="text-neutral-300">{{ sc.evaluationDescription }}</span>
+                            </p>
+                          }
+                        } @else {
+                          <div class="flex items-center gap-2 text-neutral-400">
+                            <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
+                            <span class="font-bold text-white">Contexto del Sílabo:</span>
+                            <span>{{ item.syllabusContext.unitTitle }}</span>
+                          </div>
+                          @if (item.syllabusContext.sessionTopics.length > 0) {
+                            <p class="text-neutral-400 pl-5">
+                              • Tema de la semana: {{ item.syllabusContext.sessionTopics[0] }}
+                            </p>
+                          }
+                        }
                       </div>
                     }
                   </div>
+                }
+              }
+            </div>
+          </div>
+        }
+
+        <!-- TAB: Evaluaciones -->
+        @if (activeSection === 'evaluations') {
+          <div class="space-y-4">
+            <div class="flex items-center justify-between pb-1">
+              <h3 class="text-base sm:text-lg font-bold text-white">
+                Evaluaciones Oficiales ({{ sortedEvaluations.length }})
+              </h3>
+            </div>
+
+            <div class="space-y-2.5">
+              @for (ev of sortedEvaluations; track ev.id) {
+                <div class="p-4 sm:p-5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors shadow-none">
+                  <div class="space-y-1">
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                      <span class="font-semibold text-neutral-400">{{ ev.courseName.split(' - ')[0] }}</span>
+                      <span class="text-neutral-600">•</span>
+                      <span class="font-semibold" [ngClass]="ev.week === currentWeek ? 'text-[var(--utopik-green-yellow)]' : ev.week - currentWeek === 1 ? 'text-[var(--utopik-sandy-brown)]' : 'text-neutral-400'">
+                        Semana {{ ev.week }} {{ ev.week === currentWeek ? '(Esta semana)' : '' }}
+                      </span>
+                      <span class="text-neutral-600">•</span>
+                      <span class="font-bold text-[var(--utopik-sandy-brown)] bg-[var(--utopik-sandy-brown)]/15 px-2 py-0.5 rounded-[var(--r-sm)] text-[11px]">
+                        {{ ev.code }} ({{ ev.weightPercent }}%)
+                      </span>
+                    </div>
+
+                    <h4 class="text-sm font-bold text-white leading-snug">{{ ev.fullName }}</h4>
+                    @if (ev.description) {
+                      <p class="text-xs text-neutral-400 max-w-2xl leading-relaxed">{{ ev.description }}</p>
+                    }
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
+                    <button
+                      (click)="selectedCourseForSyllabus = ev.courseName; isSyllabusModalOpen = true"
+                      class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
+                    >
+                      <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
+                      <span>Sílabo</span>
+                    </button>
+                    <button
+                      (click)="onAskAiClick('¿Cómo prepararme para ' + ev.code + ' (' + ev.fullName + ') de ' + ev.courseName + ' y qué rúbrica evalúa la UTP para sacar 20?')"
+                      title="Consultar al Copiloto IA"
+                      class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
+                    >
+                      <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-[var(--utopik-sandy-brown)]"></lucide-icon>
+                    </button>
+                  </div>
                 </div>
               }
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- MODAL: Indicaciones de Tarea -->
-      @if (selectedTaskForInstructions) {
-        <div 
-          class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md"
-          (click)="selectedTaskForInstructions = null"
-        >
+        <!-- MODAL: Detalle de Clase -->
+        <app-class-detail-modal
+          [isOpen]="!!selectedEventForModal"
+          [event]="selectedEventForModal"
+          [weekNumber]="currentWeek"
+          [interval]="currentInterval"
+          (close)="selectedEventForModal = null"
+          (openGlobalAi)="onAskAiClick($event)"
+        />
+
+        <!-- MODAL: Rúbrica -->
+        @if (activeRubric) {
           <div 
-            class="relative flex flex-col w-full max-w-2xl max-h-[85vh] rounded-2xl bg-[#111114] text-white shadow-2xl overflow-hidden border border-white/10"
-            (click)="$event.stopPropagation()"
+            class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md"
+            (click)="activeRubric = null"
           >
-            <div class="bg-[#16161a] px-6 py-4 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h3 class="text-base font-bold text-white">{{ selectedTaskForInstructions.title }}</h3>
-                <p class="text-xs text-neutral-400">{{ selectedTaskForInstructions.courseName }} • Semana {{ selectedTaskForInstructions.week }}</p>
+            <div 
+              class="relative flex flex-col w-full max-w-3xl max-h-[85vh] rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-white shadow-2xl overflow-hidden"
+              (click)="$event.stopPropagation()"
+            >
+              <div class="bg-[var(--utopik-carbon-black)] px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-bold text-white">{{ activeRubric.taskTitle }}</h3>
+                  <p class="text-xs text-neutral-400">{{ activeRubric.courseName }} • Rúbrica Oficial (Total: {{ activeRubric.rubric.totalPoints }} pts)</p>
+                </div>
+                <button 
+                  (click)="activeRubric = null" 
+                  aria-label="Cerrar rúbrica"
+                  class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
+                >
+                  <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
+                </button>
               </div>
-              <button (click)="selectedTaskForInstructions = null" class="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer">✕</button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-4 utp-instructions-content" [innerHTML]="selectedTaskForInstructions.instructionsHtml">
+              <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                @for (crit of activeRubric.rubric.criteria; track crit.id) {
+                  <div class="p-4 rounded-[var(--r-2xl)] bg-white/[0.02] space-y-2">
+                    <div class="flex justify-between items-center">
+                      <h4 class="text-sm font-bold text-white">{{ crit.title }}</h4>
+                      <span class="text-xs font-bold text-[var(--utopik-green-yellow)]">Max: {{ crit.maxPoints }} pts</span>
+                    </div>
+                    <p class="text-xs text-neutral-400">{{ crit.description }}</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                      @for (lvl of crit.levels; track lvl.name) {
+                        <div class="p-2.5 rounded-[var(--r-xl)] bg-white/[0.03] space-y-1">
+                          <div class="flex justify-between text-[11px] font-bold">
+                            <span class="text-neutral-200">{{ lvl.name }}</span>
+                            <span class="text-[var(--utopik-green-yellow)]">{{ lvl.points }} pts</span>
+                          </div>
+                          <p class="text-[10px] text-neutral-400 leading-snug">{{ lvl.description }}</p>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
           </div>
-        </div>
+        }
+
+        <!-- MODAL: Indicaciones de Tarea -->
+        @if (selectedTaskForInstructions) {
+          <div 
+            class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md"
+            (click)="selectedTaskForInstructions = null"
+          >
+            <div 
+              class="relative flex flex-col w-full max-w-2xl max-h-[85vh] rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-white shadow-2xl overflow-hidden"
+              (click)="$event.stopPropagation()"
+            >
+              <div class="bg-[var(--utopik-carbon-black)] px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-bold text-white">{{ selectedTaskForInstructions.title }}</h3>
+                  <p class="text-xs text-neutral-400">{{ selectedTaskForInstructions.courseName }} • Semana {{ selectedTaskForInstructions.week }}</p>
+                </div>
+                <button 
+                  (click)="selectedTaskForInstructions = null" 
+                  aria-label="Cerrar indicaciones"
+                  class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
+                >
+                  <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
+                </button>
+              </div>
+              <div class="flex-1 overflow-y-auto p-6 space-y-4 utp-instructions-content" [innerHTML]="selectedTaskForInstructions.instructionsHtml">
+              </div>
+            </div>
+          </div>
+        }
       }
-    }
     </div>
   `
 })
@@ -788,7 +755,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
         this.tasksArrived = true;
         console.log(`[TODAY-VIEW] 📥 Tareas/actividades recibidas en ${Math.round(performance.now() - this.tasksRequestStart)}ms (${res.data?.length ?? 0} ítems, semana ${targetWeek})`);
         if (res.success && res.data && res.data.length > 0) {
-          const dynamicTasks: TaskWithSyllabusContext[] = res.data.map((u: any) => {
+          const dynamicTasks: TaskWithSyllabusContext[] = res.data.map((u: TaskSyncItem) => {
             const isDelivered = u.isDelivered || u.studentStatus === 'DELIVERED' || u.studentStatus === 'SUBMITTED' || u.homeworkStatus === 'DELIVERED';
             const courseTitle = u.courseName || '';
             const week = u.week || u.weekNumber || targetWeek;
@@ -850,7 +817,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
             next: (taskRes) => {
               console.log(`[TODAY-VIEW] 📥 Tareas (fallback /tasks) recibidas en ${Math.round(performance.now() - this.tasksRequestStart)}ms (${taskRes.data?.length ?? 0} ítems)`);
               if (taskRes.success && taskRes.data && taskRes.data.length > 0) {
-                this.synchronizedTasks = taskRes.data.map((t: any) => {
+                this.synchronizedTasks = taskRes.data.map((t: TaskSyncItem) => {
                   const week = t.week || this.currentWeek || 1;
                   const syllabusContext = getSyllabusWeekContext(t.courseName, week);
                   const correlation = t.syllabusCorrelation;
@@ -884,7 +851,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
                       const cName = getCanonicalCourseKey(t.task.courseName || '');
                       const sCode = getCanonicalCourseKey(t.task.sectionCode || '');
                       return enrolledKeys.has(cName) || enrolledKeys.has(sCode) ||
-                             Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
+                        Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
                     })
                   : [];
               }
@@ -893,14 +860,14 @@ export class TodayViewComponent implements OnInit, OnDestroy {
         }
       },
       error: () => {
-        console.warn(`[TODAY-VIEW] ⏭️ Error consultando actividades (semana ${targetWeek}) tras ${Math.round(performance.now() - this.tasksRequestStart)}ms: se sirve el fallback local`);
+        console.warn(`[TODAY-VIEW] ⚠️ Error consultando actividades (semana ${targetWeek}) tras ${Math.round(performance.now() - this.tasksRequestStart)}ms: se sirve el fallback local`);
         const fallback = getSynchronizedStudentTasks();
         this.synchronizedTasks = enrolledKeys.size > 0
           ? fallback.filter(t => {
               const cName = getCanonicalCourseKey(t.task.courseName || '');
               const sCode = getCanonicalCourseKey(t.task.sectionCode || '');
               return enrolledKeys.has(cName) || enrolledKeys.has(sCode) ||
-                     Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
+                Array.from(enrolledKeys).some(k => (cName && (cName.includes(k) || k.includes(cName))));
             })
           : [];
       }
@@ -976,7 +943,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isLoading = false;
-        console.warn(`[TODAY-VIEW] ⏭️ Horario falló tras ${Math.round(performance.now() - this.scheduleSkeletonStart)}ms: skeletons apagados sin datos`, err);
+        console.warn(`[TODAY-VIEW] ⚠️ Horario falló tras ${Math.round(performance.now() - this.scheduleSkeletonStart)}ms: skeletons apagados sin datos`, err);
       }
     });
   }

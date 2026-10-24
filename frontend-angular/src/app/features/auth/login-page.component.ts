@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '@data/services/auth.service';
@@ -406,9 +406,10 @@ export interface StepItem {
     </div>
   `
 })
-export class LoginPageComponent implements OnDestroy {
+export class LoginPageComponent implements OnInit, OnDestroy {
   @Output() openPrivacy = new EventEmitter<void>();
 
+  @Input() autoOpen = false;
   isLoginModalOpen = false;
   username = '';
   password = '';
@@ -640,6 +641,12 @@ export class LoginPageComponent implements OnDestroy {
   }
 
   /** Auditoría 0.9: el desmontaje del componente deja cero timers pendientes. */
+  ngOnInit(): void {
+    if (this.autoOpen) {
+      this.isLoginModalOpen = true;
+    }
+  }
+
   ngOnDestroy(): void {
     this.clearAllTimers();
   }

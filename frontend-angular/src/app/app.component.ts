@@ -8,7 +8,7 @@ import { WeeklyScheduleComponent } from './features/schedule/weekly-schedule.com
 import { SyllabusViewComponent } from './features/syllabus/syllabus-view.component';
 import { SettingsModalComponent } from './features/settings/settings-modal.component';
 import { AiAssistantModalComponent } from './features/ai-assistant/ai-assistant-modal.component';
-import { LoginPageComponent } from './features/auth/login-page.component';
+import { LandingPageComponent } from './features/landing/landing-page.component';
 import { PrivacyPageComponent } from './features/privacy/privacy-page.component';
 import { NetworkingViewComponent } from './features/networking/networking-view.component';
 import { MarketplaceViewComponent } from './features/marketplace/marketplace-view.component';
@@ -26,7 +26,7 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
     SyllabusViewComponent,
     SettingsModalComponent,
     AiAssistantModalComponent,
-    LoginPageComponent,
+    LandingPageComponent,
     PrivacyPageComponent,
     NetworkingViewComponent,
     MarketplaceViewComponent
@@ -35,7 +35,7 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
     @if (showPrivacy) {
       <app-privacy-page (goBack)="showPrivacy = false"></app-privacy-page>
     } @else if (!authService.isAuthenticated()) {
-      <app-login-page (openPrivacy)="showPrivacy = true"></app-login-page>
+      <app-landing-page (openPrivacy)="showPrivacy = true"></app-landing-page>
     } @else {
       <div class="min-h-screen bg-[#070709] text-white flex flex-col font-sans selection:bg-[var(--accent-lime)] selection:text-black">
         <app-navbar 
