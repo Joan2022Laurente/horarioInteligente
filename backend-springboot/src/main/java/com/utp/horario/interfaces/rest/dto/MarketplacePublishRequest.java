@@ -19,6 +19,7 @@ public class MarketplacePublishRequest {
     private String title;
     private String description;
     private String imageUrl;
+    private String thumbnailUrl;
     private String location;
     private String contactMethod;
     private String tutorName;

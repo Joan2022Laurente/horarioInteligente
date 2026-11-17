@@ -30,6 +30,7 @@ export interface ServiceItem {
   title: string;
   description: string;
   imageUrl: string;
+  thumbnailUrl?: string;
   badge?: string;
   location?: string;
   rating: number;

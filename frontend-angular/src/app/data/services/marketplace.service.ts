@@ -15,6 +15,7 @@ export interface PublishItemPayload {
   title: string;
   description: string;
   imageUrl?: string;
+  thumbnailUrl?: string;
   location?: string;
   contactMethod?: string;
   tutorName?: string;
@@ -165,6 +166,7 @@ export class MarketplaceService {
       title: raw.title || '',
       description: raw.description || '',
       imageUrl: raw.imageUrl || 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=600&auto=format&fit=crop',
+      thumbnailUrl: raw.thumbnailUrl || raw.imageUrl || 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=600&auto=format&fit=crop',
       badge: raw.badge || 'NUEVO',
       location: raw.location || 'Campus UTP',
       rating: Number(raw.rating) || 5.0,

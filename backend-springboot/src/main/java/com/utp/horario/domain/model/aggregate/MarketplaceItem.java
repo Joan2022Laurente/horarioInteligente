@@ -24,6 +24,7 @@ public class MarketplaceItem {
     private String title;
     private String description;
     private String imageUrl;
+    private String thumbnailUrl;
     private String badge;
     private String location;       // 'Torre A - Piso 3'
     private Double rating;

@@ -24,6 +24,7 @@ public class MarketplaceDto {
     private String title;
     private String description;
     private String imageUrl;
+    private String thumbnailUrl;
     private String badge;
     private String location;
     private Double rating;

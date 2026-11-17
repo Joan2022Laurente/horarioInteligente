@@ -56,6 +56,9 @@ public class MarketplaceItemEntity {
     @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
+    @Column(name = "thumbnail_url", columnDefinition = "TEXT")
+    private String thumbnailUrl;
+
     @Column(length = 64)
     private String badge;
 

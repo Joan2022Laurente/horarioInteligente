@@ -16,7 +16,7 @@ import { ServiceItem } from '@domain/models/marketplace';
       <!-- Card Image Aspect Square Frame -->
       <div class="relative aspect-square w-full bg-[#121318] flex items-center justify-center overflow-hidden">
         <img 
-          [src]="item.imageUrl" 
+          [src]="item.thumbnailUrl || item.imageUrl" 
           [alt]="item.title"
           (error)="onImgError($event)"
           loading="lazy"

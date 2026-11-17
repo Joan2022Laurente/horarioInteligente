@@ -971,6 +971,10 @@ video {
   height: 5rem;
 }
 
+.h-24{
+  height: 6rem;
+}
+
 .h-28{
   height: 7rem;
 }
@@ -1950,6 +1954,10 @@ video {
   border-color: rgb(255 255 255 / 0.08);
 }
 
+.border-white\/\[0\.12\]{
+  border-color: rgb(255 255 255 / 0.12);
+}
+
 .border-yellow-500\/20{
   border-color: rgb(234 179 8 / 0.2);
 }
@@ -2180,6 +2188,10 @@ video {
 
 .bg-black\/5{
   background-color: rgb(0 0 0 / 0.05);
+}
+
+.bg-black\/60{
+  background-color: rgb(0 0 0 / 0.6);
 }
 
 .bg-black\/75{
@@ -3994,6 +4006,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .hover\:border-red-500\/60:hover{
   border-color: rgb(239 68 68 / 0.6);
+}
+
+.hover\:border-white\/25:hover{
+  border-color: rgb(255 255 255 / 0.25);
 }
 
 .hover\:bg-\[\#14151b\]:hover{

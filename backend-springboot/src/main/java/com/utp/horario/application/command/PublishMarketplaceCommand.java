@@ -19,6 +19,7 @@ public class PublishMarketplaceCommand {
     private final String title;
     private final String description;
     private final String imageUrl;
+    private final String thumbnailUrl;
     private final String badge;
     private final String location;
     private final String tutorName;
