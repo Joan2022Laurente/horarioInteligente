@@ -686,42 +686,19 @@ export class MarketplaceViewComponent implements OnInit {
       next: (savedItem) => {
         if (savedItem) {
           this.marketplaceStore.addItem(savedItem);
+          this.isOfferModalOpen = false;
+          this.isPublishing = false;
+          this.newOffer.title = '';
+          this.newOffer.description = '';
+          this.removeSelectedImage();
         } else {
-          const fallbackItem: ServiceItem = {
-            id: `m-${Date.now()}`,
-            itemType,
-            category: payload.category,
-            serviceType: payload.serviceType,
-            condition: payload.condition,
-            numericPrice: payload.numericPrice,
-            price: `S/ ${payload.numericPrice.toFixed(2)}`,
-            unit: payload.unit,
-            location: payload.location,
-            title: payload.title,
-            description: payload.description,
-            imageUrl: payload.imageUrl,
-            thumbnailUrl: payload.thumbnailUrl,
-            rating: 0,
-            reviewsCount: 0,
-            salesCount: 0,
-            tutorName: payload.tutorName,
-            tutorCareer: payload.tutorCareer,
-            tutorCycle: payload.tutorCycle,
-            reputation: 100,
-            tags: [],
-            contactMethod: payload.contactMethod,
-            status: 'AVAILABLE'
-          };
-          this.marketplaceStore.addItem(fallbackItem);
+          alert('No se pudo guardar la publicación en el servidor. Por favor, verifica tu conexión o sesión e intenta nuevamente.');
+          this.isPublishing = false;
         }
-        this.isOfferModalOpen = false;
-        this.isPublishing = false;
-        this.newOffer.title = '';
-        this.newOffer.description = '';
-        this.removeSelectedImage();
       },
       error: (err) => {
         console.error('[MarketplaceView] Error al publicar ítem:', err);
+        alert('Ocurrió un error al intentar publicar en el Marketplace. Inténtalo nuevamente.');
         this.isPublishing = false;
       }
     });
