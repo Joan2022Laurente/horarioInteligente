@@ -23,98 +23,66 @@ import { ServiceItem } from '@domain/models/marketplace';
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
         />
 
-        <!-- Top Badges Overlay -->
-        @if (item.badge && item.badge !== item.condition) {
+        <!-- Status Badges Overlay (Solo estados reales) -->
+        @if (item.status && item.status !== 'AVAILABLE') {
           <div class="absolute top-2.5 left-2.5 pointer-events-none">
             <span 
               class="px-2 py-0.5 r-control-xs text-[10px] font-extrabold tracking-wide uppercase shadow-sm"
-              [ngClass]="item.badge === 'TOP TUTOR' || item.badge === 'MÁS SOLICITADO' || item.badge === 'ENTREGA HOY'
-                ? 'bg-[var(--accent-lime)] text-black' 
-                : 'bg-black/80 backdrop-blur-md text-white border border-white/10'"
+              [ngClass]="item.status === 'SOLD' ? 'bg-purple-600 text-white' : 'bg-yellow-500 text-black'"
             >
-              {{ item.badge }}
+              {{ item.status === 'SOLD' ? 'VENDIDO' : 'APARTADO' }}
             </span>
           </div>
         }
 
-        <!-- Bottom Location / Course Pill Overlay -->
-        @if (item.location || item.courseName) {
+        <!-- Bottom Location Pill Overlay -->
+        @if (item.location) {
           <div class="absolute bottom-2 left-2 right-2 flex items-center pointer-events-none">
             <span class="px-2 py-0.5 r-control-xs text-[10px] font-medium bg-black/85 backdrop-blur-md text-neutral-300 border border-white/10 truncate max-w-full flex items-center gap-1">
-              @if (item.location) {
-                <lucide-icon name="map-pin" class="h-3 w-3 text-[var(--accent-lime)] shrink-0"></lucide-icon>
-                <span>{{ item.location }}</span>
-              } @else if (item.courseName) {
-                <span>{{ item.courseName }}</span>
-              }
+              <lucide-icon name="map-pin" class="h-3 w-3 text-[var(--accent-lime)] shrink-0"></lucide-icon>
+              <span>{{ item.location }}</span>
             </span>
           </div>
         }
       </div>
 
-      <!-- Card Body Content -->
-      <div class="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-3">
+      <!-- Card Body Content (Solo datos reales) -->
+      <div class="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-2.5">
         
-        <div class="space-y-1.5">
-          <!-- Service / Product Type -->
-          <div class="flex items-center justify-between text-[11px] text-neutral-400">
-            <span class="font-medium text-neutral-300">{{ item.serviceType }}</span>
-            @if (item.tutorCareer && item.category === 'TUTORING') {
-              <span class="text-[10px] text-neutral-500 font-medium truncate max-w-[120px]">{{ item.tutorCareer }}</span>
+        <div class="space-y-1">
+          <!-- Condition & Seller Name -->
+          <div class="flex items-center justify-between text-[11px]">
+            @if (item.condition) {
+              <span class="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 r-control-sm">
+                {{ item.condition }}
+              </span>
+            } @else {
+              <span class="text-neutral-400">Campus UTP</span>
             }
+            <span class="text-[11px] text-neutral-400 truncate max-w-[130px]">{{ item.tutorName }}</span>
           </div>
 
           <!-- Title (2 lines clamp) -->
-          <h3 class="text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug group-hover:text-[var(--accent-lime)] transition-colors">
+          <h3 class="text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug group-hover:text-[var(--accent-lime)] transition-colors pt-0.5">
             {{ item.title }}
           </h3>
         </div>
 
-        <!-- Rating & Sales / Tutor Info -->
-        <div class="space-y-2 pt-1 border-t border-white/[0.06]">
-          
-          <!-- Rating Row (Stars + Solicitudes/Ventas) -->
-          <div class="flex items-center justify-between text-[11px]">
-            <div class="flex items-center gap-1">
-              <!-- Star Icon -->
-              <lucide-icon name="star" class="h-3.5 w-3.5 text-[var(--accent-lime)] fill-[var(--accent-lime)]"></lucide-icon>
-              <span class="font-bold text-white">{{ item.rating }}</span>
-              <span class="text-neutral-500 font-medium">({{ item.reviewsCount }})</span>
-            </div>
-
-            <span class="text-[10px] text-neutral-400 font-medium">
-              {{ item.salesCount }} {{ item.itemType === 'PRODUCT' ? 'pedidos' : 'asesorías' }}
+        <!-- Real Price Row -->
+        <div class="pt-2 border-t border-white/[0.06] flex items-baseline justify-between">
+          <div class="flex items-baseline gap-1">
+            <span class="text-sm sm:text-base font-black text-[var(--accent-lime)]">
+              {{ item.price }}
             </span>
-          </div>
-
-          <!-- Emprendedor / Tutor Name & Price Bottom Row -->
-          <div class="flex items-center justify-between pt-1">
-            <!-- Price Display (Soles) -->
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-sm sm:text-base font-black text-[var(--accent-lime)]">
-                {{ item.price }}
-              </span>
-              @if (item.originalPrice) {
-                <span class="text-[11px] text-neutral-500 line-through">
-                  S/ {{ item.originalPrice.toFixed(2) }}
-                </span>
-              }
+            @if (item.unit && item.unit !== '/ unidad') {
               <span class="text-[10px] text-neutral-400">
-                {{ item.unit || '/ unidad' }}
+                {{ item.unit }}
               </span>
-            </div>
-
-            <!-- Quick Action Button -->
-            <button
-              type="button"
-              (click)="$event.stopPropagation(); selectItem.emit(item)"
-              [title]="item.itemType === 'PRODUCT' ? 'Ver producto y pedir' : 'Ver detalle y contactar'"
-              class="h-7 w-7 sm:h-8 sm:w-8 r-control-sm bg-white/[0.06] hover:bg-[var(--accent-lime)] hover:text-black text-white flex items-center justify-center transition border border-white/10 cursor-pointer shrink-0 shadow-sm"
-            >
-              <lucide-icon name="message-square" class="h-3.5 w-3.5"></lucide-icon>
-            </button>
+            }
           </div>
-
+          <span class="text-[10px] text-neutral-500 font-medium group-hover:text-white transition-colors">
+            Ver detalle →
+          </span>
         </div>
 
       </div>

@@ -33,7 +33,7 @@ public class MarketplaceAssembler {
                 .tutorCareer(cmd.getTutorCareer())
                 .tutorCycle(cmd.getTutorCycle())
                 .contactMethod(cmd.getContactMethod())
-                .rating(5.0)
+                .rating(null)
                 .reviewsCount(0)
                 .salesCount(0)
                 .reputation(100)

@@ -145,7 +145,7 @@ public class MarketplaceController {
                 .thumbnailUrl(request.getThumbnailUrl() != null && !request.getThumbnailUrl().isBlank()
                         ? request.getThumbnailUrl()
                         : request.getImageUrl())
-                .badge("NUEVO")
+                .badge(null)
                 .location(request.getLocation() != null ? request.getLocation() : "Campus UTP")
                 .tutorName(effectiveTutor)
                 .tutorCareer(request.getTutorCareer() != null ? request.getTutorCareer() : "Ingeniería")

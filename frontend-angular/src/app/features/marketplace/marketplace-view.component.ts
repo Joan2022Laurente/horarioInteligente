@@ -109,15 +109,16 @@ import { MarketplaceStore } from './marketplace.store';
             <!-- Left Modal Image Frame -->
             <div class="md:w-5/12 bg-[#08090b] relative flex items-center justify-center overflow-hidden">
               <img 
-                [src]="selectedItem.imageUrl" 
+                [src]="selectedItem.imageUrl || selectedItem.thumbnailUrl" 
                 [alt]="selectedItem.title"
                 class="w-full h-48 md:h-full object-cover"
               />
               <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:hidden"></div>
               
-              @if (selectedItem.badge) {
-                <span class="absolute top-4 left-4 px-2.5 py-1 r-control-md text-[10px] font-extrabold bg-[var(--accent-lime)] text-black uppercase tracking-wider shadow-md">
-                  {{ selectedItem.badge }}
+              @if (selectedItem.status && selectedItem.status !== 'AVAILABLE') {
+                <span class="absolute top-4 left-4 px-2.5 py-1 r-control-md text-[10px] font-extrabold uppercase tracking-wider shadow-md"
+                  [ngClass]="selectedItem.status === 'SOLD' ? 'bg-purple-600 text-white' : 'bg-yellow-500 text-black'">
+                  {{ selectedItem.status === 'SOLD' ? 'VENDIDO' : 'APARTADO' }}
                 </span>
               }
             </div>
@@ -128,22 +129,15 @@ import { MarketplaceStore } from './marketplace.store';
               <div class="space-y-3">
                 <!-- Header -->
                 <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <span class="px-2.5 py-0.5 r-control-md text-[10px] font-semibold bg-white/10 text-neutral-300">
-                      {{ selectedItem.serviceType }}
-                    </span>
+                  <div class="flex items-center gap-1.5 flex-wrap">
                     @if (selectedItem.condition) {
-                      <span class="ml-1 px-2.5 py-0.5 r-control-md text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                      <span class="px-2.5 py-0.5 r-control-md text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
                         {{ selectedItem.condition }}
                       </span>
                     }
                     @if (selectedItem.location) {
-                      <span class="ml-1 text-xs text-[var(--accent-lime)] font-medium inline-flex items-center gap-1">
-                        • <lucide-icon name="map-pin" class="h-3 w-3 inline text-[var(--accent-lime)]"></lucide-icon> {{ selectedItem.location }}
-                      </span>
-                    } @else if (selectedItem.courseName) {
-                      <span class="ml-1 text-xs text-neutral-400 font-medium">
-                        • {{ selectedItem.courseName }}
+                      <span class="text-xs text-neutral-300 font-medium inline-flex items-center gap-1">
+                        <lucide-icon name="map-pin" class="h-3 w-3 inline text-[var(--accent-lime)]"></lucide-icon> {{ selectedItem.location }}
                       </span>
                     }
                   </div>
@@ -160,65 +154,33 @@ import { MarketplaceStore } from './marketplace.store';
                   {{ selectedItem.title }}
                 </h2>
 
-                <!-- Rating and Seller Snapshot -->
-                <div class="flex items-center justify-between p-3 r-card bg-[#14151a] border border-white/[0.08]">
-                  <div class="flex items-center gap-2.5">
-                    <div class="h-9 w-9 r-panel bg-[#181920] border border-white/10 flex items-center justify-center text-xs font-bold text-[var(--accent-lime)]">
-                      {{ selectedItem.tutorName.charAt(0) }}
-                    </div>
-                    <div>
-                      <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-bold text-white">{{ selectedItem.tutorName }}</span>
-                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 r-control-sm font-medium">Estudiante UTP</span>
-                      </div>
-                      <span class="text-[11px] text-neutral-400 block">{{ selectedItem.tutorCareer }} • Ciclo {{ selectedItem.tutorCycle }}</span>
-                    </div>
+                <!-- Real Seller Snapshot (Sin calificaciones inventadas) -->
+                <div class="p-3 r-card bg-[#14151a] border border-white/[0.08] flex items-center gap-3">
+                  <div class="h-9 w-9 r-panel bg-[#181920] border border-white/10 flex items-center justify-center text-xs font-bold text-[var(--accent-lime)] shrink-0">
+                    {{ selectedItem.tutorName.charAt(0) }}
                   </div>
-
-                  <div class="text-right">
-                    <div class="flex items-center gap-1 text-xs font-bold text-white">
-                      <lucide-icon name="star" class="h-3.5 w-3.5 text-[var(--accent-lime)] fill-[var(--accent-lime)]"></lucide-icon>
-                      <span>{{ selectedItem.rating }}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-bold text-white truncate">{{ selectedItem.tutorName }}</span>
+                      <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 r-control-sm font-medium shrink-0">Estudiante UTP</span>
                     </div>
-                    <span class="text-[10px] text-neutral-500">{{ selectedItem.salesCount }} pedidos / ventas</span>
-                  </div>
-                </div>
-
-                <!-- Description -->
-                <div class="space-y-1 text-xs text-neutral-300 leading-relaxed">
-                  <p>{{ selectedItem.description }}</p>
-                </div>
-
-                <!-- Highlights / Specs -->
-                @if (selectedItem.highlights && selectedItem.highlights.length > 0) {
-                  <div class="space-y-1.5 pt-1">
-                    <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Detalles & Estado:</span>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-neutral-200">
-                      @for (hl of selectedItem.highlights; track hl) {
-                        <div class="flex items-center gap-1.5">
-                          <lucide-icon name="check" class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0 stroke-[2.5]"></lucide-icon>
-                          <span class="truncate">{{ hl }}</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-
-                <!-- Tags -->
-                @if (selectedItem.tags && selectedItem.tags.length > 0) {
-                  <div class="flex flex-wrap gap-1.5 pt-1">
-                    @for (t of selectedItem.tags; track t) {
-                      <span class="text-[11px] text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2 py-0.5 r-control-md border border-[var(--accent-lime)]/20 font-medium">
-                        #{{ t }}
-                      </span>
+                    @if (selectedItem.tutorCareer) {
+                      <span class="text-[11px] text-neutral-400 block truncate">{{ selectedItem.tutorCareer }} • Ciclo {{ selectedItem.tutorCycle || 1 }}</span>
                     }
+                  </div>
+                </div>
+
+                <!-- Description (Solo si es real y no texto relleno) -->
+                @if (selectedItem.description && selectedItem.description.trim() && !isDefaultDescription(selectedItem.description)) {
+                  <div class="p-3 r-panel bg-white/[0.02] border border-white/[0.06] text-xs text-neutral-300 leading-relaxed">
+                    <p class="whitespace-pre-line">{{ selectedItem.description }}</p>
                   </div>
                 }
 
                 <!-- Institutional Contact & Delivery -->
                 <div class="p-3 r-panel bg-white/[0.03] border border-white/10 space-y-1 text-xs">
-                  <span class="text-[11px] text-neutral-400 block font-medium">Punto de Entrega & Contacto:</span>
-                  <p class="font-medium text-white text-xs select-all">{{ selectedItem.contactMethod }}</p>
+                  <span class="text-[11px] text-neutral-400 block font-medium">Contacto directo:</span>
+                  <p class="font-medium text-white text-xs select-all break-all">{{ getCleanContactText(selectedItem) }}</p>
                 </div>
 
               </div>
@@ -226,13 +188,12 @@ import { MarketplaceStore } from './marketplace.store';
               <!-- Price & Order Action Row -->
               <div class="pt-4 border-t border-white/[0.06] flex items-center justify-between gap-3">
                 <div>
-                  <span class="text-[11px] text-neutral-500 block">Precio Estudiantil</span>
-                  <div class="flex items-baseline gap-1.5">
+                  <span class="text-[11px] text-neutral-500 block">Precio</span>
+                  <div class="flex items-baseline gap-1">
                     <span class="text-xl font-black text-[var(--accent-lime)]">{{ selectedItem.price }}</span>
-                    @if (selectedItem.originalPrice) {
-                      <span class="text-xs text-neutral-500 line-through">S/ {{ selectedItem.originalPrice.toFixed(2) }}</span>
+                    @if (selectedItem.unit && selectedItem.unit !== '/ unidad') {
+                      <span class="text-xs text-neutral-400">{{ selectedItem.unit }}</span>
                     }
-                    <span class="text-xs text-neutral-400">{{ selectedItem.unit || '/ unidad' }}</span>
                   </div>
                 </div>
 
@@ -300,9 +261,10 @@ import { MarketplaceStore } from './marketplace.store';
                   } @else {
                     <button 
                       (click)="contactSeller(selectedItem)" 
-                      class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs border-none cursor-pointer transition shadow-lg"
+                      class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs border-none cursor-pointer transition shadow-lg flex items-center gap-1.5"
                     >
-                      {{ selectedItem.itemType === 'PRODUCT' ? 'Pedir / Contactar' : 'Coordinar Asesoría' }}
+                      <lucide-icon name="message-square" class="h-3.5 w-3.5"></lucide-icon>
+                      <span>{{ selectedItem.itemType === 'PRODUCT' ? 'Pedir / Contactar' : 'Coordinar Asesoría' }}</span>
                     </button>
                   }
                 </div>
@@ -739,17 +701,16 @@ export class MarketplaceViewComponent implements OnInit {
             description: payload.description,
             imageUrl: payload.imageUrl,
             thumbnailUrl: payload.thumbnailUrl,
-            badge: 'NUEVO EN CAMPUS',
-            rating: 5.0,
-            reviewsCount: 1,
-            salesCount: 1,
+            rating: 0,
+            reviewsCount: 0,
+            salesCount: 0,
             tutorName: payload.tutorName,
             tutorCareer: payload.tutorCareer,
             tutorCycle: payload.tutorCycle,
             reputation: 100,
-            tags: ['UTP', 'Emprendimiento', 'Campus', 'Venta'],
+            tags: [],
             contactMethod: payload.contactMethod,
-            highlights: ['Producto verificado por estudiante', 'Entrega directa y trato en mano en campus']
+            status: 'AVAILABLE'
           };
           this.marketplaceStore.addItem(fallbackItem);
         }
@@ -764,6 +725,20 @@ export class MarketplaceViewComponent implements OnInit {
         this.isPublishing = false;
       }
     });
+  }
+
+  isDefaultDescription(desc?: string): boolean {
+    if (!desc) return true;
+    return desc.includes('marketplace estudiantil UTP') || desc.includes('Publicación en el');
+  }
+
+  getCleanContactText(item: ServiceItem): string {
+    if (!item.contactMethod) return 'Coordinación institucional en campus';
+    const match = item.contactMethod.match(/[uU]\d{8}@utp\.edu\.pe/);
+    if (match) {
+      return `Microsoft Teams: ${match[0]}`;
+    }
+    return item.contactMethod;
   }
 
   isMyListing(item: ServiceItem): boolean {
