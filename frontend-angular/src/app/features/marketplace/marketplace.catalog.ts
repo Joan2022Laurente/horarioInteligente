@@ -1,4 +1,4 @@
-﻿import { ServiceItem } from '@domain/models/marketplace';
+import { ServiceItem } from '@domain/models/marketplace';
 
 export const INITIAL_MARKETPLACE_ITEMS: ServiceItem[] = [
     // =========================================================================

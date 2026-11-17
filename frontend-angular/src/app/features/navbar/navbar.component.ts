@@ -362,7 +362,6 @@ export class NavbarComponent {
     { id: 'today',       label: 'HOY' },
     { id: 'weekly',      label: 'HORARIO' },
     { id: 'courses',     label: 'CURSOS' },
-    { id: 'networking',  label: 'NETWORKING', dot: true },
     { id: 'marketplace', label: 'MARKETPLACE' },
   ];
 
