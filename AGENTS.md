@@ -17,3 +17,8 @@
 - Enfoque modular (SRP), componentes pequeños y reutilizables.
 - Código limpio y tipado estricto (cero `any` injustificado).
 - Responsive en mobile y desktop.
+
+## 4. Memoria Persistente (Engram MCP)
+- **Fuente de Verdad Histórica:** Utilizar `engram` (`mem_search`, `mem_context`, `mem_get_observation`) para consultar decisiones previas, incidentes resueltos y restricciones arquitectónicas antes de modificar módulos críticos.
+- **Persistencia Inmediata:** Guardar recuerdos (`mem_save`) al resolver un bug de arquitectura, negociar una regla operativa o descubrir una restricción externa con formato: `Título concreto`, `Causa raíz`, `Solución` y `topic_key` estable (ej. `security/sso-jwks-utp`, `architecture/no-silent-fallbacks`).
+- **Cero Amnesia:** Prohibido asumir que algo "nunca se discutió" sin antes consultar la memoria persistente del proyecto.
