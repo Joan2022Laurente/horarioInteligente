@@ -34,6 +34,7 @@ export interface ChatMessage {
   metadata?: Record<string, unknown>;
   activities?: AgentActivity[];
   currentActivity?: AgentActivity | null;
+  isStreaming?: boolean;
 }
 
 export interface AiChatRequest {

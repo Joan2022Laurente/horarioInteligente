@@ -47,6 +47,8 @@ export class NetworkingService {
     private scheduleService: ScheduleService
   ) {
     this.hydrateFromLocalCache();
+    // Inicializar perfil una sola vez en el constructor (fuera del ciclo de renderizado de Angular)
+    this.refreshProfile();
   }
 
   /** URL base del módulo de networking en el backend Spring Boot. */
@@ -71,9 +73,20 @@ export class NetworkingService {
   }
 
   /**
-   * Genera o actualiza el perfil de networking del alumno autenticado calculando automáticamente sus ventanas libres.
+   * Obtiene el perfil de networking actual sin mutar señales en tiempo de renderizado (evita NG0600).
    */
   getMyProfile(): StudentNetworkingProfile {
+    const current = this.myProfileSignal();
+    if (current) {
+      return current;
+    }
+    return this.refreshProfile();
+  }
+
+  /**
+   * Regenera el perfil de networking del alumno autenticado calculando automáticamente sus ventanas libres.
+   */
+  refreshProfile(): StudentNetworkingProfile {
     const cached = this.myProfileSignal();
     const student = getCachedStudentProfile();
     const interval = this.scheduleService.currentInterval();
@@ -110,7 +123,9 @@ export class NetworkingService {
     };
 
     this.myProfileSignal.set(profile);
-    localStorage.setItem(NETWORKING_PROFILE_KEY, JSON.stringify(profile));
+    try {
+      localStorage.setItem(NETWORKING_PROFILE_KEY, JSON.stringify(profile));
+    } catch {}
     return profile;
   }
 
@@ -396,6 +411,50 @@ export class NetworkingService {
       catchError(err => {
         console.warn('[NetworkingService] ⚠️ No se pudo unir a la mesa:', err?.message || err);
         return of(null);
+      })
+    );
+  }
+
+  /**
+   * El estudiante autenticado abandona la mesa de estudio (POST /networking/beacons/{id}/leave).
+   */
+  leaveBeacon(beaconId: string): Observable<StudyBeaconRow | null> {
+    return this.http.post<ApiResponse<StudyBeaconRow>>(
+      `${this.apiUrl}/beacons/${encodeURIComponent(beaconId)}/leave`,
+      {}
+    ).pipe(
+      map(res => {
+        if (!res.success || !res.data) {
+          throw new Error(res.error || 'No fue posible abandonar la mesa.');
+        }
+        const updated = res.data;
+        this.beaconsSignal.update(list => list.map(b => (b.id === updated.id ? updated : b)));
+        return updated;
+      }),
+      catchError(err => {
+        console.warn('[NetworkingService] ⚠️ No se pudo abandonar la mesa:', err?.message || err);
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * El anfitrión cancela y elimina la mesa de estudio convocada (DELETE /networking/beacons/{id}).
+   */
+  deleteBeacon(beaconId: string): Observable<boolean> {
+    return this.http.delete<ApiResponse<void>>(
+      `${this.apiUrl}/beacons/${encodeURIComponent(beaconId)}`
+    ).pipe(
+      map(res => {
+        if (!res.success) {
+          throw new Error(res.error || 'No fue posible cancelar la mesa.');
+        }
+        this.beaconsSignal.update(list => list.filter(b => b.id !== beaconId));
+        return true;
+      }),
+      catchError(err => {
+        console.warn('[NetworkingService] ⚠️ No se pudo cancelar la mesa:', err?.message || err);
+        return of(false);
       })
     );
   }

@@ -50,6 +50,17 @@ public class StudyBeacon {
         return true;
     }
 
+    public boolean leave() {
+        if (this.currentCollaborators > 1) {
+            this.currentCollaborators--;
+            if ("FULL".equalsIgnoreCase(this.status)) {
+                this.status = "ACTIVE";
+            }
+            return true;
+        }
+        return false;
+    }
+
     public void cancel() {
         this.status = "CANCELLED";
     }

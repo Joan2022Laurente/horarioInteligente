@@ -37,7 +37,7 @@ import { LucideAngularModule } from 'lucide-angular';
           <button
             type="button"
             (click)="onAskAi('Haz un resumen comparativo de todos mis cursos, sus exigencias y fechas de exámenes clave')"
-            class="inline-flex items-center gap-2 rounded-[var(--r-lg)] bg-[var(--utopik-green-yellow)] px-4 py-2 text-xs font-black text-black transition active:scale-95"
+            class="inline-flex items-center gap-2 r-control-md bg-[var(--utopik-green-yellow)] px-4 py-2 text-xs font-black text-black transition active:scale-95"
           >
             <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-black"></lucide-icon>
             <span>Resumen IA</span>

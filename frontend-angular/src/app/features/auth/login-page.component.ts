@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 
@@ -23,15 +24,15 @@ export interface StepItem {
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <div class="relative min-h-screen lg:h-screen lg:max-h-screen w-full bg-[#070709] text-white flex flex-col justify-between overflow-x-hidden select-none selection:bg-[var(--accent-lime)] selection:text-black font-sans">
       
       <!-- 1. Luces de Fondo Volumétricas Sutiles -->
       <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[40rem] h-[20rem] bg-[var(--accent-lime)]/[0.04] rounded-full blur-[140px]"></div>
-        <div class="absolute top-1/3 -right-40 w-[24rem] h-[24rem] bg-blue-500/[0.03] rounded-full blur-[160px]"></div>
-        <div class="absolute -bottom-40 left-10 w-[28rem] h-[28rem] bg-[var(--accent-lime)]/[0.04] rounded-full blur-[140px]"></div>
+        <div class="absolute top-1/3 -right-40 w-[24rem] h-[24rem] bg-blue-500/[0.03] circle blur-[160px]"></div>
+        <div class="absolute -bottom-40 left-10 w-[28rem] h-[28rem] bg-[var(--accent-lime)]/[0.04] circle blur-[140px]"></div>
       </div>
 
       <!-- 2. Barra Superior Minimalista y Responsive -->
@@ -39,7 +40,7 @@ export interface StepItem {
         
         <!-- Izquierda: Indicador & Logo -->
         <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <span class="h-1.5 w-1.5 rounded-full bg-white animate-pulse"></span>
+          <span class="h-1.5 w-1.5 circle bg-white animate-pulse"></span>
           <span class="text-[10px] sm:text-[11px] tracking-wider text-neutral-300 uppercase font-semibold">
             ESTUDIANTES UTP
           </span>
@@ -86,23 +87,18 @@ export interface StepItem {
             <button
               type="button"
               (click)="isLoginModalOpen = true"
-              class="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-3.5 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs sm:text-sm tracking-wide uppercase shadow-xl shadow-[var(--accent-lime)]/20 transition-all active:scale-95 cursor-pointer group shrink-0 border-none"
+              class="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-3.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs sm:text-sm tracking-wide uppercase shadow-sm transition-all active:scale-95 cursor-pointer group shrink-0 border-none"
             >
               <span>Empezar</span>
-              <svg class="h-4 w-4 text-[#0a0a0c] group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M5 12h14"/>
-                <path d="m12 5 7 7-7 7"/>
-              </svg>
+              <lucide-icon name="arrow-right" class="h-4 w-4 text-[#0a0a0c] group-hover:translate-x-1 transition-transform stroke-[2.5]"></lucide-icon>
             </button>
 
             <button
               type="button"
               (click)="openPrivacy.emit()"
-              class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white font-medium text-xs tracking-wide uppercase transition cursor-pointer shrink-0"
+              class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-3 sm:py-3.5 r-control-lg bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white font-medium text-xs tracking-wide uppercase transition cursor-pointer shrink-0"
             >
-              <svg class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
+              <lucide-icon name="shield" class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0"></lucide-icon>
               <span>Seguridad</span>
             </button>
           </div>
@@ -112,16 +108,9 @@ export interface StepItem {
         <!-- 3 Tarjetas de Características -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3.5 w-full pt-6 sm:pt-8">
           
-          <div class="p-3 sm:p-4 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md space-y-1">
+          <div class="p-3 sm:p-4 r-card bg-white/[0.02] border border-white/5 backdrop-blur-md space-y-1">
             <div class="flex items-center gap-2 text-white font-semibold text-xs sm:text-sm">
-              <svg class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 8V4H8"/>
-                <rect width="16" height="12" x="4" y="8" rx="2"/>
-                <path d="M2 14h2"/>
-                <path d="M20 14h2"/>
-                <path d="M15 13v2"/>
-                <path d="M9 13v2"/>
-              </svg>
+              <lucide-icon name="bot" class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0"></lucide-icon>
               <span>Copiloto de IA</span>
             </div>
             <p class="text-[11px] sm:text-xs text-neutral-400 leading-normal">
@@ -129,14 +118,9 @@ export interface StepItem {
             </p>
           </div>
 
-          <div class="p-3 sm:p-4 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md space-y-1">
+          <div class="p-3 sm:p-4 r-card bg-white/[0.02] border border-white/5 backdrop-blur-md space-y-1">
             <div class="flex items-center gap-2 text-white font-semibold text-xs sm:text-sm">
-              <svg class="h-3.5 w-3.5 text-blue-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="18" height="18" x="3" y="4" rx="2"/>
-                <line x1="16" x2="16" y1="2" y2="6"/>
-                <line x1="8" x2="8" y1="2" y2="6"/>
-                <line x1="3" x2="21" y1="10" y2="10"/>
-              </svg>
+              <lucide-icon name="calendar" class="h-3.5 w-3.5 text-blue-400 shrink-0"></lucide-icon>
               <span>Sincronización en Vivo</span>
             </div>
             <p class="text-[11px] sm:text-xs text-neutral-400 leading-normal">
@@ -144,13 +128,9 @@ export interface StepItem {
             </p>
           </div>
 
-          <div class="p-3 sm:p-4 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md space-y-1">
+          <div class="p-3 sm:p-4 r-card bg-white/[0.02] border border-white/5 backdrop-blur-md space-y-1">
             <div class="flex items-center gap-2 text-white font-semibold text-xs sm:text-sm">
-              <svg class="h-3.5 w-3.5 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-                <polyline points="2 17 12 22 22 17"/>
-                <polyline points="2 12 12 17 22 12"/>
-              </svg>
+              <lucide-icon name="graduation-cap" class="h-3.5 w-3.5 text-purple-400 shrink-0"></lucide-icon>
               <span>Red de Estudio</span>
             </div>
             <p class="text-[11px] sm:text-xs text-neutral-400 leading-normal">
@@ -188,7 +168,7 @@ export interface StepItem {
           (click)="attemptCloseModal()"
         >
           <div 
-            class="relative w-full max-w-md rounded-2xl bg-[#09090c]/95 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-4 sm:space-y-5"
+            class="relative w-full max-w-md r-control-lg bg-[#09090c]/95 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-4 sm:space-y-5"
             (click)="$event.stopPropagation()"
           >
             <!-- Botón de cierre: cancela ante error; bloqueado durante el proceso activo -->
@@ -198,12 +178,9 @@ export interface StepItem {
               [attr.aria-label]="isClosable ? 'Cerrar modal' : 'Sincronización en curso'"
               [class.pointer-events-none]="!isClosable"
               [class.opacity-30]="!isClosable"
-              class="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer bg-transparent border-none"
+              class="absolute top-4 right-4 z-10 p-1.5 r-control-lg text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer bg-transparent border-none flex items-center justify-center"
             >
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6 6 18"/>
-                <path d="m6 6 12 12"/>
-              </svg>
+              <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
             </button>
 
             @if (isBootstrapping) {
@@ -212,7 +189,7 @@ export interface StepItem {
                 <!-- Cabecera de estado -->
                 <div class="text-left space-y-1">
                   <h3 class="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
-                    <span class="inline-block h-2 w-2 rounded-full bg-[var(--accent-lime)] animate-ping"></span>
+                    <span class="inline-block h-2 w-2 circle bg-[var(--accent-lime)] animate-ping"></span>
                     Preparando tu espacio universitario
                   </h3>
                   <p class="text-[11px] sm:text-xs text-neutral-400">
@@ -224,7 +201,7 @@ export interface StepItem {
                 <div class="space-y-2.5 pt-2">
                   @for (step of steps; track step.id) {
                     <div 
-                      class="flex items-start gap-3 p-2.5 sm:p-3 rounded-[var(--r-lg)] transition-all duration-300"
+                      class="flex items-start gap-3 p-2.5 sm:p-3 r-control-lg transition-all duration-300"
                       [ngClass]="{
                         'bg-[var(--surface-card)] border border-[var(--border-subtle)] opacity-40': step.status === 'pending',
                         'bg-[var(--surface-subtle)] border border-[rgba(187,244,81,0.3)] shadow-[0_0_15px_rgba(187,244,81,0.08)]': step.status === 'active',
@@ -235,19 +212,13 @@ export interface StepItem {
                       <!-- Icono de estado -->
                       <div class="mt-0.5 shrink-0">
                         @if (step.status === 'completed') {
-                          <svg class="h-4 w-4 text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M20 6 9 17l-5-5"/>
-                          </svg>
+                          <lucide-icon name="check" class="h-4 w-4 text-[var(--accent-lime)] stroke-[2.5]"></lucide-icon>
                         } @else if (step.status === 'active') {
-                          <div class="h-4 w-4 border-2 border-[var(--accent-lime)] border-t-transparent rounded-full animate-spin"></div>
+                          <div class="h-4 w-4 border-2 border-[var(--accent-lime)] border-t-transparent circle animate-spin"></div>
                         } @else if (step.status === 'failed') {
-                          <svg class="h-4 w-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" y1="8" x2="12" y2="12"/>
-                            <line x1="12" y1="16" x2="12.01" y2="16"/>
-                          </svg>
+                          <lucide-icon name="alert-circle" class="h-4 w-4 text-rose-400"></lucide-icon>
                         } @else {
-                          <div class="h-4 w-4 rounded-full border border-neutral-600 bg-neutral-800"></div>
+                          <div class="h-4 w-4 circle border border-neutral-600 bg-neutral-800"></div>
                         }
                       </div>
 
@@ -255,7 +226,7 @@ export interface StepItem {
                       <div class="text-left flex-1 min-w-0">
                         <p class="text-xs font-semibold text-white truncate">{{ step.label }}</p>
                         @if (step.detail) {
-                          <p class="text-[10px] sm:text-[11px] text-neutral-400 tracking-wide mt-0.5 font-mono truncate">
+                          <p class="text-[10px] sm:text-[11px] text-neutral-400 tracking-wide mt-0.5 font-sans font-medium truncate">
                             {{ step.detail }}
                           </p>
                         }
@@ -268,12 +239,8 @@ export interface StepItem {
               <!-- Error y acciones: Reintentar sin borrar campos / cancelar ante falla -->
               @if (hasStepFailed) {
                 <div class="space-y-3">
-                  <div class="rounded-[var(--r-lg)] bg-rose-500/10 border border-rose-500/30 p-3 flex items-start gap-2.5">
-                    <svg class="h-4 w-4 shrink-0 mt-0.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="8" x2="12" y2="12"/>
-                      <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
+                  <div class="r-control-lg bg-rose-500/10 border border-rose-500/30 p-3 flex items-start gap-2.5">
+                    <lucide-icon name="alert-circle" class="h-4 w-4 shrink-0 mt-0.5 text-rose-400"></lucide-icon>
                     <p class="text-xs text-rose-300 leading-normal flex-1 min-w-0">{{ bootstrapError }}</p>
                   </div>
 
@@ -281,19 +248,16 @@ export interface StepItem {
                     <button
                       type="button"
                       (click)="retryFailedStep()"
-                      class="flex-1 inline-flex items-center justify-center gap-2 rounded-[var(--r-md)] bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-2.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] cursor-pointer uppercase tracking-wider border-none"
+                      class="flex-1 inline-flex items-center justify-center gap-2 r-control-md bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-2.5 text-xs font-bold text-[#0a0a0c] shadow-sm transition active:scale-[0.98] cursor-pointer uppercase tracking-wider border-none"
                     >
-                      <svg class="h-3.5 w-3.5 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
-                        <path d="M21 3v6h-6"/>
-                      </svg>
+                      <lucide-icon name="rotate-ccw" class="h-3.5 w-3.5 text-[#0a0a0c] stroke-[2.5]"></lucide-icon>
                       <span>Reintentar</span>
                     </button>
 
                     <button
                       type="button"
                       (click)="cancelFromStepper()"
-                      class="flex-1 inline-flex items-center justify-center rounded-[var(--r-md)] py-2.5 text-xs font-semibold text-neutral-300 border border-[var(--border-medium)] hover:text-white hover:bg-white/5 transition cursor-pointer"
+                      class="flex-1 inline-flex items-center justify-center r-control-md py-2.5 text-xs font-semibold text-neutral-300 border border-[var(--border-medium)] hover:text-white hover:bg-white/5 transition cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -303,12 +267,8 @@ export interface StepItem {
             } @else {
               <!-- Mensajes de Estado -->
               @if (errorMessage) {
-                <div class="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-3 flex items-start gap-2.5 text-xs text-rose-300">
-                  <svg class="h-4 w-4 shrink-0 mt-0.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" x2="12" y1="8" y2="12"/>
-                    <line x1="12" x2="12.01" y1="16" y2="16"/>
-                  </svg>
+                <div class="r-card bg-rose-500/10 border border-rose-500/20 p-3 flex items-start gap-2.5 text-xs text-rose-300">
+                  <lucide-icon name="alert-circle" class="h-4 w-4 shrink-0 mt-0.5 text-rose-400"></lucide-icon>
                   <span>{{ errorMessage }}</span>
                 </div>
               }
@@ -321,10 +281,7 @@ export interface StepItem {
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                      </svg>
+                      <lucide-icon name="user" class="h-4 w-4"></lucide-icon>
                     </div>
                     <input
                       type="text"
@@ -333,7 +290,7 @@ export interface StepItem {
                       placeholder="u123456789"
                       [disabled]="isLoading"
                       required
-                      class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
+                      class="w-full r-control-lg bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
                     />
                   </div>
                 </div>
@@ -344,10 +301,7 @@ export interface StepItem {
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
+                      <lucide-icon name="lock" class="h-4 w-4"></lucide-icon>
                     </div>
                     <input
                       type="password"
@@ -356,7 +310,7 @@ export interface StepItem {
                       placeholder="Tu contraseña de UTP Class"
                       [disabled]="isLoading"
                       required
-                      class="w-full rounded-md bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
+                      class="w-full r-control-lg bg-black/40 border border-white/10 pl-10 pr-4 py-2.5 sm:py-3 text-xs text-white placeholder-neutral-500 focus:border-[var(--accent-lime)] focus:ring-1 focus:ring-[var(--accent-lime)] focus:outline-none transition"
                     />
                   </div>
                 </div>
@@ -364,17 +318,14 @@ export interface StepItem {
                 <button
                   type="submit"
                   [disabled]="isLoading"
-                  class="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-3 sm:py-3.5 text-xs font-bold text-[#0a0a0c] shadow-lg shadow-[var(--accent-lime)]/20 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer uppercase tracking-wider border-none"
+                  class="w-full flex items-center justify-center gap-2 r-control-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] py-3 sm:py-3.5 text-xs font-bold text-[#0a0a0c] shadow-sm transition active:scale-[0.98] disabled:opacity-50 cursor-pointer uppercase tracking-wider border-none"
                 >
                   @if (isLoading) {
-                    <span class="h-4 w-4 border-2 border-[#0a0a0c] border-t-transparent rounded-full animate-spin"></span>
+                    <span class="h-4 w-4 border-2 border-[#0a0a0c] border-t-transparent circle animate-spin"></span>
                     <span>Validando con UTP...</span>
                   } @else {
                     <span>Ingresar</span>
-                    <svg class="h-4 w-4 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <path d="M5 12h14"/>
-                      <path d="m12 5 7 7-7 7"/>
-                    </svg>
+                    <lucide-icon name="arrow-right" class="h-4 w-4 text-[#0a0a0c] stroke-[2.5]"></lucide-icon>
                   }
                 </button>
               </form>
@@ -391,10 +342,7 @@ export interface StepItem {
                     class="inline-flex items-center gap-1 text-[10px] text-[var(--accent-lime)] hover:underline font-medium cursor-pointer transition bg-transparent border-none"
                   >
                     <span>Conoce nuestras Políticas de Privacidad y Seguridad</span>
-                    <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M5 12h14"/>
-                      <path d="m12 5 7 7-7 7"/>
-                    </svg>
+                    <lucide-icon name="arrow-right" class="h-2.5 w-2.5"></lucide-icon>
                   </button>
                 </div>
               </div>

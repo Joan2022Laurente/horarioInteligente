@@ -17,11 +17,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,6 +60,19 @@ public class AcademicToolService {
             return studentCode.trim().toUpperCase();
         }
         return null;
+    }
+
+    public String resolveDayOfWeekSpanish(LocalDate date) {
+        if (date == null) return null;
+        return switch (date.getDayOfWeek()) {
+            case MONDAY -> "Lunes";
+            case TUESDAY -> "Martes";
+            case WEDNESDAY -> "Miércoles";
+            case THURSDAY -> "Jueves";
+            case FRIDAY -> "Viernes";
+            case SATURDAY -> "Sábado";
+            case SUNDAY -> "Domingo";
+        };
     }
 
     /**
@@ -132,8 +148,178 @@ public class AcademicToolService {
                 ? "Hoy no tienes clases programadas en tu horario oficial. ¡Día libre!"
                 : null;
 
-        return new DayScheduleResult(studentCode, today.toString(), dayClasses.size(), dayClasses, message, weekNumber);
+        String dayOfWeekSpanish = resolveDayOfWeekSpanish(today);
+        return new DayScheduleResult(studentCode, today.toString(), dayOfWeekSpanish, dayClasses.size(), dayClasses, message, weekNumber);
     }
+
+    /**
+     * Tool 5 (Determinista): Obtiene las clases que quedan por cursar en el día (o en curso),
+     * enriquecidas deterministamente en el servidor con el temario oficial del sílabo
+     * para la semana lectiva actual, actividades previstas y evaluaciones programadas.
+     *
+     * @param studentCode código institucional del estudiante
+     * @param dateStr fecha ISO YYYY-MM-DD opcional (por defecto hoy en America/Lima)
+     * @param timeStr hora HH:mm opcional (por defecto la hora actual en America/Lima)
+     * @return resultado enriquecido con clases restantes y temas de sílabo
+     */
+    public RemainingClassesTodayResult getRemainingClassesToday(String studentCode, String dateStr, String timeStr) {
+        studentCode = resolveEffectiveStudentCode(studentCode);
+
+        LocalDate date = LocalDate.now(LIMA_ZONE);
+        if (dateStr != null && !dateStr.isBlank()) {
+            try {
+                date = LocalDate.parse(dateStr.trim());
+            } catch (DateTimeParseException e) {
+                log.warn("[AcademicTool] Fecha inválida en getRemainingClassesToday [{}], usando hoy", dateStr);
+            }
+        }
+
+        LocalTime time = LocalTime.now(LIMA_ZONE);
+        if (timeStr != null && !timeStr.isBlank()) {
+            try {
+                time = LocalTime.parse(timeStr.trim());
+            } catch (DateTimeParseException e) {
+                log.warn("[AcademicTool] Hora inválida en getRemainingClassesToday [{}], usando hora actual", timeStr);
+            }
+        }
+
+        String currentTimeFormatted = time.format(DateTimeFormatter.ofPattern("HH:mm"));
+        String dayOfWeekSpanish = resolveDayOfWeekSpanish(date);
+
+        if (studentCode == null || studentCode.isBlank()) {
+            return new RemainingClassesTodayResult("", date.toString(), dayOfWeekSpanish, currentTimeFormatted, null, 0, List.of(),
+                    "No se identificó una sesión de estudiante activa. Inicia sesión para consultar tu horario personal.");
+        }
+
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
+        if (scheduleOpt.isEmpty() || scheduleOpt.get().getClasses() == null) {
+            log.warn("[AcademicTool] 🚫 Sin horario persistido para [{}] en getRemainingClassesToday", studentCode);
+            return new RemainingClassesTodayResult(studentCode, date.toString(), dayOfWeekSpanish, currentTimeFormatted, null, 0, List.of(),
+                    "No tienes un horario registrado en el sistema. Por favor sincroniza tu sesión institucional.");
+        }
+
+        ScheduleInterval schedule = scheduleOpt.get();
+        Integer currentWeek = schedule.getWeekNumber();
+
+        List<ClassSession> allClassesToday = new ArrayList<>();
+        for (ClassSession c : schedule.getClasses()) {
+            if (c.getStartAt() != null && c.getStartAt().toLocalDate().equals(date)) {
+                allClassesToday.add(c);
+            }
+        }
+
+        if (allClassesToday.isEmpty()) {
+            return new RemainingClassesTodayResult(studentCode, date.toString(), dayOfWeekSpanish, currentTimeFormatted, currentWeek, 0, List.of(),
+                    "Hoy no tienes clases programadas en tu horario oficial. ¡Día libre!");
+        }
+
+        List<RemainingClassSessionDto> remaining = new ArrayList<>();
+
+        for (ClassSession c : allClassesToday) {
+            LocalTime startTime = c.getStartAt().toLocalTime();
+            LocalTime finishTime = c.getFinishAt() != null ? c.getFinishAt().toLocalTime() : startTime.plusHours(2);
+
+            // Si la clase ya concluyó antes de la hora actual, se descarta deterministamente
+            if (finishTime.isBefore(time)) {
+                continue;
+            }
+
+            String status;
+            long minutesUntilStart;
+            if (!time.isBefore(startTime) && !time.isAfter(finishTime)) {
+                status = "EN_CURSO";
+                minutesUntilStart = 0L;
+            } else {
+                status = "PROXIMA";
+                minutesUntilStart = Math.max(0L, Duration.between(time, startTime).toMinutes());
+            }
+
+            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+            String finishTimeStr = finishTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+            String timeWindow = startTimeStr + " - " + finishTimeStr;
+
+            String courseCode = c.getCourseCode() != null ? c.getCourseCode().trim() : "";
+            String courseName = c.getCourseName() != null ? c.getCourseName().trim() : "Clase UTP";
+
+            // Enriquecimiento determinista con el sílabo oficial
+            String syllabusTopic = null;
+            String syllabusActivities = null;
+            String evaluationScheduled = null;
+
+            if (!courseCode.isBlank()) {
+                Optional<Syllabus> syllabusOpt = syllabusRepository.findByCourseCode(courseCode.toUpperCase());
+                if (syllabusOpt.isPresent()) {
+                    Syllabus syl = syllabusOpt.get();
+                    if (currentWeek != null && syl.getWeeklySchedule() != null) {
+                        for (var ws : syl.getWeeklySchedule()) {
+                            if (ws.getWeek() != null && ws.getWeek().equals(currentWeek)) {
+                                syllabusTopic = ws.getTopic();
+                                syllabusActivities = ws.getActivities();
+                                if (ws.getEvaluation() != null && !ws.getEvaluation().isBlank()) {
+                                    evaluationScheduled = ws.getEvaluation();
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    if (evaluationScheduled == null && currentWeek != null && syl.getEvaluations() != null) {
+                        for (var ev : syl.getEvaluations()) {
+                            if (ev.getWeek() != null && ev.getWeek().equals(currentWeek)) {
+                                evaluationScheduled = ev.getType() + " (" + ev.getWeightPercent() + "%) - " + ev.getDescription();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            String modality = "P".equalsIgnoreCase(c.getModality()) ? "Presencial"
+                    : ("R".equalsIgnoreCase(c.getModality()) ? "Remota en Vivo" : "Virtual Asíncrono");
+
+            remaining.add(new RemainingClassSessionDto(
+                    courseCode,
+                    courseName,
+                    status,
+                    timeWindow,
+                    startTimeStr,
+                    finishTimeStr,
+                    minutesUntilStart,
+                    modality,
+                    c.getClassroom() != null && !c.getClassroom().isBlank() ? c.getClassroom() : "Aula Asignada",
+                    c.getBuilding() != null && !c.getBuilding().isBlank() ? c.getBuilding() : "Campus UTP",
+                    c.getFloor() != null && !c.getFloor().isBlank() ? c.getFloor() : null,
+                    c.getTeacher() != null && !c.getTeacher().isBlank() ? c.getTeacher() : "Docente UTP",
+                    c.getZoomLink(),
+                    syllabusTopic,
+                    syllabusActivities,
+                    evaluationScheduled
+            ));
+        }
+
+        // Ordenar cronológicamente por hora de inicio
+        remaining.sort(Comparator.comparing(RemainingClassSessionDto::startTime));
+
+        String message = null;
+        if (remaining.isEmpty()) {
+            message = "Todas tus clases programadas para hoy ya concluyeron. ¡Jornada académica finalizada!";
+        }
+
+        log.info("[AcademicTool] 🕒 getRemainingClassesToday [{}]: {} clases restantes de {} totales en fecha {} a las {}",
+                studentCode, remaining.size(), allClassesToday.size(), date, currentTimeFormatted);
+
+        return new RemainingClassesTodayResult(
+                studentCode,
+                date.toString(),
+                dayOfWeekSpanish,
+                currentTimeFormatted,
+                currentWeek,
+                remaining.size(),
+                remaining,
+                message
+        );
+    }
+
 
     /**
      * Resuelve la semana lectiva vigente del estudiante a partir del snapshot persistido del

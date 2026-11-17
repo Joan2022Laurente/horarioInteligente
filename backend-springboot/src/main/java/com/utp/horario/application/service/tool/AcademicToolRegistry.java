@@ -116,6 +116,35 @@ public class AcademicToolRegistry {
                                         "required", List.of("current_week")
                                 )
                         )
+                ),
+                Map.of(
+                        "type", "function",
+                        "function", Map.of(
+                                "name", "get_remaining_classes_today",
+                                "description", "Obtiene de forma determinista las clases académicas que aún quedan por cursar en el día de hoy (o en curso en este momento), enriquecidas automáticamente con los temas oficiales del sílabo correspondientes a la semana lectiva actual, actividades previstas, enlaces de Zoom y evaluaciones programadas.",
+                                "parameters", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of(
+                                                "date", Map.of("type", "string", "description", "Fecha en formato ISO YYYY-MM-DD. Opcional, por defecto el día de hoy en America/Lima."),
+                                                "time", Map.of("type", "string", "description", "Hora en formato HH:mm (24h). Opcional, por defecto la hora actual en America/Lima.")
+                                        )
+                                )
+                        )
+                ),
+                Map.of(
+                        "type", "function",
+                        "function", Map.of(
+                                "name", "search_marketplace",
+                                "description", "Busca productos de segunda mano, tecnología, libros o servicios de tutoría 1 a 1 ofrecidos por compañeros en el Marketplace estudiantil UTP.",
+                                "parameters", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of(
+                                                "query", Map.of("type", "string", "description", "Término de búsqueda (ej. 'desarrollo web', 'calculadora', 'mouse', 'cálculo'). Opcional."),
+                                                "type", Map.of("type", "string", "description", "Tipo de ítem: 'PRODUCT' (producto físico) o 'SERVICE' (tutoría/asesoría). Opcional."),
+                                                "category", Map.of("type", "string", "description", "Categoría del ítem: 'TUTORING', 'SECOND_HAND_TECH', 'PRINTING_SUPPLIES', 'SNACKS_FOOD', etc. Opcional.")
+                                        )
+                                )
+                        )
                 )
         );
     }

@@ -12,7 +12,7 @@ import { resolveEventLocation } from '@data/classroom-helper';
   template: `
     <div
       (click)="cardClick.emit(evt)"
-      class="group relative rounded-[var(--r-2xl)] p-4 transition-all duration-300 space-y-3 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
+      class="group relative r-control-lg p-4 transition-all duration-300 space-y-3 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
       [ngClass]="isActive ? 'bg-[#282c20]' : 'bg-[var(--utopik-carbon-black)] hover:bg-[#282c20]'"
       [ngStyle]="auroraStyle"
     >
@@ -40,12 +40,12 @@ import { resolveEventLocation } from '@data/classroom-helper';
             (click)="onZoomClick($event)"
             title="Unirse directo a Zoom"
             aria-label="Unirse a Zoom"
-            class="flex h-6 w-6 items-center justify-center rounded-[var(--r-md)] bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition shrink-0 cursor-pointer"
+            class="flex h-6 w-6 items-center justify-center r-control-sm bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition shrink-0 cursor-pointer"
           >
             <lucide-icon name="video" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
           </button>
         } @else {
-          <span class="text-[11px] font-mono font-medium text-neutral-400 group-hover:text-neutral-200 transition-colors truncate max-w-[80px]">
+          <span class="text-[11px] font-sans font-medium text-neutral-400 group-hover:text-neutral-200 transition-colors truncate max-w-[80px]">
             {{ evt.modality === 'P' ? location.aula.replace('Aula ', '') : 'Digital' }}
           </span>
         }
@@ -55,7 +55,7 @@ import { resolveEventLocation } from '@data/classroom-helper';
         {{ parsedTitle }}
       </h4>
 
-      <div class="flex items-center gap-1.5 text-xs font-mono text-neutral-400 whitespace-nowrap">
+      <div class="flex items-center gap-1.5 text-xs font-sans font-medium text-neutral-400 whitespace-nowrap">
         <lucide-icon name="clock" class="h-3.5 w-3.5 text-neutral-500 shrink-0"></lucide-icon>
         <span class="truncate">{{ timeRange }}</span>
       </div>

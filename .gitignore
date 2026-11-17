@@ -11,6 +11,10 @@
 # ==========================================
 backend-springboot/target/
 **/target/
+backend-springboot/data/
+**/data/
+*.mv.db
+*.trace.db
 !.mvn/wrapper/maven-wrapper.jar
 *.class
 *.jar
@@ -61,10 +65,16 @@ logs/
 scratch/
 
 # ==========================================
-# Labs, Playground & Internal Scratch/Plans
+# Labs, Playground & Internal Scratch/Plans & Audits
 # ==========================================
 labs/
 **/labs/
+docs/
+**/docs/
+tests-audit/
+**/tests-audit/
+audit-*.js
+test-audit.*
 *.pdf
 api_externa_plan.md
 *_plan.md

@@ -1,6 +1,7 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { ChatMessage, ScheduleInterval, UTPCurrentInterval, AgentActivity } from '@domain/models/utp.model';
 import { DailyLimitStatus, getClientDailyLimitStatus, incrementClientDailyUsage } from '@data/rate-limit/daily-limiter';
 import { AuthService } from '@data/services/auth.service';
@@ -19,6 +20,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
 ¿En qué te puedo ayudar hoy?`,
   timestamp: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
   suggestions: [
+    '¿Qué clases me quedan hoy y qué temas tocan?',
     '¿Qué clases tengo hoy y en qué aula?',
     '¿Qué temas tocan esta semana según el sílabo?',
     '¿Cuáles son mis próximas evaluaciones y porcentajes?',
@@ -29,7 +31,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
 @Component({
   selector: 'app-ai-assistant-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatrixOrbComponent, ChatMessageBubbleComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, MatrixOrbComponent, ChatMessageBubbleComponent],
   template: `
     @if (isOpen) {
       <div 
@@ -63,7 +65,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                       Copiloto Académico
                     </h3>
                     @if (isExpanded) {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-sm bg-white/10 text-neutral-300">
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 r-control-xs bg-white/10 text-neutral-300">
                         Pantalla Completa
                       </span>
                     }
@@ -77,20 +79,20 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
               <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <!-- Badge de Cuota de Consultas -->
                 @if (quota.isUnlimited) {
-                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                    <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 r-control-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                    <lucide-icon name="sparkles" class="h-3 w-3"></lucide-icon>
                     <span class="hidden sm:inline">Ilimitado</span>
                   </span>
                 } @else {
                   <span 
-                    class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md"
+                    class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 r-control-sm"
                     [ngClass]="quota.remaining > 0 ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'"
                   >
                     @if (quota.remaining > 0) {
-                      <svg class="h-3 w-3 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      <lucide-icon name="zap" class="h-3 w-3 text-amber-400 shrink-0"></lucide-icon>
                       <span>{{ quota.remaining }}/{{ quota.limit }} <span class="hidden sm:inline">consultas</span></span>
                     } @else {
-                      <svg class="h-3 w-3 text-rose-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <lucide-icon name="alert-circle" class="h-3 w-3 text-rose-400 shrink-0"></lucide-icon>
                       <span>Agotada</span>
                     }
                   </span>
@@ -101,12 +103,12 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                   type="button"
                   (click)="toggleExpanded()"
                   [title]="isExpanded ? 'Modo ventana' : 'Pantalla completa'"
-                  class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer shrink-0 border-none"
+                  class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer shrink-0 border-none"
                 >
                   @if (isExpanded) {
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                    <lucide-icon name="minimize-2" class="h-3.5 w-3.5"></lucide-icon>
                   } @else {
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                    <lucide-icon name="maximize-2" class="h-3.5 w-3.5"></lucide-icon>
                   }
                 </button>
 
@@ -114,17 +116,17 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                 <button
                   (click)="resetConversation()"
                   title="Reiniciar conversación"
-                  class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer shrink-0 border-none"
+                  class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer shrink-0 border-none"
                 >
-                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <lucide-icon name="rotate-ccw" class="h-3.5 w-3.5"></lucide-icon>
                 </button>
 
                 <!-- Botón Cerrar -->
                 <button
                   (click)="closeModal()"
-                  class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer shrink-0 border-none"
+                  class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer shrink-0 border-none"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
                 </button>
               </div>
 
@@ -137,7 +139,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
               (click)="restoreExpanded()"
               class="w-full bg-[#141418]/90 hover:bg-[#18181f] text-neutral-400 hover:text-neutral-200 text-[11px] py-1 text-center cursor-pointer transition flex items-center justify-center gap-1.5 border-b border-white/5 select-none"
             >
-              <svg class="h-3 w-3 animate-bounce text-[var(--accent-lime)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+              <lucide-icon name="arrow-up" class="h-3 w-3 animate-bounce text-[var(--accent-lime)]"></lucide-icon>
               <span>Modo ventana (reducir)</span>
             </div>
           }
@@ -185,14 +187,14 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                   name="chatInput"
                   placeholder="Pregúntale a tu copiloto académico..."
                   [disabled]="isLoading"
-                  class="flex-1 rounded-md bg-black/40 border-none px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none transition"
+                  class="flex-1 r-control-lg bg-black/40 border-none px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none transition"
                 />
                 <button
                   type="submit"
                   [disabled]="isLoading || !input.trim()"
-                  class="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent-lime)] text-[#0a0a0c] hover:bg-[#a8e63b] disabled:opacity-40 transition shadow-lg shadow-[var(--accent-lime)]/20 active:scale-95 cursor-pointer shrink-0 border-none"
+                  class="flex h-10 w-10 items-center justify-center r-control-lg bg-[var(--accent-lime)] text-[#0a0a0c] hover:bg-[#a8e63b] disabled:opacity-40 transition shadow-sm active:scale-95 cursor-pointer shrink-0 border-none"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                  <lucide-icon name="send" class="h-4 w-4"></lucide-icon>
                 </button>
               </form>
             </div>
@@ -478,10 +480,18 @@ export class AiAssistantModalComponent implements OnChanges {
       timestamp: this.getFormattedTime(),
       metadata: { toolsUsed },
       activities: activities,
-      currentActivity: null
+      currentActivity: {
+        id: 'init-reasoning',
+        phase: 'start',
+        tool: '',
+        label: 'Analizando contexto académico...',
+      },
+      isStreaming: true,
     };
 
-    let msgAdded = false;
+    this.messages.push(assistantMsg);
+    this.isLoading = false;
+    this.scrollToBottom('smooth');
 
     // Construir historial reciente de conversación para contexto continuo del copiloto
     const historyPayload = this.messages
@@ -492,11 +502,6 @@ export class AiAssistantModalComponent implements OnChanges {
     this.aiService.streamChat(
       query,
       (word: string) => {
-        if (!msgAdded) {
-          this.isLoading = false;
-          this.messages.push(assistantMsg);
-          msgAdded = true;
-        }
         streamedContent += word;
         assistantMsg.content = streamedContent;
         this.scrollToBottom('smooth');
@@ -506,22 +511,11 @@ export class AiAssistantModalComponent implements OnChanges {
           toolsUsed.push(toolName);
           assistantMsg.metadata = { ...assistantMsg.metadata, toolsUsed: [...toolsUsed] };
         }
-        if (!msgAdded) {
-          this.isLoading = false;
-          this.messages.push(assistantMsg);
-          msgAdded = true;
-        }
         this.scrollToBottom('smooth');
       },
       undefined,
       historyPayload,
       (act: AgentActivity) => {
-        if (!msgAdded) {
-          this.isLoading = false;
-          this.messages.push(assistantMsg);
-          msgAdded = true;
-        }
-
         const idx = activities.findIndex(a => a.id === act.id);
         if (idx >= 0) {
           activities[idx] = { ...activities[idx], ...act };
@@ -542,10 +536,14 @@ export class AiAssistantModalComponent implements OnChanges {
       }
     ).then(() => {
       this.isLoading = false;
+      assistantMsg.isStreaming = false;
       assistantMsg.currentActivity = null;
       this.quota = incrementClientDailyUsage(userId);
       this.scrollToBottom('smooth');
     }).catch((err) => {
+      this.isLoading = false;
+      assistantMsg.isStreaming = false;
+      assistantMsg.currentActivity = null;
       console.warn('[AiAssistantModal] Stream SSE no disponible, ejecutando fallback estándar:', err);
       // Fallback a sendMessage si SSE fallara por red
       const schedule = this.scheduleService.currentSchedule() || this.interval;
@@ -554,31 +552,23 @@ export class AiAssistantModalComponent implements OnChanges {
       this.aiService.sendMessage(query, userId, student, schedule, syllabi).subscribe({
         next: (res) => {
           this.isLoading = false;
+          assistantMsg.isStreaming = false;
+          assistantMsg.currentActivity = null;
           if (res.success && res.data) {
             this.quota = incrementClientDailyUsage(userId);
             console.log('[AiAssistantModal] 🤖 Modelo que respondió:', (res.data.metadata as any)?.model ?? 'no informado');
-            if (msgAdded) {
-              assistantMsg.content = res.data.content;
-              assistantMsg.suggestions = res.data.suggestions || res.data.suggestedActions;
-              assistantMsg.contextInfo = res.data.contextInfo;
-            } else {
-              this.messages.push({
-                id: res.data.id || (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: res.data.content,
-                timestamp: this.getFormattedTime(),
-                suggestions: res.data.suggestions || res.data.suggestedActions,
-                suggestedActions: res.data.suggestedActions || res.data.suggestions,
-                contextInfo: res.data.contextInfo,
-              });
-            }
+            assistantMsg.content = res.data.content;
+            assistantMsg.suggestions = res.data.suggestions || res.data.suggestedActions;
+            assistantMsg.contextInfo = res.data.contextInfo;
             this.scrollToBottom('smooth');
           } else {
+            this.messages = this.messages.filter(m => m.id !== assistantMsgId);
             this.handleErrorMessage(res.error || 'No se pudo procesar la respuesta');
           }
         },
         error: (fallbackErr) => {
           this.isLoading = false;
+          this.messages = this.messages.filter(m => m.id !== assistantMsgId);
           const msg = fallbackErr?.error?.message || fallbackErr?.message || 'Error de conexión con el copiloto';
           this.handleErrorMessage(msg);
         }

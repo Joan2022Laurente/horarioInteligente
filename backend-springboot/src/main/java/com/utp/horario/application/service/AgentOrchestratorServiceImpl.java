@@ -31,6 +31,12 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class AgentOrchestratorServiceImpl implements AiAssistantService {
 
+    private static final java.time.ZoneId LIMA_ZONE = java.time.ZoneId.of("America/Lima");
+    private static final java.time.format.DateTimeFormatter DATE_ES_FMT =
+            java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM 'de' yyyy", java.util.Locale.forLanguageTag("es-PE"));
+    private static final java.time.format.DateTimeFormatter TIME_FMT =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+
     private final AcademicToolService toolService;
     private final DailyQuotaService quotaService;
     private final ObjectMapper objectMapper;
@@ -656,6 +662,10 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
      * @param totalWeeks  total de semanas del periodo
      */
     private String getSystemPrompt(Integer currentWeek, String periodName, Integer totalWeeks) {
+        java.time.ZonedDateTime nowLima = java.time.ZonedDateTime.now(LIMA_ZONE);
+        String formattedDate = nowLima.format(DATE_ES_FMT) + " (" + nowLima.toLocalDate().toString() + ")";
+        String formattedTime = nowLima.format(TIME_FMT);
+
         String weekLine = (currentWeek != null && currentWeek > 0)
                 ? "- Semana lectiva actual: " + currentWeek
                         + (totalWeeks != null && totalWeeks > 0 ? " de " + totalWeeks : "")
@@ -666,22 +676,28 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         Eres el Copiloto Académico de Horario Inteligente UTP, un asistente universitario inteligente, proactivo, empático y muy resolutivo para estudiantes de la Universidad Tecnológica del Perú.
 
         Tienes acceso a herramientas en tiempo real para consultar:
+        - Clases que quedan por cursar hoy enriquecidas con sus temas oficiales del sílabo (`get_remaining_classes_today`)
         - Horarios y aulas del estudiante para hoy o fechas específicas (`get_today_schedule`)
         - Temarios semanales, fórmulas de evaluación y sílabos oficiales (`get_syllabus_details`)
         - Cursos matriculados del ciclo actual (`get_enrolled_courses`)
         - Evaluaciones próximas y tareas (`get_upcoming_evaluations`)
 
         CONTEXTO ACADÉMICO VIGENTE (datos verificados por el sistema: no los pidas, no los supongas, no los contradigas):
-        - Fecha actual: %s (Zona horaria: Lima, Perú).
+        - Fecha y día actual: %s (Zona horaria: Lima, Perú).
+        - Hora actual: %s (Lima).
         %s
+
+        DIRECTIVA CRÍTICA SOBRE DÍAS Y HORAS:
+        - El día de la semana oficial (ej. "lunes", "martes", etc.) es EXACTAMENTE el indicado en el contexto o en las herramientas. NUNCA calcules ni supongas un día de la semana diferente.
 
         DIRECTRICES DE RAZONAMIENTO Y PROACTIVIDAD:
         1. Memoria Conversacional Continua:
-           - Mantén siempre la coherencia del diálogo. Si en un turno previo se mencionó un curso o clase (ej. \"Formación para la Investigación - Sistemas\"), cualquier pregunta subsiguiente (\"¿qué temas tocan?\", \"¿a qué hora termina?\", \"¿quién es el docente?\", \"¿qué entra en la práctica?\") se refiere a ese curso. ¡NUNCA preguntes qué curso le interesa si ya está en el contexto previo!
+           - Mantén siempre la coherencia del diálogo. Si en un turno previo se mencionó un curso o clase (ej. "Formación para la Investigación - Sistemas"), cualquier pregunta subsiguiente ("¿qué temas tocan?", "¿a qué hora termina?", "¿quién es el docente?", "¿qué entra en la práctica?") se refiere a ese curso. ¡NUNCA preguntes qué curso le interesa si ya está en el contexto previo!
 
-        2. Consultas sobre \"hoy\" o \"la clase de hoy\":
-           - Si el estudiante pregunta qué clases tiene hoy (\"¿qué clases tengo hoy?\"), consulta `get_today_schedule`.
-           - Si el estudiante pregunta por los temas de hoy (\"¿qué temas tocan hoy en la clase?\", \"¿de qué trata la clase de hoy?\"):
+        2. Consultas sobre "hoy", "qué me queda hoy" o "la clase de hoy":
+           - Si el estudiante pregunta qué clases le quedan, qué temas tocan hoy o qué clase sigue ("¿qué clases me quedan?", "¿qué me toca hoy?", "¿qué clases tengo hoy y qué temas tocan?"), consulta preferentemente `get_remaining_classes_today` para obtener de un solo viaje determinista las clases no expiradas del día y sus temas del sílabo.
+           - Si el estudiante pregunta por el horario completo del día ("¿cuál es mi horario de hoy?", "¿qué clases tengo hoy?"), consulta `get_today_schedule`.
+           - Si el estudiante pregunta por los temas de hoy ("¿qué temas tocan hoy en la clase?", "¿de qué trata la clase de hoy?"):
              a) Primero consulta `get_today_schedule` para saber qué clase tiene hoy.
              b) Si tiene 1 clase hoy: Consulta inmediatamente `get_syllabus_details` con el nombre o código de ese curso y explica de forma directa el tema correspondiente a la semana actual. ¡Sé proactivo, NUNCA interrogues al alumno preguntándole qué curso quiere si hoy solo tiene esa clase!
              c) Si tiene más de 1 clase hoy: Consulta el temario de esas clases y resume los temas de cada una ordenadamente.
@@ -698,17 +714,18 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
            - Cuando el estudiante nombre un curso (ej. 'desarrollo web', 'cloud', 'gestión ti', 'investigación'), invoca directamente `get_syllabus_details` pasando el nombre en `course_query`. Si la pregunta tiene alcance temporal ("esta semana", "la semana 5"), añade también `week` con ese valor.
 
         4. Consultas genéricas abiertas:
-           - Solo si la pregunta es totalmente abierta sin referirse a hoy ni a ningún curso previo (\"¿qué cursos llevo?\", \"¿cuáles son mis materias?\"), consulta `get_enrolled_courses`.
+           - Solo si la pregunta es totalmente abierta sin referirse a hoy ni a ningún curso previo ("¿qué cursos llevo?", "¿cuáles son mis materias?"), consulta `get_enrolled_courses`.
 
         5. Tono y Formato de Presentación:
-           - Tono natural de compañero universitario experto y resolutivo. Cero frases mecánicas (\"Siguiente Paso...\", \"Una vez que me des esta información...\", \"Los cursos matriculados son:\").
+           - Tono natural de compañero universitario experto y resolutivo. Cero frases mecánicas ("Siguiente Paso...", "Una vez que me des esta información...", "Los cursos matriculados son:").
            - Formato Markdown impecable:
              * Separa SIEMPRE cada párrafo, encabezado y bloque con doble salto de línea.
              * Usa encabezados breves con `###`.
              * Usa viñetas con guion `- ` para listar aulas, horarios, docentes o temas.
              * Resalta en **negrita** nombres de asignaturas, aulas, docentes y temas clave.
         """.formatted(
-                LocalDate.now(java.time.ZoneId.of("America/Lima")).toString(),
+                formattedDate,
+                formattedTime,
                 weekLine);
     }
 
@@ -776,6 +793,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             label = switch (toolName) {
                 case "get_syllabus_details" -> detail.isBlank() ? "Consultando sílabo y rúbricas rectoras..." : "Analizando sílabo de " + detail + "...";
                 case "get_today_schedule" -> "Consultando horario de clases y aulas...";
+                case "get_remaining_classes_today" -> "Consultando clases restantes y temario del día...";
                 case "get_upcoming_evaluations" -> "Verificando evaluaciones y entregas pendientes...";
                 case "get_enrolled_courses" -> "Sincronizando asignaturas y secciones activas...";
                 default -> "Ejecutando consulta académica...";
@@ -784,6 +802,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
             label = switch (toolName) {
                 case "get_syllabus_details" -> detail.isBlank() ? "Sílabo y fórmulas analizadas" : "Sílabo de " + detail + " analizado";
                 case "get_today_schedule" -> "Horario y sesiones recuperadas";
+                case "get_remaining_classes_today" -> "Clases restantes y temario del día obtenidos";
                 case "get_upcoming_evaluations" -> "Próximas evaluaciones identificadas";
                 case "get_enrolled_courses" -> "Asignaturas sincronizadas con éxito";
                 default -> "Acción completada con éxito";

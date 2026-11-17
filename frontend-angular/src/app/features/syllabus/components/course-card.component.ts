@@ -11,7 +11,7 @@ import { LucideAngularModule } from 'lucide-angular';
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <div
-      class="flex flex-col justify-between rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] hover:bg-[#282c20] transition-all duration-300 space-y-4 p-5 group shadow-none cursor-pointer"
+      class="flex flex-col justify-between r-control-lg bg-[var(--utopik-carbon-black)] hover:bg-[#282c20] transition-all duration-300 space-y-4 p-5 group shadow-none cursor-pointer"
       (click)="onOpenSyllabus()"
     >
       <div class="space-y-3">
@@ -51,7 +51,7 @@ import { LucideAngularModule } from 'lucide-angular';
       <div class="flex items-center gap-2 pt-3">
         <button
           type="button"
-          class="flex-1 inline-flex items-center justify-center gap-2 rounded-[var(--r-lg)] bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition active:scale-95 py-2.5 px-3 cursor-pointer"
+          class="flex-1 inline-flex items-center justify-center gap-2 r-control-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition active:scale-95 py-2.5 px-3 cursor-pointer"
           (click)="onOpenSyllabus(); $event.stopPropagation()"
         >
           <lucide-icon name="book-open" class="h-4 w-4 text-[var(--utopik-green-yellow)]"></lucide-icon>
@@ -64,7 +64,7 @@ import { LucideAngularModule } from 'lucide-angular';
             target="_blank"
             rel="noopener noreferrer"
             title="Entrar a sala Zoom de la clase"
-            class="inline-flex items-center justify-center h-9 w-9 rounded-[var(--r-lg)] bg-white/10 hover:bg-[var(--utopik-sandy-brown)]/20 text-white hover:text-[var(--utopik-sandy-brown)] transition active:scale-95 shrink-0 cursor-pointer"
+            class="inline-flex items-center justify-center h-9 w-9 r-control-lg bg-white/10 hover:bg-[var(--utopik-sandy-brown)]/20 text-white hover:text-[var(--utopik-sandy-brown)] transition active:scale-95 shrink-0 cursor-pointer"
             (click)="$event.stopPropagation()"
           >
             <lucide-icon name="video" class="h-4 w-4"></lucide-icon>
@@ -75,7 +75,7 @@ import { LucideAngularModule } from 'lucide-angular';
           type="button"
           (click)="onAskAi(); $event.stopPropagation()"
           title="Consultar al Agente sobre este curso"
-          class="inline-flex items-center justify-center h-9 w-9 rounded-[var(--r-lg)] bg-white/10 hover:bg-[var(--utopik-green-yellow)]/20 text-white hover:text-[var(--utopik-green-yellow)] transition active:scale-95 shrink-0 cursor-pointer"
+          class="inline-flex items-center justify-center h-9 w-9 r-control-lg bg-white/10 hover:bg-[var(--utopik-green-yellow)]/20 text-white hover:text-[var(--utopik-green-yellow)] transition active:scale-95 shrink-0 cursor-pointer"
         >
           <lucide-icon name="sparkles" class="h-4 w-4 text-[var(--utopik-green-yellow)]"></lucide-icon>
         </button>

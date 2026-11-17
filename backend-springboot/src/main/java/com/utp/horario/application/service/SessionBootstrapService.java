@@ -7,6 +7,8 @@ import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
+import com.utp.horario.domain.model.repositories.IStudentRepository;
+import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import com.utp.horario.domain.model.value_objects.ClassSession;
 import com.utp.horario.domain.model.value_objects.Course;
 import com.utp.horario.domain.model.value_objects.ScheduleInterval;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +61,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SessionBootstrapService {
 
     /**
@@ -79,6 +81,29 @@ public class SessionBootstrapService {
     private final GenerateScheduleCommandHandler scheduleSyncHandler;
     private final SyllabusService syllabusService;
     private final SyncTaskCommandHandler taskPrimerHandler;
+    private final IUtpPortalGateway utpPortalGateway;
+    private final IStudentRepository studentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SessionBootstrapService(
+            GenerateScheduleCommandHandler scheduleSyncHandler,
+            SyllabusService syllabusService,
+            SyncTaskCommandHandler taskPrimerHandler,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) IUtpPortalGateway utpPortalGateway,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) IStudentRepository studentRepository) {
+        this.scheduleSyncHandler = scheduleSyncHandler;
+        this.syllabusService = syllabusService;
+        this.taskPrimerHandler = taskPrimerHandler;
+        this.utpPortalGateway = utpPortalGateway;
+        this.studentRepository = studentRepository;
+    }
+
+    public SessionBootstrapService(
+            GenerateScheduleCommandHandler scheduleSyncHandler,
+            SyllabusService syllabusService,
+            SyncTaskCommandHandler taskPrimerHandler) {
+        this(scheduleSyncHandler, syllabusService, taskPrimerHandler, null, null);
+    }
 
     public SessionBootstrapResult bootstrapStudentData(String studentCode, String token, String period) {
         if (studentCode == null || studentCode.isBlank() || "current-student".equalsIgnoreCase(studentCode)) {
@@ -90,18 +115,70 @@ public class SessionBootstrapService {
         // Paso 1: horario local-first — si MySQL ya tiene snapshot oficial sincronizado
         // hoy se sirve en milisegundos (sin llamada a la pasarela); si falta o venció,
         // fetch oficial; si la pasarela no responde degrada al snapshot previo persistido.
-        ScheduleInterval schedule;
+        ScheduleInterval schedule = null;
         try {
             schedule = scheduleSyncHandler.ensureFreshSchedule(
                     studentCode, token, effectivePeriod, LocalDate.now());
         } catch (ScheduleUnavailableException ex) {
-            log.warn("[SessionBootstrap] 🚫 Horario no disponible para [{}/{}]: {}",
+            log.warn("[SessionBootstrap] ⚠️ Horario no disponible en pasarela para [{}/{}]: {}",
                     studentCode, effectivePeriod, safeMessage(ex));
-            return new SessionBootstrapResult(false, 0, 0, 0);
         }
 
         // Paso 2: cursos matriculados únicos (declarativos + horario)
-        List<CourseTarget> targets = enrolledCourseTargets(schedule);
+        List<CourseTarget> targets = new ArrayList<>();
+        if (schedule != null) {
+            targets.addAll(enrolledCourseTargets(schedule));
+        }
+
+        // Resiliencia multi-tenant: si el horario directo no entregó asignaturas, consultar resumen oficial de cursos
+        if (targets.isEmpty() && token != null && !token.isBlank() && utpPortalGateway != null) {
+            try {
+                var summaries = utpPortalGateway.fetchCoursesSummary(token);
+                if (summaries != null && !summaries.isEmpty()) {
+                    for (var cs : summaries) {
+                        if (cs.courseCode() != null && !cs.courseCode().isBlank()) {
+                            targets.add(new CourseTarget(cs.courseCode().trim(), null));
+                        }
+                    }
+                    log.info("[SessionBootstrap] 📚 {} curso(s) recuperados de /courses/summary para [{}]", targets.size(), studentCode);
+                }
+            } catch (Exception ex) {
+                log.debug("[SessionBootstrap] No se pudo recuperar cursos de summary: {}", ex.getMessage());
+            }
+        }
+
+        // Si no hay cursos por pasarela remota, verificar si el perfil del estudiante ya tiene cursos asignados
+        if (targets.isEmpty() && studentRepository != null) {
+            studentRepository.findByStudentCode(studentCode).ifPresent(profile -> {
+                if (profile.getEnrolledCourseCodes() != null && !profile.getEnrolledCourseCodes().isEmpty()) {
+                    for (String code : profile.getEnrolledCourseCodes()) {
+                        if (code != null && !code.isBlank()) {
+                            targets.add(new CourseTarget(code.trim(), null));
+                        }
+                    }
+                    log.info("[SessionBootstrap] 📚 {} curso(s) detectados desde el perfil de [{}]", targets.size(), studentCode);
+                }
+            });
+        }
+
+        // Si no había schedule en BD pero sí obtuvimos cursos, generar snapshot base multi-tenant
+        if (schedule == null && !targets.isEmpty()) {
+            List<Course> coursesList = targets.stream()
+                    .map(t -> Course.builder().code(t.courseCode()).name(t.courseCode()).build())
+                    .toList();
+            ScheduleInterval baseInterval = ScheduleInterval.builder()
+                    .id("interval-" + studentCode)
+                    .periodName(effectivePeriod)
+                    .weekNumber(1)
+                    .totalWeeks(18)
+                    .startDate(LocalDate.now())
+                    .endDate(LocalDate.now().plusWeeks(18))
+                    .courses(coursesList)
+                    .classes(List.of())
+                    .build();
+            schedule = scheduleSyncHandler.importSchedule(studentCode, baseInterval);
+        }
+
         log.info("[SessionBootstrap] 📚 {} curso(s) matriculado(s) detectado(s) para [{}]", targets.size(), studentCode);
 
         // Paso 3: sílabos locales-first, faltantes en paralelo
@@ -111,9 +188,10 @@ public class SessionBootstrapService {
         // segundo plano — la vista HOY servirá del Read Model de MySQL sin scraping.
         launchActivitiesPrimer(studentCode, token);
 
-        log.info("[SessionBootstrap] ✔ Bootstrap integral de [{}] completado: sílabos {}/{}",
-                studentCode, synced, targets.size());
-        return new SessionBootstrapResult(true, targets.size(), synced, targets.size());
+        boolean success = !targets.isEmpty() || schedule != null;
+        log.info("[SessionBootstrap] ✔ Bootstrap integral de [{}] completado: sílabos {}/{} (success={})",
+                studentCode, synced, targets.size(), success);
+        return new SessionBootstrapResult(success, targets.size(), synced, targets.size());
     }
 
     /**
@@ -155,20 +233,25 @@ public class SessionBootstrapService {
         if (schedule.getCourses() != null) {
             for (Course c : schedule.getCourses()) {
                 if (c.getCode() != null && !c.getCode().isBlank()) {
-                    sectionByCode.putIfAbsent(c.getCode().trim(), normalize(c.getSection()));
+                    String sec = normalize(c.getSection());
+                    sectionByCode.putIfAbsent(c.getCode().trim(), sec != null ? sec : "");
                 }
             }
         }
         if (schedule.getClasses() != null) {
             for (ClassSession cs : schedule.getClasses()) {
                 if (cs.getCourseCode() != null && !cs.getCourseCode().isBlank()) {
-                    sectionByCode.merge(cs.getCourseCode().trim(), normalize(cs.getSectionId()),
-                            (current, offered) -> (current == null || current.isBlank()) ? offered : current);
+                    String code = cs.getCourseCode().trim();
+                    String sec = normalize(cs.getSectionId());
+                    String current = sectionByCode.get(code);
+                    if (current == null || current.isBlank()) {
+                        sectionByCode.put(code, sec != null ? sec : "");
+                    }
                 }
             }
         }
         return sectionByCode.entrySet().stream()
-                .map(e -> new CourseTarget(e.getKey(), e.getValue()))
+                .map(e -> new CourseTarget(e.getKey(), e.getValue().isBlank() ? null : e.getValue()))
                 .toList();
     }
 

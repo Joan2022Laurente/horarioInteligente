@@ -32,6 +32,7 @@ public class MarketplaceMapper {
                 .tutorCycle(entity.getTutorCycle())
                 .reputation(entity.getReputation())
                 .contactMethod(entity.getContactMethod())
+                .status(entity.getStatus() != null ? entity.getStatus() : "AVAILABLE")
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
@@ -61,6 +62,7 @@ public class MarketplaceMapper {
                 .tutorCycle(domain.getTutorCycle())
                 .reputation(domain.getReputation())
                 .contactMethod(domain.getContactMethod())
+                .status(domain.getStatus() != null ? domain.getStatus() : "AVAILABLE")
                 .createdAt(domain.getCreatedAt())
                 .build();
     }

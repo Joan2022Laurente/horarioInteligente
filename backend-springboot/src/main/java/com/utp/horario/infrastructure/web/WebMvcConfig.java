@@ -28,23 +28,28 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        // Prefijar automÃ¡ticamente todos los @RestController con /api/v1 (excepto endpoints estÃ¡ndar como MCP y .well-known)
+        // Prefijar automáticamente todos los @RestController de la aplicación con /api/v1 (excepto endpoints estándar como MCP y .well-known)
         configurer.addPathPrefix("/api/v1", c -> c.isAnnotationPresent(RestController.class) 
+                && c.getPackageName().startsWith("com.utp.horario")
                 && !c.getSimpleName().equals("McpServerController")
                 && !c.getSimpleName().equals("WellKnownController"));
     }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Servir archivos estÃ¡ticos del frontend Angular y resolver rutas SPA a index.html
+        // Servir archivos estáticos del frontend Angular y resolver rutas SPA a index.html
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static/")
                 .resourceChain(true)
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        // NO servir index.html para endpoints de sistema como .well-known, mcp o api (debe devolver 404 real)
-                        if (resourcePath.startsWith(".well-known") || resourcePath.startsWith("mcp") || resourcePath.startsWith("api")) {
+                        // NO servir index.html para endpoints de sistema como .well-known, mcp, api o swagger (debe devolver 404 real o el recurso webjar)
+                        if (resourcePath.startsWith(".well-known") 
+                                || resourcePath.startsWith("mcp") 
+                                || resourcePath.startsWith("api")
+                                || resourcePath.startsWith("swagger")
+                                || resourcePath.startsWith("v3")) {
                             return null;
                         }
                         

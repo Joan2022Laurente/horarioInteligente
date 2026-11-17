@@ -36,17 +36,46 @@
   --surface-input: #121215;
 
   /* ───────────────────────────────────────────────────────────────────────────
-     ESCALA GLOBAL DE RADIOS (SQUIRCLES SOBRIOS - ESTILO AZZIA / LINEAR / VERCEL)
-     Valores puros en píxeles. Sin fórmulas porcentuales que deformen elementos.
+     ESCALA SEMÁNTICA DE RADIOS (ARQUITECTURA DE TRES CAPAS - SQUIRCLES SOBRIOS)
+     1. Primitivos Privados: constantes absolutas de radio en px.
+     2. Alturas Fijas de Control: fuente de verdad de elevación y altura de controles.
+     3. Roles Semánticos Públicos: radios con ratio r <= 0.35h (imposible pastilla).
      ─────────────────────────────────────────────────────────────────────────── */
-  --r-xs: 4px;   /* micro-badges, tags mínimos */
-  --r-sm: 6px;   /* badges compactos (ej. ACTIVE) */
-  --r-md: 8px;   /* chips, botones compactos, inputs */
-  --r-lg: 10px;  /* botones estándar, selectores (ej. MANAGE, Root Folders) */
-  --r-xl: 14px;  /* cards pequeñas, sub-paneles */
-  --r-2xl: 18px; /* cards principales, contenedores grandes */
-  --r-3xl: 24px; /* modales, dashboards y heroes */
-  --r-pill: 9999px; /* exclusivo para avatares circulares y dots 1:1 */
+  /* Primitivos privados */
+  --_r-4: 4px;
+  --_r-6: 6px;
+  --_r-8: 8px;
+  --_r-10: 10px;
+  --_r-12: 12px;
+  --_r-14: 14px;
+  --_r-18: 18px;
+  --_r-24: 24px;
+
+  /* Alturas de control fijas */
+  --h-control-xs: 24px;
+  --h-control-sm: 28px;
+  --h-control-md: 32px;
+  --h-control-lg: 40px;
+
+  /* Roles Semánticos Públicos */
+  --r-control-xs: var(--_r-4);   /* micro-badges, tags mínimos */
+  --r-control-sm: var(--_r-6);   /* badges compactos, tabs compactas interiores */
+  --r-control-md: var(--_r-8);   /* chips, botones compactos, inputs */
+  --r-control-lg: var(--_r-10);  /* botones estándar, segmented controls contenedor */
+  --r-panel:      var(--_r-14);  /* sub-paneles, cards pequeñas */
+  --r-card:       var(--_r-18);  /* cards principales, contenedores grandes */
+  --r-overlay:    var(--_r-24);  /* modales, dashboards y heroes */
+  --r-circle:     9999px;        /* exclusivo para avatares y dots 1:1 */
+
+  /* Aliases de compatibilidad transitoria */
+  --r-xs: var(--r-control-xs);
+  --r-sm: var(--r-control-sm);
+  --r-md: var(--r-control-md);
+  --r-lg: var(--r-control-lg);
+  --r-xl: var(--r-panel);
+  --r-2xl: var(--r-card);
+  --r-3xl: var(--r-overlay);
+  --r-pill: var(--r-circle);
 
   /* Solid Neutral Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);

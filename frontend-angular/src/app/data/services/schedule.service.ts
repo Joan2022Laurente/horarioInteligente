@@ -192,7 +192,7 @@ export class ScheduleService {
           const events: UTPEvent[] = scheduleData.classes.map((c: any) => ({
             id: c.id,
             title: `${c.courseName}${c.section && c.section !== 'Sección Única' ? ' (' + c.section + ')' : ''} (Semana ${scheduleData.weekNumber}) - Sesión`,
-            modality: c.modality,
+            modality: c.modality || 'Presencial',
             type: 'SESSION',
             startAt: c.startAt,
             finishAt: c.finishAt,
@@ -320,22 +320,33 @@ export class ScheduleService {
   }
 
   /**
-   * Exporta el horario oficial del estudiante a formato RFC 5545 iCalendar (.ics)
-   * listo para importar en Google Calendar, Apple Calendar o Microsoft Outlook.
+   * Consulta las clases programadas para el día de hoy vía Spring Boot Academic Tool
+   * (GET /api/v1/schedule/today).
    */
-  exportCalendarIcs(period: string = '2026 - Ciclo 2 Agosto'): Observable<Blob> {
-    const profile = getCachedStudentProfile();
-    const token = profile?.token || '';
-    const headers: Record<string, string> = {
-      'Accept': 'text/calendar, text/plain, */*'
-    };
-    if (token) {
-      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-    }
-    const query = period ? `?period=${encodeURIComponent(period)}` : '';
-    return this.http.get(`${environment.academicApiUrl}/schedule/export.ics${query}`, {
-      headers,
-      responseType: 'blob'
-    });
+  getTodaySchedule(date?: string): Observable<ApiResponse<any>> {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return this.http.get<ApiResponse<any>>(`${environment.academicApiUrl}/schedule/today${query}`).pipe(
+      catchError(err => {
+        console.warn('[ScheduleService] Error consultando clases de hoy:', err?.message || err);
+        return of({ success: false, data: null, message: err?.message || 'Error de red' });
+      })
+    );
+  }
+
+  /**
+   * Consulta las clases restantes del día de hoy vía Spring Boot Academic Tool
+   * (GET /api/v1/schedule/remaining).
+   */
+  getRemainingClassesToday(date?: string, time?: string): Observable<ApiResponse<any>> {
+    const queryParts: string[] = [];
+    if (date) queryParts.push(`date=${encodeURIComponent(date)}`);
+    if (time) queryParts.push(`time=${encodeURIComponent(time)}`);
+    const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    return this.http.get<ApiResponse<any>>(`${environment.academicApiUrl}/schedule/remaining${query}`).pipe(
+      catchError(err => {
+        console.warn('[ScheduleService] Error consultando clases restantes de hoy:', err?.message || err);
+        return of({ success: false, data: null, message: err?.message || 'Error de red' });
+      })
+    );
   }
 }

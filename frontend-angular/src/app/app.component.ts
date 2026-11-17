@@ -56,7 +56,7 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
           } @else if (activeTab === 'courses') {
             <app-syllabus-view [initialCourseToOpen]="selectedCourseForSyllabus" (askAi)="openAiWithPrompt($event)"></app-syllabus-view>
           } @else if (activeTab === 'networking') {
-            <app-networking-view></app-networking-view>
+            <app-networking-view (askAi)="openAiWithPrompt($event)"></app-networking-view>
           } @else if (activeTab === 'marketplace') {
             <app-marketplace-view></app-marketplace-view>
           }
@@ -78,7 +78,7 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
         <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
           @for (toast of feedbackService.toasts(); track toast.id) {
             <div 
-              class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border text-xs font-semibold shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+              class="pointer-events-auto flex items-center gap-3 px-4 py-3 r-card border text-xs font-semibold shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
               [ngClass]="{
                 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200': toast.type === 'success',
                 'bg-rose-950/90 border-rose-500/30 text-rose-200': toast.type === 'error',

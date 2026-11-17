@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MarketplaceService } from '@data/services/marketplace.service';
 import { getCachedStudentProfile } from '@data/syllabus/client-storage';
@@ -15,6 +16,7 @@ import { MarketplaceStore } from './marketplace.store';
   imports: [
     CommonModule, 
     FormsModule, 
+    LucideAngularModule,
     MarketplaceCardComponent, 
     MarketplaceFiltersComponent
   ],
@@ -24,13 +26,13 @@ import { MarketplaceStore } from './marketplace.store';
       <!-- ===================================================================== -->
       <!-- CENTER CONTINUOUS COLUMN (Elevated Dark Marketplace Stream)           -->
       <!-- ===================================================================== -->
-      <main class="w-full md:max-w-[600px] flex-1 border border-white/[0.08] bg-[#0c0d10] rounded-2xl overflow-hidden shadow-2xl min-h-screen">
+      <main class="w-full md:max-w-[600px] flex-1 border border-white/[0.08] bg-[#0c0d10] r-card overflow-hidden shadow-2xl min-h-screen">
         
         <!-- Sticky Top Channel Selector (Modern Segmented Pills) -->
         <div class="sticky top-0 z-20 bg-[#0c0d10]/90 backdrop-blur-md border-b border-white/[0.08] p-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             (click)="setCategory('ALL')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition border-none cursor-pointer shrink-0"
+            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
             [ngClass]="filterSignal().category === 'ALL' 
               ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
               : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
@@ -40,7 +42,7 @@ import { MarketplaceStore } from './marketplace.store';
 
           <button
             (click)="setCategory('SNACKS_FOOD')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition border-none cursor-pointer shrink-0"
+            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
             [ngClass]="filterSignal().category === 'SNACKS_FOOD' 
               ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
               : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
@@ -50,7 +52,7 @@ import { MarketplaceStore } from './marketplace.store';
 
           <button
             (click)="setCategory('CLOTHING_THRIFT')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition border-none cursor-pointer shrink-0"
+            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
             [ngClass]="filterSignal().category === 'CLOTHING_THRIFT' 
               ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
               : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
@@ -60,7 +62,7 @@ import { MarketplaceStore } from './marketplace.store';
 
           <button
             (click)="setCategory('SECOND_HAND_TECH')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition border-none cursor-pointer shrink-0"
+            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
             [ngClass]="filterSignal().category === 'SECOND_HAND_TECH' 
               ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
               : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
@@ -70,7 +72,7 @@ import { MarketplaceStore } from './marketplace.store';
 
           <button
             (click)="setCategory('TUTORING')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition border-none cursor-pointer shrink-0"
+            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
             [ngClass]="filterSignal().category === 'TUTORING' 
               ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
               : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
@@ -80,7 +82,7 @@ import { MarketplaceStore } from './marketplace.store';
 
           <button
             (click)="setCategory('PRINTING_SUPPLIES')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition border-none cursor-pointer shrink-0"
+            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
             [ngClass]="filterSignal().category === 'PRINTING_SUPPLIES' 
               ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
               : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
@@ -107,7 +109,7 @@ import { MarketplaceStore } from './marketplace.store';
 
           <button 
             (click)="isOfferModalOpen = true"
-            class="px-4 py-1.5 rounded-xl bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs transition border-none cursor-pointer shadow-md"
+            class="px-4 py-1.5 r-control-sm bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs transition border-none cursor-pointer shadow-md"
           >
             + Publicar
           </button>
@@ -121,7 +123,7 @@ import { MarketplaceStore } from './marketplace.store';
               <p class="text-xs text-neutral-500">Prueba cambiando los filtros o sé el primero en publicar un producto o asesoría.</p>
               <button 
                 (click)="resetFilters()"
-                class="px-4 py-1.5 rounded-xl bg-white text-black font-bold text-xs border-none cursor-pointer mt-2"
+                class="px-4 py-1.5 r-control-sm bg-white text-black font-bold text-xs border-none cursor-pointer mt-2"
               >
                 Limpiar filtros
               </button>
@@ -160,7 +162,7 @@ import { MarketplaceStore } from './marketplace.store';
           (click)="selectedItem = null"
         >
           <div 
-            class="relative flex flex-col md:flex-row w-full max-w-3xl rounded-2xl bg-[#0c0d10] text-white shadow-2xl border border-white/[0.08] overflow-hidden max-h-[90vh] text-left"
+            class="relative flex flex-col md:flex-row w-full max-w-3xl r-control-sm bg-[#0c0d10] text-white shadow-2xl border border-white/[0.08] overflow-hidden max-h-[90vh] text-left"
             (click)="$event.stopPropagation()"
           >
             <!-- Left Modal Image Frame -->
@@ -173,7 +175,7 @@ import { MarketplaceStore } from './marketplace.store';
               <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:hidden"></div>
               
               @if (selectedItem.badge) {
-                <span class="absolute top-4 left-4 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-[var(--accent-lime)] text-black uppercase tracking-wider shadow-md">
+                <span class="absolute top-4 left-4 px-2.5 py-1 r-control-md text-[10px] font-extrabold bg-[var(--accent-lime)] text-black uppercase tracking-wider shadow-md">
                   {{ selectedItem.badge }}
                 </span>
               }
@@ -186,17 +188,17 @@ import { MarketplaceStore } from './marketplace.store';
                 <!-- Header -->
                 <div class="flex items-start justify-between gap-2">
                   <div>
-                    <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-white/10 text-neutral-300">
+                    <span class="px-2.5 py-0.5 r-control-md text-[10px] font-semibold bg-white/10 text-neutral-300">
                       {{ selectedItem.serviceType }}
                     </span>
                     @if (selectedItem.condition) {
-                      <span class="ml-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                      <span class="ml-1 px-2.5 py-0.5 r-control-md text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
                         {{ selectedItem.condition }}
                       </span>
                     }
                     @if (selectedItem.location) {
-                      <span class="ml-1 text-xs text-[var(--accent-lime)] font-medium">
-                        • 📍 {{ selectedItem.location }}
+                      <span class="ml-1 text-xs text-[var(--accent-lime)] font-medium inline-flex items-center gap-1">
+                        • <lucide-icon name="map-pin" class="h-3 w-3 inline text-[var(--accent-lime)]"></lucide-icon> {{ selectedItem.location }}
                       </span>
                     } @else if (selectedItem.courseName) {
                       <span class="ml-1 text-xs text-neutral-400 font-medium">
@@ -207,9 +209,9 @@ import { MarketplaceStore } from './marketplace.store';
 
                   <button 
                     (click)="selectedItem = null" 
-                    class="h-7 w-7 rounded-xl bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer"
+                    class="h-7 w-7 r-control-sm bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer"
                   >
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
                   </button>
                 </div>
 
@@ -218,15 +220,15 @@ import { MarketplaceStore } from './marketplace.store';
                 </h2>
 
                 <!-- Rating and Seller Snapshot -->
-                <div class="flex items-center justify-between p-3 rounded-2xl bg-[#14151a] border border-white/[0.08]">
+                <div class="flex items-center justify-between p-3 r-card bg-[#14151a] border border-white/[0.08]">
                   <div class="flex items-center gap-2.5">
-                    <div class="h-9 w-9 rounded-xl bg-[#181920] border border-white/10 flex items-center justify-center text-xs font-bold text-[var(--accent-lime)]">
+                    <div class="h-9 w-9 r-panel bg-[#181920] border border-white/10 flex items-center justify-center text-xs font-bold text-[var(--accent-lime)]">
                       {{ selectedItem.tutorName.charAt(0) }}
                     </div>
                     <div>
                       <div class="flex items-center gap-1.5">
                         <span class="text-xs font-bold text-white">{{ selectedItem.tutorName }}</span>
-                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md font-medium">Estudiante UTP</span>
+                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 r-control-sm font-medium">Estudiante UTP</span>
                       </div>
                       <span class="text-[11px] text-neutral-400 block">{{ selectedItem.tutorCareer }} • Ciclo {{ selectedItem.tutorCycle }}</span>
                     </div>
@@ -234,7 +236,7 @@ import { MarketplaceStore } from './marketplace.store';
 
                   <div class="text-right">
                     <div class="flex items-center gap-1 text-xs font-bold text-white">
-                      <svg class="h-3.5 w-3.5 text-[var(--accent-lime)] fill-[var(--accent-lime)]" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      <lucide-icon name="star" class="h-3.5 w-3.5 text-[var(--accent-lime)] fill-[var(--accent-lime)]"></lucide-icon>
                       <span>{{ selectedItem.rating }}</span>
                     </div>
                     <span class="text-[10px] text-neutral-500">{{ selectedItem.salesCount }} pedidos / ventas</span>
@@ -253,7 +255,7 @@ import { MarketplaceStore } from './marketplace.store';
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-neutral-200">
                       @for (hl of selectedItem.highlights; track hl) {
                         <div class="flex items-center gap-1.5">
-                          <svg class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          <lucide-icon name="check" class="h-3.5 w-3.5 text-[var(--accent-lime)] shrink-0 stroke-[2.5]"></lucide-icon>
                           <span class="truncate">{{ hl }}</span>
                         </div>
                       }
@@ -265,7 +267,7 @@ import { MarketplaceStore } from './marketplace.store';
                 @if (selectedItem.tags && selectedItem.tags.length > 0) {
                   <div class="flex flex-wrap gap-1.5 pt-1">
                     @for (t of selectedItem.tags; track t) {
-                      <span class="text-[11px] text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2 py-0.5 rounded-lg border border-[var(--accent-lime)]/20 font-mono">
+                      <span class="text-[11px] text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-2 py-0.5 r-control-md border border-[var(--accent-lime)]/20 font-medium">
                         #{{ t }}
                       </span>
                     }
@@ -273,9 +275,9 @@ import { MarketplaceStore } from './marketplace.store';
                 }
 
                 <!-- Institutional Contact & Delivery -->
-                <div class="p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1 text-xs">
+                <div class="p-3 r-panel bg-white/[0.03] border border-white/10 space-y-1 text-xs">
                   <span class="text-[11px] text-neutral-400 block font-medium">Punto de Entrega & Contacto:</span>
-                  <p class="font-mono text-white text-xs select-all">{{ selectedItem.contactMethod }}</p>
+                  <p class="font-medium text-white text-xs select-all">{{ selectedItem.contactMethod }}</p>
                 </div>
 
               </div>
@@ -296,16 +298,72 @@ import { MarketplaceStore } from './marketplace.store';
                 <div class="flex items-center gap-2">
                   <button 
                     (click)="selectedItem = null" 
-                    class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border-none cursor-pointer transition"
+                    class="px-3.5 py-2.5 r-control-lg bg-white/10 hover:bg-white/20 text-white font-bold text-xs border-none cursor-pointer transition"
                   >
                     Cerrar
                   </button>
-                  <button 
-                    (click)="contactSeller(selectedItem)" 
-                    class="px-5 py-2.5 rounded-xl bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs border-none cursor-pointer transition shadow-lg"
-                  >
-                    {{ selectedItem.itemType === 'PRODUCT' ? 'Pedir / Contactar' : 'Coordinar Asesoría' }}
-                  </button>
+                  @if (isMyListing(selectedItem)) {
+                    <div class="flex items-center gap-1.5">
+                      @if (selectedItem.itemType === 'SERVICE') {
+                        @if (selectedItem.status === 'PAUSED') {
+                          <button 
+                            (click)="changeStatus(selectedItem, 'AVAILABLE')" 
+                            class="px-2.5 py-2 r-control-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/20 cursor-pointer"
+                          >
+                            Reanudar
+                          </button>
+                        } @else {
+                          <button 
+                            (click)="changeStatus(selectedItem, 'PAUSED')" 
+                            class="px-2.5 py-2 r-control-md bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 font-bold text-xs border border-yellow-500/20 cursor-pointer"
+                          >
+                            Pausar
+                          </button>
+                        }
+                      } @else {
+                        @if (selectedItem.status === 'AVAILABLE') {
+                          <button 
+                            (click)="changeStatus(selectedItem, 'RESERVED')" 
+                            class="px-2.5 py-2 r-control-md bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 font-bold text-xs border border-yellow-500/20 cursor-pointer"
+                          >
+                            Apartar
+                          </button>
+                          <button 
+                            (click)="changeStatus(selectedItem, 'SOLD')" 
+                            class="px-2.5 py-2 r-control-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 font-bold text-xs border border-purple-500/20 cursor-pointer"
+                          >
+                            Vendido
+                          </button>
+                        } @else if (selectedItem.status === 'RESERVED') {
+                          <button 
+                            (click)="changeStatus(selectedItem, 'AVAILABLE')" 
+                            class="px-2.5 py-2 r-control-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/20 cursor-pointer"
+                          >
+                            Liberar
+                          </button>
+                          <button 
+                            (click)="changeStatus(selectedItem, 'SOLD')" 
+                            class="px-2.5 py-2 r-control-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 font-bold text-xs border border-purple-500/20 cursor-pointer"
+                          >
+                            Vendido
+                          </button>
+                        }
+                      }
+                      <button 
+                        (click)="deleteOffer(selectedItem)" 
+                        class="px-2.5 py-2 r-control-md bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold text-xs border border-red-500/20 cursor-pointer transition"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  } @else {
+                    <button 
+                      (click)="contactSeller(selectedItem)" 
+                      class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs border-none cursor-pointer transition shadow-lg"
+                    >
+                      {{ selectedItem.itemType === 'PRODUCT' ? 'Pedir / Contactar' : 'Coordinar Asesoría' }}
+                    </button>
+                  }
                 </div>
               </div>
 
@@ -324,7 +382,7 @@ import { MarketplaceStore } from './marketplace.store';
           (click)="isOfferModalOpen = false"
         >
           <div 
-            class="relative flex flex-col w-full max-w-xl rounded-2xl bg-[#0c0d10] text-white p-6 shadow-2xl border border-white/[0.08] space-y-4 text-left max-h-[90vh] overflow-y-auto no-scrollbar"
+            class="relative flex flex-col w-full max-w-xl r-control-lg bg-[#0c0d10] text-white p-6 shadow-2xl border border-white/[0.08] space-y-4 text-left max-h-[90vh] overflow-y-auto no-scrollbar"
             (click)="$event.stopPropagation()"
           >
             <div class="flex items-center justify-between border-b border-white/[0.08] pb-3">
@@ -332,8 +390,8 @@ import { MarketplaceStore } from './marketplace.store';
                 <h3 class="text-base font-bold text-white">Publicar en el Marketplace UTP</h3>
                 <p class="text-xs text-neutral-400">Ofrece comida casera, ropa, tecnología seminueva o tutorías a tus compañeros.</p>
               </div>
-              <button (click)="isOfferModalOpen = false" class="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <button (click)="isOfferModalOpen = false" class="h-8 w-8 r-control-md bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer">
+                <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
               </button>
             </div>
 
@@ -342,7 +400,7 @@ import { MarketplaceStore } from './marketplace.store';
               <!-- Category Selector -->
               <div class="space-y-1">
                 <label class="block text-xs font-bold text-neutral-300">Categoría</label>
-                <select [(ngModel)]="newOffer.category" class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none">
+                <select [(ngModel)]="newOffer.category" class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none">
                   <option value="SNACKS_FOOD">Comida, Snacks & Postres de Campus</option>
                   <option value="CLOTHING_THRIFT">Ropa, Hoodies & Moda de Segunda Mano</option>
                   <option value="SECOND_HAND_TECH">Tecnología & Hardware Seminuevo (Mouse, Teclados, Laptops)</option>
@@ -357,14 +415,14 @@ import { MarketplaceStore } from './marketplace.store';
               <!-- Title -->
               <div class="space-y-1">
                 <label class="block text-xs font-bold text-neutral-300">Título de la Publicación</label>
-                <input type="text" [(ngModel)]="newOffer.title" placeholder="Ej: Hoodie Oversized Negro Talla M / Mouse Logitech G305 / Brownies" class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
+                <input type="text" [(ngModel)]="newOffer.title" placeholder="Ej: Hoodie Oversized Negro Talla M / Mouse Logitech G305 / Brownies" class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
               </div>
 
               <!-- Condition & Location -->
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1">
                   <label class="block text-xs font-bold text-neutral-300">Estado / Condición</label>
-                  <select [(ngModel)]="newOffer.condition" class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none">
+                  <select [(ngModel)]="newOffer.condition" class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none">
                     <option value="NUEVO">Nuevo / En empaque</option>
                     <option value="SEMINUEVO 9.5/10">Seminuevo 9.5/10</option>
                     <option value="SEMINUEVO 9/10">Seminuevo 9/10</option>
@@ -374,7 +432,7 @@ import { MarketplaceStore } from './marketplace.store';
                 </div>
                 <div class="space-y-1">
                   <label class="block text-xs font-bold text-neutral-300">Punto de Entrega</label>
-                  <input type="text" [(ngModel)]="newOffer.location" placeholder="Ej: Torre A - Piso 3" class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
+                  <input type="text" [(ngModel)]="newOffer.location" placeholder="Ej: Torre A - Piso 3" class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
                 </div>
               </div>
 
@@ -382,11 +440,11 @@ import { MarketplaceStore } from './marketplace.store';
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1">
                   <label class="block text-xs font-bold text-neutral-300">Precio en Soles (S/)</label>
-                  <input type="number" [(ngModel)]="newOffer.numericPrice" placeholder="45.00" class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
+                  <input type="number" [(ngModel)]="newOffer.numericPrice" placeholder="45.00" class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
                 </div>
                 <div class="space-y-1">
                   <label class="block text-xs font-bold text-neutral-300">Unidad</label>
-                  <select [(ngModel)]="newOffer.unit" class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none">
+                  <select [(ngModel)]="newOffer.unit" class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none">
                     <option value="/ prenda">Por prenda</option>
                     <option value="/ unidad">Por unidad</option>
                     <option value="/ porción">Por porción</option>
@@ -400,21 +458,21 @@ import { MarketplaceStore } from './marketplace.store';
               <!-- Description -->
               <div class="space-y-1">
                 <label class="block text-xs font-bold text-neutral-300">Descripción & Detalles (Talla, modelo, especificaciones)</label>
-                <textarea [(ngModel)]="newOffer.description" rows="3" placeholder="Describe estado, tiempo de uso, especificaciones o ingredientes..." class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl p-3 text-xs text-white outline-none focus:border-[var(--accent-lime)] resize-none"></textarea>
+                <textarea [(ngModel)]="newOffer.description" rows="3" placeholder="Describe estado, tiempo de uso, especificaciones o ingredientes..." class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg p-3 text-xs text-white outline-none focus:border-[var(--accent-lime)] resize-none"></textarea>
               </div>
 
               <!-- Image URL -->
               <div class="space-y-1">
                 <label class="block text-xs font-bold text-neutral-300">Enlace de Foto del Producto / Servicio (Opcional)</label>
-                <input type="url" [(ngModel)]="newOffer.imageUrl" placeholder="https://images.unsplash.com/..." class="w-full bg-[#14151a] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
+                <input type="url" [(ngModel)]="newOffer.imageUrl" placeholder="https://images.unsplash.com/..." class="w-full bg-[#14151a] border border-white/[0.08] r-control-lg px-3.5 py-2.5 text-xs text-white outline-none focus:border-[var(--accent-lime)]" />
               </div>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
-              <button (click)="isOfferModalOpen = false" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border-none cursor-pointer">
+              <button (click)="isOfferModalOpen = false" class="px-4 py-2.5 r-control-lg bg-white/10 hover:bg-white/15 text-white font-bold text-xs border-none cursor-pointer">
                 Cancelar
               </button>
-              <button (click)="publishNewOffer()" [disabled]="!newOffer.title.trim() || !newOffer.numericPrice" class="px-5 py-2.5 rounded-xl bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] disabled:opacity-30 text-black font-extrabold text-xs border-none cursor-pointer">
+              <button (click)="publishNewOffer()" [disabled]="!newOffer.title.trim() || !newOffer.numericPrice" class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] disabled:opacity-30 text-black font-extrabold text-xs border-none cursor-pointer">
                 Publicar en Marketplace
               </button>
             </div>
@@ -489,15 +547,29 @@ export class MarketplaceViewComponent implements OnInit {
   }
 
   contactSeller(item: ServiceItem): void {
-    if (item.contactMethod.includes('teams.microsoft.com')) {
-      window.open(item.contactMethod, '_blank');
-    } else if (item.contactMethod.includes('@utp.edu.pe')) {
-      const email = item.contactMethod.match(/u\d+@utp\.edu\.pe/)?.[0] || item.contactMethod;
-      window.open(`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`, '_blank');
-    } else {
-      navigator.clipboard?.writeText(item.contactMethod);
-      alert(`Información de contacto copiada:\n${item.contactMethod}`);
-    }
+    this.marketplaceService.getContactHandshake(item.id).subscribe(handshake => {
+      if (handshake && handshake.teamsUrl) {
+        window.open(handshake.teamsUrl, '_blank');
+      } else if (item.contactMethod.includes('teams.microsoft.com')) {
+        window.open(item.contactMethod, '_blank');
+      } else if (item.contactMethod.includes('@utp.edu.pe')) {
+        const email = item.contactMethod.match(/u\d+@utp\.edu\.pe/)?.[0] || item.contactMethod;
+        window.open(`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`, '_blank');
+      } else {
+        navigator.clipboard?.writeText(item.contactMethod);
+        alert(`Información de contacto copiada:\n${item.contactMethod}`);
+      }
+    });
+  }
+
+  changeStatus(item: ServiceItem, newStatus: string): void {
+    this.marketplaceService.updateStatus(item.id, newStatus).subscribe(updated => {
+      if (updated) {
+        item.status = updated.status;
+        this.selectedItem = updated;
+        this.marketplaceStore.loadItems();
+      }
+    });
   }
 
   publishNewOffer(): void {
@@ -571,6 +643,23 @@ export class MarketplaceViewComponent implements OnInit {
     this.isOfferModalOpen = false;
     this.newOffer.title = '';
     this.newOffer.description = '';
+  }
+
+  isMyListing(item: ServiceItem): boolean {
+    const student = getCachedStudentProfile();
+    const myCode = (student?.studentCode || student?.username || '').toUpperCase();
+    return !!myCode && (
+      (item.tutorName || '').toUpperCase().includes(myCode) ||
+      (item.contactMethod || '').toUpperCase().includes(myCode)
+    );
+  }
+
+  deleteOffer(item: ServiceItem): void {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta publicación del Marketplace?')) return;
+    this.marketplaceService.deleteItem(item.id).subscribe(ok => {
+      this.marketplaceStore.removeItem(item.id);
+      this.selectedItem = null;
+    });
   }
 }
 

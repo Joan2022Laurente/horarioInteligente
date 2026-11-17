@@ -8,10 +8,12 @@ import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import com.utp.horario.interfaces.rest.dto.AuthRequest;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "01. Autenticación", description = "Sesión de estudiante, SSO y auto-bootstrap de datos")
 @RestController
 @RequestMapping({"/auth", "/api/v1/auth"})
 @RequiredArgsConstructor

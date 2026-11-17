@@ -17,18 +17,35 @@ public class AcademicToolDto {
     public record DayScheduleResult(
             String studentCode,
             String date,
+            String dayOfWeek,
             int totalClasses,
             List<ClassSessionDto> classes,
             String message,
             Integer weekNumber
     ) {
+        public DayScheduleResult(String studentCode, String date, String dayOfWeek, int totalClasses,
+                                 List<ClassSessionDto> classes, String message, Integer weekNumber) {
+            this.studentCode = studentCode;
+            this.date = date;
+            this.dayOfWeek = dayOfWeek;
+            this.totalClasses = totalClasses;
+            this.classes = classes;
+            this.message = message;
+            this.weekNumber = weekNumber;
+        }
+
+        public DayScheduleResult(String studentCode, String date, int totalClasses,
+                                 List<ClassSessionDto> classes, String message, Integer weekNumber) {
+            this(studentCode, date, null, totalClasses, classes, message, weekNumber);
+        }
+
         public DayScheduleResult(String studentCode, String date, int totalClasses,
                                  List<ClassSessionDto> classes, String message) {
-            this(studentCode, date, totalClasses, classes, message, null);
+            this(studentCode, date, null, totalClasses, classes, message, null);
         }
 
         public DayScheduleResult(String studentCode, String date, int totalClasses, List<ClassSessionDto> classes) {
-            this(studentCode, date, totalClasses, classes, null, null);
+            this(studentCode, date, null, totalClasses, classes, null, null);
         }
     }
 
@@ -101,4 +118,61 @@ public class AcademicToolDto {
         }
     }
 
+    /**
+     * Sesión académica pendiente por cursar hoy o en curso en este momento,
+     * enriquecida deterministamente con temario y evaluación del sílabo oficial.
+     */
+    public record RemainingClassSessionDto(
+            String courseCode,
+            String courseName,
+            String status,              // "EN_CURSO" | "PROXIMA"
+            String timeWindow,          // ej. "14:15 - 16:30"
+            String startTime,           // "14:15"
+            String endTime,             // "16:30"
+            Long minutesUntilStart,     // 0 si EN_CURSO, >0 si PROXIMA
+            String modality,            // "Presencial" | "Remota en Vivo" | "Virtual Asíncrono"
+            String classroom,
+            String building,
+            String floor,
+            String teacherName,
+            String zoomLink,            // Enlace de Zoom si aplica
+            String syllabusTopic,       // Tema oficial del sílabo para la semana vigente
+            String syllabusActivities,  // Actividades planificadas
+            String evaluationScheduled  // Evaluación si toca hoy (ej. "PC2 (20%) - Práctica Calificada 2")
+    ) {}
+
+    /**
+     * Resultado determinista de clases restantes del día con temas de sílabo cruzados en el servidor.
+     */
+    public record RemainingClassesTodayResult(
+            String studentCode,
+            String date,
+            String dayOfWeek,
+            String currentTime,
+            Integer currentWeek,
+            int totalRemainingClasses,
+            List<RemainingClassSessionDto> remainingClasses,
+            String message
+    ) {
+        public RemainingClassesTodayResult(String studentCode, String date, String dayOfWeek, String currentTime,
+                                           Integer currentWeek, int totalRemainingClasses,
+                                           List<RemainingClassSessionDto> remainingClasses) {
+            this(studentCode, date, dayOfWeek, currentTime, currentWeek, totalRemainingClasses, remainingClasses, null);
+        }
+
+        public RemainingClassesTodayResult(String studentCode, String date, String currentTime,
+                                           Integer currentWeek, int totalRemainingClasses,
+                                           List<RemainingClassSessionDto> remainingClasses) {
+            this(studentCode, date, null, currentTime, currentWeek, totalRemainingClasses, remainingClasses, null);
+        }
+
+        public RemainingClassesTodayResult(String studentCode, String date, String currentTime,
+                                           Integer currentWeek, int totalRemainingClasses,
+                                           List<RemainingClassSessionDto> remainingClasses,
+                                           String message) {
+            this(studentCode, date, null, currentTime, currentWeek, totalRemainingClasses, remainingClasses, message);
+        }
+    }
+
 }
+

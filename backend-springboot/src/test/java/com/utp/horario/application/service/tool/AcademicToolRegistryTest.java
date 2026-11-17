@@ -27,17 +27,19 @@ class AcademicToolRegistryTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** Las unicas 4 herramientas realmente soportadas por el backend. */
+    /** Las 6 herramientas realmente soportadas por el backend. */
     private static final List<String> EXPECTED_TOOLS = List.of(
             "get_today_schedule",
             "get_enrolled_courses",
             "get_syllabus_details",
-            "get_upcoming_evaluations"
+            "get_upcoming_evaluations",
+            "get_remaining_classes_today",
+            "search_marketplace"
     );
 
     @Test
-    @DisplayName("El registro expone exactamente las 4 herramientas academicas soportadas")
-    void registryExposesExactlyTheFourSupportedTools() {
+    @DisplayName("El registro expone exactamente las 6 herramientas academicas soportadas")
+    void registryExposesExactlyTheFiveSupportedTools() {
         assertEquals(EXPECTED_TOOLS, AcademicToolRegistry.getSupportedToolNames());
     }
 
@@ -122,6 +124,20 @@ class AcademicToolRegistryTest {
         Map<String, Object> properties = (Map<String, Object>) parameters.get("properties");
 
         assertTrue(properties.isEmpty(), "get_enrolled_courses no admite parametros");
+    }
+
+    @Test
+    @DisplayName("get_remaining_classes_today declara date y time como propiedades opcionales")
+    void remainingClassesTodayDeclaresOptionalDateAndTime() {
+        Map<String, Object> function = functionByName("get_remaining_classes_today");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parameters = (Map<String, Object>) function.get("parameters");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> properties = (Map<String, Object>) parameters.get("properties");
+
+        assertTrue(properties.containsKey("date"));
+        assertTrue(properties.containsKey("time"));
+        assertFalse(parameters.containsKey("required"), "Los parametros son opcionales");
     }
 
 

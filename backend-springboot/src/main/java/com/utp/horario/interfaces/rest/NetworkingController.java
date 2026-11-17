@@ -13,6 +13,7 @@ import com.utp.horario.interfaces.rest.dto.StudyBeaconDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 
@@ -30,6 +32,7 @@ import java.util.List;
  * {@code @CurrentStudent}: el cuerpo NUNCA decide quién es el anfitrión ni de
  * quién es el perfil (prevención IDOR/BOLA).
  */
+@Tag(name = "05. Networking Presencial", description = "Mesas de estudio en campus (Study Beacons) y Matching Dual")
 @Slf4j
 @RestController
 @RequestMapping({"/networking", "/api/v1/networking"})
@@ -75,6 +78,24 @@ public class NetworkingController {
             @PathVariable String id) {
         StudyBeacon updated = networkingService.joinBeacon(id, studentId);
         return ResponseEntity.ok(ApiResponse.ok("Te uniste a la mesa de estudio", beaconMapper.toDto(updated)));
+    }
+
+    /** El estudiante autenticado abandona la mesa de estudio liberando un cupo. */
+    @PostMapping("/beacons/{id}/leave")
+    public ResponseEntity<ApiResponse<StudyBeaconDto>> leaveBeacon(
+            @CurrentStudent String studentId,
+            @PathVariable String id) {
+        StudyBeacon updated = networkingService.leaveBeacon(id, studentId);
+        return ResponseEntity.ok(ApiResponse.ok("Has salido de la mesa de estudio", beaconMapper.toDto(updated)));
+    }
+
+    /** El anfitrión cancela y elimina la mesa de estudio que convocó. */
+    @DeleteMapping("/beacons/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteBeacon(
+            @CurrentStudent String studentId,
+            @PathVariable String id) {
+        networkingService.cancelBeacon(id, studentId);
+        return ResponseEntity.ok(ApiResponse.ok("Mesa de estudio cancelada exitosamente", null));
     }
 
     /** Perfiles candidatos REALES para el Matching Dual (sin ghost y sin el consultante). */

@@ -99,7 +99,7 @@ class McpServerControllerHttpTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("t-1"))
-                .andExpect(jsonPath("$.result.tools.length()").value(4))
+                .andExpect(jsonPath("$.result.tools.length()").value(6))
                 .andExpect(jsonPath("$.result.tools[0].name").value("get_today_schedule"))
                 .andExpect(jsonPath("$.result.tools[0].inputSchema").exists());
     }
@@ -176,7 +176,7 @@ class McpServerControllerHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("horario-inteligente-mcp"))
                 .andExpect(jsonPath("$.protocolVersion").value("2024-11-05"))
-                .andExpect(jsonPath("$.tools.length()").value(4));
+                .andExpect(jsonPath("$.tools.length()").value(6));
     }
 
     @Test

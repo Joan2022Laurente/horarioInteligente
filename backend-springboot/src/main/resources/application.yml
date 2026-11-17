@@ -8,10 +8,14 @@ spring:
   application:
     name: horario-backend-negocio
   datasource:
-    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/horariodb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    driver-class-name: ${MYSQL_DRIVER:com.mysql.cj.jdbc.Driver}
-    username: ${MYSQL_USER:root}
+    url: ${MYSQL_URL:jdbc:h2:file:./data/horariodb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL}
+    driver-class-name: ${MYSQL_DRIVER:org.h2.Driver}
+    username: ${MYSQL_USER:sa}
     password: ${MYSQL_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jpa:
     hibernate:
       ddl-auto: update
@@ -19,6 +23,15 @@ spring:
   mvc:
     async:
       request-timeout: 120000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    display-request-duration: true
 
 # Conexión con la API Externa Institucional (Heroku)
 academic:

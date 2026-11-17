@@ -51,7 +51,7 @@ interface SyllabusEvaluation {
  >
  <div
  class="relative flex flex-col transition-all duration-300 ease-out overflow-hidden"
- [ngClass]="isChatExpanded ? 'w-full h-full rounded-none bg-[var(--utopik-onyx)] shadow-none' : 'w-full max-w-3xl h-[82vh] sm:h-[85vh] rounded-[var(--r-3xl)] bg-[var(--utopik-carbon-black)] text-white shadow-2xl '"
+ [ngClass]="isChatExpanded ? 'w-full h-full rounded-none bg-[var(--utopik-onyx)] shadow-none' : 'w-full max-w-3xl h-[82vh] sm:h-[85vh] r-overlay bg-[var(--utopik-carbon-black)] text-white shadow-2xl '"
  (click)="$event.stopPropagation()"
  >
 
@@ -64,17 +64,17 @@ interface SyllabusEvaluation {
  <div class="space-y-0.5 min-w-0 flex-1">
  <div class="flex items-center gap-2">
  @if (isPresencial) {
- <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold badge-solid-presencial px-2.5 py-0.5 rounded-[var(--r-xs)] shrink-0">
+ <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold badge-solid-presencial px-2.5 py-0.5 r-control-xs shrink-0">
  <lucide-icon name="map-pin" class="h-2.5 w-2.5 sm:h-3 sm:w-3"></lucide-icon>
  Presencial
  </span>
  } @else if (isRemoteZoom) {
- <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold badge-solid-zoom px-2.5 py-0.5 rounded-[var(--r-xs)] shrink-0">
+ <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold badge-solid-zoom px-2.5 py-0.5 r-control-xs shrink-0">
  <lucide-icon name="video" class="h-2.5 w-2.5 sm:h-3 sm:w-3"></lucide-icon>
  Zoom
  </span>
  } @else {
- <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold badge-solid-virtual px-2.5 py-0.5 rounded-[var(--r-xs)] shrink-0">
+ <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold badge-solid-virtual px-2.5 py-0.5 r-control-xs shrink-0">
  <lucide-icon name="wifi" class="h-2.5 w-2.5 sm:h-3 sm:w-3"></lucide-icon>
  Virtual
  </span>
@@ -98,7 +98,7 @@ interface SyllabusEvaluation {
  type="button"
  (click)="restoreToModal()"
  title="Volver a modo modal y ver datos de clase"
- class="inline-flex items-center gap-1 rounded-[var(--r-md)] bg-white/10 hover:bg-white hover:text-black px-2.5 sm:px-3 py-1 text-xs font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
+ class="inline-flex items-center gap-1 r-control-md bg-white/10 hover:bg-white hover:text-black px-2.5 sm:px-3 py-1 text-xs font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
  >
  <lucide-icon name="chevron-down" class="h-3.5 w-3.5"></lucide-icon>
  <span class="text-[11px] sm:text-xs">Ver aula</span>
@@ -108,7 +108,7 @@ interface SyllabusEvaluation {
  type="button"
  (click)="expandChat()"
  title="Expandir a pantalla completa"
- class="inline-flex items-center gap-1 rounded-[var(--r-md)] bg-white/5 hover:bg-white/15 px-2.5 sm:px-3 py-1 text-xs font-semibold text-neutral-300 hover:text-white transition cursor-pointer"
+ class="inline-flex items-center gap-1 r-control-md bg-white/5 hover:bg-white/15 px-2.5 sm:px-3 py-1 text-xs font-semibold text-neutral-300 hover:text-white transition cursor-pointer"
  >
  <lucide-icon name="maximize-2" class="h-3.5 w-3.5"></lucide-icon>
  <span class="hidden sm:inline">Pantalla completa</span>
@@ -118,7 +118,7 @@ interface SyllabusEvaluation {
  <button
  (click)="close.emit()"
  aria-label="Cerrar modal"
- class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
+ class="flex h-8 w-8 items-center justify-center r-panel bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
  >
  <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
  </button>
@@ -155,14 +155,14 @@ interface SyllabusEvaluation {
  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
 
  <!-- Horario -->
- <div class="p-3 sm:p-3.5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] space-y-0.5">
+ <div class="p-3 sm:p-3.5 r-card bg-[var(--utopik-carbon-black)] space-y-0.5">
  <span class="text-[10px] text-neutral-500 uppercase font-semibold">Horario</span>
  <p class="font-bold text-white">{{ dayName }}</p>
- <p class="font-mono text-[11px] text-neutral-400">{{ startTime }} – {{ finishTime }}</p>
+ <p class="font-sans font-medium text-[11px] text-neutral-400">{{ startTime }} – {{ finishTime }}</p>
  </div>
 
  <!-- Aula / Plataforma -->
- <div class="p-3 sm:p-3.5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] space-y-0.5">
+ <div class="p-3 sm:p-3.5 r-card bg-[var(--utopik-carbon-black)] space-y-0.5">
  <span class="text-[10px] text-neutral-500 uppercase font-semibold">
  {{ isPresencial ? 'Aula y Piso' : 'Plataforma' }}
  </span>
@@ -175,7 +175,7 @@ interface SyllabusEvaluation {
  </div>
 
  <!-- Pabellón / Modalidad -->
- <div class="p-3 sm:p-3.5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] space-y-0.5">
+ <div class="p-3 sm:p-3.5 r-card bg-[var(--utopik-carbon-black)] space-y-0.5">
  <span class="text-[10px] text-neutral-500 uppercase font-semibold">
  {{ isPresencial ? 'Pabellón' : 'Modalidad' }}
  </span>
@@ -188,10 +188,10 @@ interface SyllabusEvaluation {
  </div>
 
  <!-- Campus & Sección -->
- <div class="p-3 sm:p-3.5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] space-y-0.5">
+ <div class="p-3 sm:p-3.5 r-card bg-[var(--utopik-carbon-black)] space-y-0.5">
  <span class="text-[10px] text-neutral-500 uppercase font-semibold">Campus & Sección</span>
  <p class="font-bold text-white">{{ location.campus }}</p>
- <p class="text-[11px] text-neutral-400 font-mono">
+ <p class="text-[11px] text-neutral-400 font-sans font-medium">
  {{ sectionCode ? ('Sec. ' + sectionCode) : 'Oficial' }}
  </p>
  </div>
@@ -199,7 +199,7 @@ interface SyllabusEvaluation {
 
  <!-- Barra Zoom Directo -->
  @if (isRemoteZoom && event.metadata?.zoomLink) {
- <div class="flex items-center justify-between p-3.5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)]">
+ <div class="flex items-center justify-between p-3.5 r-card bg-[var(--utopik-carbon-black)]">
  <div class="flex items-center gap-2 text-xs">
  <lucide-icon name="video" class="h-4 w-4 text-[var(--utopik-platinum)]"></lucide-icon>
  <span class="text-neutral-300 font-medium">Clase remota en vivo programada por Zoom</span>
@@ -208,7 +208,7 @@ interface SyllabusEvaluation {
  [href]="event.metadata?.zoomLink"
  target="_blank"
  rel="noopener noreferrer"
- class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white hover:bg-neutral-200 px-4 py-2 text-xs font-bold text-black shadow transition active:scale-95 no-underline cursor-pointer"
+ class="inline-flex items-center gap-1.5 r-control-md bg-white hover:bg-neutral-200 px-4 py-2 text-xs font-bold text-black shadow transition active:scale-95 no-underline cursor-pointer"
  >
  <span>Entrar a Zoom</span>
  <lucide-icon name="external-link" class="h-3 w-3"></lucide-icon>
@@ -267,7 +267,7 @@ interface SyllabusEvaluation {
  <div class="max-w-4xl mx-auto w-full">
  <form
  (submit)="onSubmit($event)"
- class="flex items-center gap-2 bg-[var(--utopik-carbon-black)] rounded-[var(--r-md)] px-2.5 sm:px-3 py-1.5 sm:py-2 "
+ class="flex items-center gap-2 bg-[var(--utopik-carbon-black)] r-control-md px-2.5 sm:px-3 py-1.5 sm:py-2 "
  >
 
  <input
@@ -282,7 +282,7 @@ interface SyllabusEvaluation {
  type="submit"
  [disabled]="!inputMessage.trim() || isLoading"
  aria-label="Enviar mensaje"
- class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-[var(--utopik-carbon-black)] hover:bg-[var(--utopik-carbon-black)] text-white transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0 cursor-pointer"
+ class="flex h-8 w-8 items-center justify-center r-panel bg-[var(--utopik-carbon-black)] hover:bg-[var(--utopik-carbon-black)] text-white transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0 cursor-pointer"
  >
  <lucide-icon name="send" class="h-3.5 w-3.5"></lucide-icon>
  </button>

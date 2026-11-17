@@ -8,6 +8,7 @@ import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
 import com.utp.horario.infrastructure.security.CurrentStudent;
 import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.List;
  * (identidad, token del encabezado/parámetro) y se delega a los casos de uso de
  * application — el controlador no toca puertos de dominio (IUtpPortalGateway).
  */
+@Tag(name = "03. Tareas y Actividades", description = "Sincronización y consulta de tareas académicas y evaluaciones oficiales")
 @RestController
 @RequestMapping({"/tasks", "/api/v1/tasks"})
 @RequiredArgsConstructor

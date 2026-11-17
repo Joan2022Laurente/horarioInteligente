@@ -47,25 +47,25 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
       @if (isLoading) {
         <!-- Skeleton Loading State -->
         <div class="space-y-6 animate-pulse">
-          <div class="rounded-[var(--r-3xl)] p-6 bg-[var(--utopik-carbon-black)] space-y-4">
+          <div class="r-card p-6 bg-[var(--utopik-carbon-black)] space-y-4">
             <div class="flex items-center gap-2">
               <div class="h-5 w-24 bg-white/10 rounded-full"></div>
               <div class="h-5 w-20 bg-white/10 rounded-full"></div>
             </div>
-            <div class="h-7 w-2/3 bg-white/10 rounded-[var(--r-xl)]"></div>
-            <div class="h-4 w-1/3 bg-white/5 rounded-[var(--r-md)]"></div>
+            <div class="h-7 w-2/3 bg-white/10 r-panel"></div>
+            <div class="h-4 w-1/3 bg-white/5 r-control-md"></div>
           </div>
 
           <div class="space-y-3">
-            <div class="h-6 w-48 bg-white/10 rounded-[var(--r-md)]"></div>
+            <div class="h-6 w-48 bg-white/10 r-control-md"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="h-32 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] p-4 space-y-3">
-                <div class="h-4 w-1/4 bg-white/10 rounded-[var(--r-sm)]"></div>
-                <div class="h-5 w-3/4 bg-white/10 rounded-[var(--r-sm)]"></div>
+              <div class="h-32 r-card bg-[var(--utopik-carbon-black)] p-4 space-y-3">
+                <div class="h-4 w-1/4 bg-white/10 r-control-sm"></div>
+                <div class="h-5 w-3/4 bg-white/10 r-control-sm"></div>
               </div>
-              <div class="h-32 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] p-4 space-y-3">
-                <div class="h-4 w-1/4 bg-white/10 rounded-[var(--r-sm)]"></div>
-                <div class="h-5 w-3/4 bg-white/10 rounded-[var(--r-sm)]"></div>
+              <div class="h-32 r-card bg-[var(--utopik-carbon-black)] p-4 space-y-3">
+                <div class="h-4 w-1/4 bg-white/10 r-control-sm"></div>
+                <div class="h-5 w-3/4 bg-white/10 r-control-sm"></div>
               </div>
             </div>
           </div>
@@ -74,35 +74,35 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
         <!-- 1. Hero Status Banner -->
         @if (bannerClass) {
           <div 
-            class="rounded-[var(--r-3xl)] p-5 sm:p-6 transition-all duration-300 shadow-none bg-[var(--utopik-carbon-black)]"
+            class="r-card p-5 sm:p-6 transition-all duration-300 shadow-none bg-[var(--utopik-carbon-black)]"
           >
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div class="space-y-2 min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
                   @if (isLiveNow) {
-                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
-                      <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-green-yellow)] animate-pulse"></span>
+                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                      <span class="h-1.5 w-1.5 circle bg-[var(--utopik-green-yellow)] animate-pulse"></span>
                       En vivo • Quedan {{ minutesRemainingCurrent }}m
                     </span>
                   } @else {
-                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
+                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
                       <lucide-icon name="flame" class="h-3 w-3 text-white/80"></lucide-icon>
                       {{ minutesToNext !== null && minutesToNext <= 120 ? 'Próxima clase en ' + minutesToNext + ' min' : ('Siguiente sesión' | uppercase) }}
                     </span>
                   }
 
                   @if (bannerClass.modality === 'P') {
-                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                       <lucide-icon name="map-pin" class="h-3 w-3 text-white/80"></lucide-icon>
                       Presencial
                     </span>
                   } @else if (bannerClass.modality === 'R') {
-                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                       <lucide-icon name="video" class="h-3 w-3 text-white/80"></lucide-icon>
                       Remoto Zoom
                     </span>
                   } @else {
-                    <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
+                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
                       <lucide-icon name="wifi" class="h-3 w-3 text-white/80"></lucide-icon>
                       Virtual
                     </span>
@@ -113,7 +113,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                   {{ parsedBannerTitle }}
                 </h3>
 
-                <p class="text-xs text-neutral-400 flex items-center gap-2 font-mono">
+                <p class="text-xs text-neutral-400 flex items-center gap-2 font-sans font-medium">
                   <span class="text-neutral-300 font-medium">
                     {{ formatTime(bannerClass.startAt) }} – {{ formatTime(bannerClass.finishAt) }}
                   </span>
@@ -126,7 +126,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     [href]="bannerClass.metadata?.zoomLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 rounded-[var(--r-xl)] bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold shadow-none transition active:scale-95 no-underline"
+                    class="inline-flex items-center gap-2 r-control-md bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold shadow-none transition active:scale-95 no-underline"
                   >
                     <lucide-icon name="video" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
                     <span>Unirse a Zoom</span>
@@ -134,7 +134,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 }
                 <button
                   (click)="onAskAiClick('¿Qué temas tocan hoy en ' + parsedBannerTitle + ' y qué preguntas clave debería hacer en clase?')"
-                  class="inline-flex items-center gap-1.5 rounded-[var(--r-xl)] bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold transition shadow-none active:scale-95 cursor-pointer"
+                  class="inline-flex items-center gap-1.5 r-control-md bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold transition shadow-none active:scale-95 cursor-pointer"
                 >
                   <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
                   <span>Consultar IA</span>
@@ -146,10 +146,10 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
         <!-- 2. Flat Navigation Tabs -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-          <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] p-1 rounded-[var(--r-sm)] overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
+          <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] nest-1 r-control-md overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
             <button
               (click)="activeSection = 'todayClasses'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-[var(--r-xl)] font-bold"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 r-inner font-bold"
               [ngClass]="activeSection === 'todayClasses' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
             >
               <span>Clases de Hoy</span>
@@ -158,7 +158,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
             <button
               (click)="activeSection = 'tasks'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-[var(--r-xl)] font-bold"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 r-inner font-bold"
               [ngClass]="activeSection === 'tasks' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
             >
               <span>Tareas</span>
@@ -167,14 +167,14 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
             <button
               (click)="activeSection = 'evaluations'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 rounded-[var(--r-xl)] font-bold"
+              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 r-inner font-bold"
               [ngClass]="activeSection === 'evaluations' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
             >
               <span>Evaluaciones</span>
             </button>
           </div>
 
-          <div class="flex items-center gap-2 text-xs text-neutral-500 font-mono self-end sm:self-auto">
+          <div class="flex items-center gap-2 text-xs text-neutral-500 font-sans font-medium self-end sm:self-auto">
             <span>Semana {{ currentWeek }} de {{ totalWeeks }}</span>
             <span>•</span>
             <span>{{ periodName }}</span>
@@ -199,7 +199,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             </div>
 
             @if (todayEvents.length === 0) {
-              <div class="py-16 text-center rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] p-8 space-y-3 shadow-none">
+              <div class="py-16 text-center r-card bg-[var(--utopik-carbon-black)] p-8 space-y-3 shadow-none">
                 <lucide-icon name="calendar" class="h-10 w-10 mx-auto text-neutral-600"></lucide-icon>
                 <p class="text-base font-bold text-white">¡No tienes sesiones programadas para hoy!</p>
                 <p class="text-xs text-neutral-400">Aprovecha para avanzar en tus entregables y proyectos.</p>
@@ -209,41 +209,41 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 @for (ev of todayEvents; track ev.id) {
                   <div
                     (click)="selectedEventForModal = ev"
-                    class="group p-3.5 sm:p-5 rounded-[var(--r-2xl)] flex items-center justify-between gap-3 transition-all duration-300 shadow-none cursor-pointer"
+                    class="group p-3.5 sm:p-5 r-control-lg flex items-center justify-between gap-3 transition-all duration-300 shadow-none cursor-pointer"
                     [ngClass]="isSessionActive(ev) ? 'bg-[#25281e]' : 'bg-[var(--utopik-carbon-black)] hover:bg-[#25281e]'"
                   >
                     <div class="space-y-1 min-w-0 flex-1">
                       <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         @if (ev.modality === 'P') {
-                          <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] badge-solid-presencial px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
+                          <span class="inline-flex items-center gap-1.5 r-control-xs badge-solid-presencial px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
                             <lucide-icon name="map-pin" class="h-3 w-3"></lucide-icon>
                             Presencial
                           </span>
                         } @else if (ev.modality === 'R') {
-                          <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] badge-solid-zoom px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
+                          <span class="inline-flex items-center gap-1.5 r-control-xs badge-solid-zoom px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
                             <lucide-icon name="video" class="h-3 w-3"></lucide-icon>
                             Remoto Zoom
                           </span>
                         } @else {
-                          <span class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] badge-solid-virtual px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
+                          <span class="inline-flex items-center gap-1.5 r-control-xs badge-solid-virtual px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
                             <lucide-icon name="wifi" class="h-3 w-3"></lucide-icon>
                             Virtual
                           </span>
                         }
 
-                        <span class="font-mono text-[11px] sm:text-xs text-neutral-400 font-bold whitespace-nowrap">
+                        <span class="font-sans font-medium text-[11px] sm:text-xs text-neutral-400 font-bold whitespace-nowrap">
                           {{ formatTime(ev.startAt) }} – {{ formatTime(ev.finishAt) }}
                         </span>
 
                         @if (ev.modality === 'P') {
-                          <span class="text-[10px] sm:text-[11px] font-mono text-neutral-400 truncate">
+                          <span class="text-[10px] sm:text-[11px] font-sans font-medium text-neutral-400 truncate">
                             • {{ getLocationForEvent(ev).aula }} ({{ getLocationForEvent(ev).pabellon }})
                           </span>
                         }
 
                         @if (isSessionActive(ev)) {
-                          <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] px-2 py-0.5 rounded-[var(--r-xs)] backdrop-blur-md">
-                            <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-green-yellow)] animate-pulse"></span>
+                          <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] px-2 py-0.5 r-control-xs backdrop-blur-md">
+                            <span class="h-1.5 w-1.5 circle bg-[var(--utopik-green-yellow)] animate-pulse"></span>
                             Sesión Actual
                           </span>
                         }
@@ -260,7 +260,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                           (click)="openZoomDirect($event, ev.metadata?.zoomLink)"
                           title="Unirse directo a Zoom"
                           aria-label="Unirse a Zoom"
-                          class="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-[var(--r-md)] bg-white/10 hover:bg-white/20 text-white backdrop-blur-md shadow-none transition active:scale-95 shrink-0 cursor-pointer"
+                          class="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center r-control-sm bg-white/10 hover:bg-white/20 text-white backdrop-blur-md shadow-none transition active:scale-95 shrink-0 cursor-pointer"
                         >
                           <lucide-icon name="video" class="h-3.5 w-3.5 text-white"></lucide-icon>
                         </button>
@@ -287,31 +287,31 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 </span>
               </div>
 
-              <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] p-1 rounded-[var(--r-sm)] text-[11px] font-bold">
+              <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] nest-1 r-control-md text-[11px] font-bold">
                 <button
                   (click)="taskFilter = 'all'"
-                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  class="px-3 py-1 r-inner transition cursor-pointer"
                   [ngClass]="taskFilter === 'all' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
                 >
                   Todas ({{ synchronizedTasks.length }})
                 </button>
                 <button
                   (click)="taskFilter = 'homework'"
-                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  class="px-3 py-1 r-inner transition cursor-pointer"
                   [ngClass]="taskFilter === 'homework' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
                 >
                   Tareas ({{ homeworkTasksCount }})
                 </button>
                 <button
                   (click)="taskFilter = 'forum'"
-                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  class="px-3 py-1 r-inner transition cursor-pointer"
                   [ngClass]="taskFilter === 'forum' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
                 >
                   Foros ({{ forumTasksCount }})
                 </button>
                 <button
                   (click)="taskFilter = 'graded'"
-                  class="px-3 py-1 rounded-[var(--r-xl)] transition cursor-pointer"
+                  class="px-3 py-1 r-inner transition cursor-pointer"
                   [ngClass]="taskFilter === 'graded' ? 'bg-[var(--utopik-sandy-brown)]/20 text-[var(--utopik-sandy-brown)] font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
                 >
                   Calificadas ({{ gradedTasksCount }})
@@ -321,12 +321,12 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
             <div class="space-y-2.5">
               @if (filteredTasks.length === 0) {
-                <div class="p-8 text-center rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-xs text-neutral-400">
+                <div class="p-8 text-center r-card bg-[var(--utopik-carbon-black)] text-xs text-neutral-400">
                   No hay actividades en esta categoría.
                 </div>
               } @else {
                 @for (item of filteredTasks; track item.task.id) {
-                  <div class="rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] transition-colors p-4 sm:p-5 shadow-none text-white">
+                  <div class="r-card bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] transition-colors p-4 sm:p-5 shadow-none text-white">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div class="space-y-1 flex-1 min-w-0">
                         <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -336,12 +336,12 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
                           <!-- Badge: Tipo de Actividad (FORUM / TAREA) -->
                           @if (item.task.activityType === 'FORUM') {
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-sm)] bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 r-control-sm bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
                               <lucide-icon name="message-square" class="h-3 w-3"></lucide-icon>
                               <span>Foro</span>
                             </span>
                           } @else {
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-sm)] bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 r-control-sm bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
                               <lucide-icon name="file-text" class="h-3 w-3"></lucide-icon>
                               <span>Tarea</span>
                             </span>
@@ -349,7 +349,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
                           @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
                             <span class="text-neutral-600">•</span>
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-xs)] bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] font-bold text-[11px]">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 r-control-xs bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] font-bold text-[11px]">
                               <lucide-icon name="check-circle-2" class="h-3 w-3"></lucide-icon>
                               <span>Entregado</span>
                             </span>
@@ -357,7 +357,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
                           @if (item.task.evaluationSystem) {
                             <span class="text-neutral-600">•</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-[var(--r-xs)] bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
+                            <span class="inline-flex items-center px-2 py-0.5 r-control-xs bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
                               {{ item.task.evaluationSystem }}
                               @if (item.syllabusContext.formulaWeight) {
                                 ({{ item.syllabusContext.formulaWeight }}%)
@@ -365,7 +365,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                             </span>
                           } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
                             <span class="text-neutral-600">•</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-[var(--r-xs)] bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
+                            <span class="inline-flex items-center px-2 py-0.5 r-control-xs bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
                               {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
                             </span>
                           }
@@ -387,7 +387,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                         @if (item.task.instructionsHtml) {
                           <button
                             (click)="selectedTaskForInstructions = item.task"
-                            class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                            class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
                           >
                             <lucide-icon name="file-text" class="h-3.5 w-3.5"></lucide-icon>
                             <span>Indicaciones</span>
@@ -397,7 +397,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                         @if (item.task.rubric) {
                           <button
                             (click)="openRubric(item.task.rubric, item.task.title, item.task.courseName)"
-                            class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
+                            class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
                           >
                             <lucide-icon name="award" class="h-3.5 w-3.5"></lucide-icon>
                             <span>Rúbrica</span>
@@ -407,7 +407,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                         <button
                           (click)="onAskAiClick('¿Cómo resuelvo la actividad &quot;' + item.task.title + '&quot; del curso &quot;' + item.task.courseName + '&quot; según el sílabo y rúbrica oficial?')"
                           title="Consultar al Copiloto IA"
-                          class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
+                          class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
                         >
                           <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-[var(--utopik-sandy-brown)]"></lucide-icon>
                         </button>
@@ -415,7 +415,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                         <button
                           (click)="expandedTaskIds[item.task.id] = !expandedTaskIds[item.task.id]"
                           title="Ver detalles del sílabo"
-                          class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
+                          class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
                         >
                           @if (expandedTaskIds[item.task.id]) {
                             <lucide-icon name="chevron-up" class="h-3.5 w-3.5"></lucide-icon>
@@ -434,12 +434,12 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                             <span class="font-bold text-white">Contexto del Sílabo:</span>
                             <span>{{ sc.syllabusUnit || item.syllabusContext.unitTitle }}</span>
                             @if (sc.weightPercent) {
-                              <span class="px-2 py-0.5 rounded-[var(--r-sm)] bg-[var(--utopik-sandy-brown)]/10 text-[var(--utopik-sandy-brown)] font-bold text-[10.5px]">
+                              <span class="px-2 py-0.5 r-control-sm bg-[var(--utopik-sandy-brown)]/10 text-[var(--utopik-sandy-brown)] font-bold text-[10.5px]">
                                 {{ sc.evaluationType }} ({{ sc.weightPercent }}%)
                               </span>
                             }
                             @if (item.task.courseCode) {
-                              <span class="text-neutral-500 font-mono text-[10.5px]">({{ item.task.courseCode }})</span>
+                              <span class="text-neutral-500 font-sans font-medium text-[10.5px]">({{ item.task.courseCode }})</span>
                             }
                           </div>
                           @if (sc.syllabusTopic) {
@@ -488,7 +488,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
 
             <div class="space-y-2.5">
               @for (ev of sortedEvaluations; track ev.id) {
-                <div class="p-4 sm:p-5 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors shadow-none">
+                <div class="p-4 sm:p-5 r-card bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors shadow-none">
                   <div class="space-y-1">
                     <div class="flex flex-wrap items-center gap-2 text-xs">
                       <span class="font-semibold text-neutral-400">{{ ev.courseName.split(' - ')[0] }}</span>
@@ -497,7 +497,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                         Semana {{ ev.week }} {{ ev.week === currentWeek ? '(Esta semana)' : '' }}
                       </span>
                       <span class="text-neutral-600">•</span>
-                      <span class="font-bold text-[var(--utopik-sandy-brown)] bg-[var(--utopik-sandy-brown)]/15 px-2 py-0.5 rounded-[var(--r-sm)] text-[11px]">
+                      <span class="font-bold text-[var(--utopik-sandy-brown)] bg-[var(--utopik-sandy-brown)]/15 px-2 py-0.5 r-control-sm text-[11px]">
                         {{ ev.code }} ({{ ev.weightPercent }}%)
                       </span>
                     </div>
@@ -511,7 +511,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                   <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
                     <button
                       (click)="selectedCourseForSyllabus = ev.courseName; isSyllabusModalOpen = true"
-                      class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
+                      class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
                     >
                       <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
                       <span>Sílabo</span>
@@ -519,7 +519,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     <button
                       (click)="onAskAiClick('¿Cómo prepararme para ' + ev.code + ' (' + ev.fullName + ') de ' + ev.courseName + ' y qué rúbrica evalúa la UTP para sacar 20?')"
                       title="Consultar al Copiloto IA"
-                      class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
+                      class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
                     >
                       <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-[var(--utopik-sandy-brown)]"></lucide-icon>
                     </button>
@@ -547,7 +547,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             (click)="activeRubric = null"
           >
             <div 
-              class="relative flex flex-col w-full max-w-3xl max-h-[85vh] rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-white shadow-2xl overflow-hidden"
+              class="relative flex flex-col w-full max-w-3xl max-h-[85vh] r-control-sm bg-[var(--utopik-carbon-black)] text-white shadow-2xl overflow-hidden"
               (click)="$event.stopPropagation()"
             >
               <div class="bg-[var(--utopik-carbon-black)] px-6 py-4 flex items-center justify-between">
@@ -558,14 +558,14 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 <button 
                   (click)="activeRubric = null" 
                   aria-label="Cerrar rúbrica"
-                  class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
+                  class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
                 >
                   <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
                 </button>
               </div>
               <div class="flex-1 overflow-y-auto p-6 space-y-4">
                 @for (crit of activeRubric.rubric.criteria; track crit.id) {
-                  <div class="p-4 rounded-[var(--r-2xl)] bg-white/[0.02] space-y-2">
+                  <div class="p-4 r-card bg-white/[0.02] space-y-2">
                     <div class="flex justify-between items-center">
                       <h4 class="text-sm font-bold text-white">{{ crit.title }}</h4>
                       <span class="text-xs font-bold text-[var(--utopik-green-yellow)]">Max: {{ crit.maxPoints }} pts</span>
@@ -573,7 +573,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                     <p class="text-xs text-neutral-400">{{ crit.description }}</p>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                       @for (lvl of crit.levels; track lvl.name) {
-                        <div class="p-2.5 rounded-[var(--r-xl)] bg-white/[0.03] space-y-1">
+                        <div class="p-2.5 r-panel bg-white/[0.03] space-y-1">
                           <div class="flex justify-between text-[11px] font-bold">
                             <span class="text-neutral-200">{{ lvl.name }}</span>
                             <span class="text-[var(--utopik-green-yellow)]">{{ lvl.points }} pts</span>
@@ -596,7 +596,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             (click)="selectedTaskForInstructions = null"
           >
             <div 
-              class="relative flex flex-col w-full max-w-2xl max-h-[85vh] rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-white shadow-2xl overflow-hidden"
+              class="relative flex flex-col w-full max-w-2xl max-h-[85vh] r-control-sm bg-[var(--utopik-carbon-black)] text-white shadow-2xl overflow-hidden"
               (click)="$event.stopPropagation()"
             >
               <div class="bg-[var(--utopik-carbon-black)] px-6 py-4 flex items-center justify-between">
@@ -607,7 +607,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
                 <button 
                   (click)="selectedTaskForInstructions = null" 
                   aria-label="Cerrar indicaciones"
-                  class="flex h-8 w-8 items-center justify-center rounded-[var(--r-xl)] bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
+                  class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0"
                 >
                   <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
                 </button>

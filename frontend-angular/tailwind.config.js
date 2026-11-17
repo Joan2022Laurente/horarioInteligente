@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -14,20 +16,19 @@ module.exports = {
         'surface-card': '#141417',
         'surface-card-hover': '#19191e',
       },
-      /**
-       * Escala de radios gobernada por tokens CSS.
-       *
-       * Cada utilidad resuelve contra el token correspondiente y, a la vez, se
-       * acota proporcionalmente a la altura del propio elemento
-       * (`min(token, --r-adaptive-cap)`). Un componente de poca altura conserva
-       * un tramo recto y deja de leerse como pastilla, mientras que un
-       * componente de altura generosa mantiene intacto el radio de diseño.
-       *
-       * Cambiar `--r-xl` en styles.src.css reconfigura de inmediato los cien
-       * elementos que consumen esa escala.
-       */
       borderRadius: {
         none: '0px',
+        // Roles semánticos oficiales (Arquitectura de 3 capas)
+        'control-xs': 'var(--r-control-xs)',
+        'control-sm': 'var(--r-control-sm)',
+        'control-md': 'var(--r-control-md)',
+        'control-lg': 'var(--r-control-lg)',
+        panel: 'var(--r-panel)',
+        card: 'var(--r-card)',
+        overlay: 'var(--r-overlay)',
+        circle: 'var(--r-circle)',
+
+        // Tokens legacy para retrocompatibilidad segura
         xs: 'var(--r-xs)',
         sm: 'var(--r-sm)',
         DEFAULT: 'var(--r-md)',
@@ -40,5 +41,30 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ matchUtilities, addUtilities, theme }) => {
+      // r-<rol>: publica el radio como --nest-r y aplica border-radius
+      matchUtilities(
+        { r: (v) => ({ '--nest-r': v, borderRadius: 'var(--nest-r)' }) },
+        { values: theme('borderRadius') }
+      );
+      // nest-<pad>: publica el padding como --nest-pad y aplica padding
+      matchUtilities(
+        { nest: (v) => ({ padding: v, '--nest-pad': v }) },
+        { values: theme('spacing') }
+      );
+      // r-inner: radio concéntrico matemático para elementos hijos directos
+      addUtilities({
+        '.r-inner': {
+          borderRadius: 'max(0px, calc(var(--nest-r, 8px) - var(--nest-pad, 4px)))',
+        },
+        '.circle': {
+          borderRadius: 'var(--r-circle, 9999px)',
+        },
+        '.r-circle': {
+          borderRadius: 'var(--r-circle, 9999px)',
+        },
+      });
+    }),
+  ],
 }

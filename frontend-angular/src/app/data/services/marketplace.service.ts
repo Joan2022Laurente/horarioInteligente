@@ -36,12 +36,21 @@ export class MarketplaceService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Obtiene la lista de ítems reales del Marketplace desde el Backend del Negocio.
+   * Obtiene la lista de ítems del Marketplace con filtros opcionales (categoría, tipo, búsqueda, curso, estado).
    */
-  getItems(category?: string): Observable<ServiceItem[]> {
-    const url = category && category !== 'ALL' 
-      ? `${this.baseUrl}?category=${encodeURIComponent(category)}`
-      : this.baseUrl;
+  getItems(filter?: { category?: string; type?: string; q?: string; status?: string; course?: string } | string): Observable<ServiceItem[]> {
+    let params: string[] = [];
+    if (typeof filter === 'string') {
+      if (filter && filter !== 'ALL') params.push(`category=${encodeURIComponent(filter)}`);
+    } else if (filter) {
+      if (filter.category && filter.category !== 'ALL') params.push(`category=${encodeURIComponent(filter.category)}`);
+      if (filter.type && filter.type !== 'ALL') params.push(`type=${encodeURIComponent(filter.type)}`);
+      if (filter.q) params.push(`q=${encodeURIComponent(filter.q)}`);
+      if (filter.status && filter.status !== 'ALL') params.push(`status=${encodeURIComponent(filter.status)}`);
+      if (filter.course && filter.course !== 'ALL') params.push(`course=${encodeURIComponent(filter.course)}`);
+    }
+    const query = params.length > 0 ? `?${params.join('&')}` : '';
+    const url = `${this.baseUrl}${query}`;
 
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map(res => {
@@ -53,6 +62,60 @@ export class MarketplaceService {
       catchError(err => {
         console.warn('[MarketplaceService] Error al obtener ítems de base de datos:', err.message);
         return of([]);
+      })
+    );
+  }
+
+  /**
+   * Obtiene las publicaciones propias del estudiante autenticado.
+   */
+  getMyItems(): Observable<ServiceItem[]> {
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/mine`).pipe(
+      map(res => {
+        if (res.success && Array.isArray(res.data)) {
+          return res.data.map(item => this.mapToServiceItem(item));
+        }
+        return [];
+      }),
+      catchError(err => {
+        console.warn('[MarketplaceService] Error al obtener mis publicaciones:', err.message);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Cambia el estado de una publicación (AVAILABLE <-> RESERVED -> SOLD para productos, AVAILABLE <-> PAUSED para servicios).
+   */
+  updateStatus(id: string, status: string): Observable<ServiceItem | null> {
+    return this.http.patch<ApiResponse<any>>(`${this.baseUrl}/${encodeURIComponent(id)}/status`, { status }).pipe(
+      map(res => {
+        if (res.success && res.data) {
+          return this.mapToServiceItem(res.data);
+        }
+        return null;
+      }),
+      catchError(err => {
+        console.error('[MarketplaceService] Error al actualizar estado:', err.message);
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * Registra intención de contacto y devuelve los enlaces profundos seguros (Teams institucional / WhatsApp).
+   */
+  getContactHandshake(id: string): Observable<{ sellerName: string; teamsEmail: string; teamsUrl: string; prefilledMessage: string } | null> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/${encodeURIComponent(id)}/contact`, {}).pipe(
+      map(res => {
+        if (res.success && res.data) {
+          return res.data;
+        }
+        return null;
+      }),
+      catchError(err => {
+        console.warn('[MarketplaceService] Error obteniendo handshake de contacto:', err.message);
+        return of(null);
       })
     );
   }
@@ -71,6 +134,19 @@ export class MarketplaceService {
       catchError(err => {
         console.error('[MarketplaceService] Error al publicar en marketplace:', err.message);
         return of(null);
+      })
+    );
+  }
+
+  /**
+   * Elimina una publicación del Marketplace (DELETE /api/v1/marketplace/{id}).
+   */
+  deleteItem(id: string): Observable<boolean> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/${encodeURIComponent(id)}`).pipe(
+      map(res => !!res.success),
+      catchError(err => {
+        console.error('[MarketplaceService] Error al eliminar publicación:', err.message);
+        return of(false);
       })
     );
   }
@@ -100,6 +176,7 @@ export class MarketplaceService {
       reputation: Number(raw.reputation) || 100,
       tags: raw.tags || ['UTP', 'Estudiante', raw.category],
       contactMethod: raw.contactMethod || 'Coordinación en campus',
+      status: raw.status || 'AVAILABLE',
       highlights: raw.highlights || []
     };
   }

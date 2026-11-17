@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.tool.AcademicToolService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *       un mensaje informativo explícito, no un conjunto vacío ni un dato inventado.</li>
  * </ul>
  */
+@Tag(name = "07. Copiloto IA & MCP", description = "Servidor Model Context Protocol (JSON-RPC 2.0 y SSE)")
 @Slf4j
 @RestController
 @RequestMapping({"/mcp", "/api/v1/mcp"})

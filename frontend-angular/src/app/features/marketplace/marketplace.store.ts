@@ -115,6 +115,10 @@ export class MarketplaceStore {
     this.items.update(list => [item, ...list]);
   }
 
+  removeItem(id: string): void {
+    this.items.update(list => list.filter(item => item.id !== id));
+  }
+
   openPublishModal(): void {
     this.isPublishModalOpen.set(true);
   }

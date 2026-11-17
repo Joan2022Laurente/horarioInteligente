@@ -84,6 +84,10 @@ public class MarketplaceItemEntity {
     @Column(name = "contact_method", length = 255)
     private String contactMethod;
 
+    @Column(name = "status", length = 32)
+    @Builder.Default
+    private String status = "AVAILABLE";
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

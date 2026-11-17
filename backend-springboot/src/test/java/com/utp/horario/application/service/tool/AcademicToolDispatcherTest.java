@@ -9,6 +9,8 @@ import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
 import com.utp.horario.application.dtos.AcademicToolDto.EvaluationSummaryDto;
 import com.utp.horario.application.dtos.AcademicToolDto.SyllabusDetailsResult;
 import com.utp.horario.application.dtos.AcademicToolDto.WeeklySessionDto;
+import com.utp.horario.application.dtos.AcademicToolDto.RemainingClassesTodayResult;
+import com.utp.horario.application.dtos.AcademicToolDto.RemainingClassSessionDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -163,6 +165,57 @@ class AcademicToolDispatcherTest {
         assertTrue(execution.isError(), "La lista vacia se enriquece y se marca como error informativo");
         assertTrue(execution.json().contains("message"));
         verify(toolService).getUpcomingEvaluations(STUDENT, 9);
+    }
+
+    @Test
+    @DisplayName("get_remaining_classes_today serializa clases restantes enriquecidas con sílabo")
+    void dispatchesRemainingClassesToday() throws Exception {
+        when(toolService.getRemainingClassesToday(STUDENT, "2026-10-26", "14:00")).thenReturn(
+                new RemainingClassesTodayResult(
+                        STUDENT,
+                        "2026-10-26",
+                        "14:00",
+                        9,
+                        1,
+                        List.of(new RemainingClassSessionDto(
+                                "100000SI58",
+                                "Desarrollo Web Integrado",
+                                "PROXIMA",
+                                "18:00 - 20:00",
+                                "18:00",
+                                "20:00",
+                                240L,
+                                "Presencial",
+                                "Aula 402",
+                                "Pabellón B",
+                                "Piso 4",
+                                "Docente UTP",
+                                null,
+                                "Arquitectura Limpia y DDD",
+                                "Laboratorio práctico",
+                                null
+                        )),
+                        null
+                )
+        );
+
+        AcademicToolDispatcher.ToolExecution execution =
+                dispatcher.dispatch("get_remaining_classes_today", args("{\"date\": \"2026-10-26\", \"time\": \"14:00\"}"), STUDENT);
+
+        assertFalse(execution.isError());
+        assertTrue(execution.json().contains("Arquitectura Limpia y DDD"));
+        verify(toolService).getRemainingClassesToday(STUDENT, "2026-10-26", "14:00");
+    }
+
+    @Test
+    @DisplayName("get_remaining_classes_today rechaza formato de hora inválido")
+    void remainingClassesTodayRejectsInvalidTime() throws Exception {
+        AcademicToolDispatcher.ToolExecution execution =
+                dispatcher.dispatch("get_remaining_classes_today", args("{\"time\": \"hora-invalida\"}"), STUDENT);
+
+        assertTrue(execution.isError());
+        assertTrue(execution.json().contains("Argumento 'time' inválido"));
+        verify(toolService, never()).getRemainingClassesToday(anyString(), anyString(), anyString());
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

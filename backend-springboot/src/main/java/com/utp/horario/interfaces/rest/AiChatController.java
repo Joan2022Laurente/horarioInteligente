@@ -7,6 +7,7 @@ import com.utp.horario.application.service.DailyQuotaService;
 import com.utp.horario.infrastructure.security.CurrentStudent;
 import com.utp.horario.interfaces.rest.dto.AiChatRequest;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "07. Copiloto IA & MCP", description = "Chat síncrono y streaming SSE con orquestador OpenRouter")
 @Slf4j
 @RestController
 @RequestMapping({"/ai", "/api/v1/ai"})

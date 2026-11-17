@@ -35,7 +35,19 @@ public class AuthenticateStudentCommandHandler {
     }
 
     public StudentProfile authenticateWithToken(String token) {
-        if (token != null && token.contains(".")) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token de autenticación requerido");
+        }
+        String cleanToken = token.trim();
+        if (cleanToken.toLowerCase().startsWith("bearer ")) {
+            cleanToken = cleanToken.substring(7).trim();
+        }
+        if (cleanToken.startsWith("\"") && cleanToken.endsWith("\"") && cleanToken.length() > 2) {
+            cleanToken = cleanToken.substring(1, cleanToken.length() - 1).trim();
+        }
+        token = cleanToken;
+
+        if (token.contains(".")) {
             try {
                 String[] parts = token.split("\\.");
                 if (parts.length >= 2) {
@@ -89,7 +101,12 @@ public class AuthenticateStudentCommandHandler {
                             .enrolledCourseCodes(List.of())
                             .build();
                     utpPortalGateway.registerStudentToken(profile.getStudentCode(), token);
-                    return repository.save(profile);
+                    StudentProfile saved = repository.save(profile);
+                    if (saved != null) {
+                        saved.setToken(token);
+                        return saved;
+                    }
+                    return profile;
                 }
             } catch (Exception e) {
                 log.warn("[AuthenticateStudentCommandHandler] Error al parsear JWT: {}", e.getMessage());

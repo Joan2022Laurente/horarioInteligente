@@ -1,6 +1,7 @@
 import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 
@@ -16,7 +17,7 @@ export interface StepItem {
 @Component({
   selector: 'app-landing-login-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <div class="w-full max-w-md mx-auto relative select-none">
       <!-- Cabecera del formulario (Integrado directamente sobre fondo carbón de la sección, Flat KISS) -->
@@ -34,11 +35,8 @@ export interface StepItem {
         <form (ngSubmit)="handleLogin()" class="relative z-10 space-y-4">
           <!-- Mensaje de error -->
           @if (errorMessage) {
-            <div class="p-3.5 rounded-[var(--r-lg)] bg-red-500/10 text-red-400 text-xs font-semibold flex items-start gap-2.5">
-              <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
-              </svg>
+            <div class="p-3.5 r-control-lg bg-red-500/10 text-red-400 text-xs font-semibold flex items-start gap-2.5">
+              <lucide-icon name="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></lucide-icon>
               <span>{{ errorMessage }}</span>
             </div>
           }
@@ -56,7 +54,7 @@ export interface StepItem {
                 placeholder="Ej. U23307609"
                 required
                 autocomplete="username"
-                class="w-full px-4 py-3.5 rounded-[var(--r-lg)] bg-[var(--utopik-onyx)] text-[var(--utopik-platinum)] placeholder-neutral-600 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--utopik-green-yellow)] transition font-mono uppercase border-none"
+                class="w-full px-4 py-3.5 r-control-lg bg-[var(--utopik-onyx)] text-[var(--utopik-platinum)] placeholder-neutral-600 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--utopik-green-yellow)] transition font-sans font-medium uppercase border-none"
               />
             </div>
           </div>
@@ -74,7 +72,7 @@ export interface StepItem {
                 placeholder="Tu contraseña del portal"
                 required
                 autocomplete="current-password"
-                class="w-full px-4 py-3.5 rounded-[var(--r-lg)] bg-[var(--utopik-onyx)] text-[var(--utopik-platinum)] placeholder-neutral-600 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--utopik-green-yellow)] transition pr-11 border-none"
+                class="w-full px-4 py-3.5 r-control-lg bg-[var(--utopik-onyx)] text-[var(--utopik-platinum)] placeholder-neutral-600 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--utopik-green-yellow)] transition pr-11 border-none"
               />
               <button
                 type="button"
@@ -90,19 +88,14 @@ export interface StepItem {
           <button
             type="submit"
             [disabled]="isLoading || !username || !password"
-            class="w-full py-4 px-6 rounded-[var(--r-lg)] bg-[var(--utopik-green-yellow)] hover:bg-[#aee642] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--utopik-onyx)] font-black text-sm uppercase tracking-wider shadow-lg shadow-[var(--utopik-green-yellow)]/20 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 border-none mt-4"
+            class="w-full py-4 px-6 r-control-lg bg-[var(--utopik-green-yellow)] hover:bg-[#aee642] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--utopik-onyx)] font-black text-sm uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 border-none mt-4"
           >
             @if (isLoading) {
-              <svg class="animate-spin h-4 w-4 text-[var(--utopik-onyx)]" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <lucide-icon name="loader-2" class="animate-spin h-4 w-4 text-[var(--utopik-onyx)]"></lucide-icon>
               <span>Verificando...</span>
             } @else {
               <span>Acceder</span>
-              <svg class="w-4 h-4 text-[var(--utopik-onyx)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-              </svg>
+              <lucide-icon name="arrow-right" class="w-4 h-4 text-[var(--utopik-onyx)] stroke-[2.5]"></lucide-icon>
             }
           </button>
         </form>
@@ -111,25 +104,21 @@ export interface StepItem {
         <div class="relative z-10 space-y-4 py-2">
           <div class="space-y-2.5">
             @for (step of steps; track step.id) {
-              <div class="p-3.5 rounded-[var(--r-lg)] bg-[var(--utopik-onyx)] border-none transition-all shadow-md shadow-black/30">
+              <div class="p-3.5 r-control-lg bg-[var(--utopik-onyx)] border-none transition-all shadow-md shadow-black/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-3">
                     @if (step.status === 'completed') {
-                      <div class="w-5 h-5 rounded-full bg-[var(--utopik-green-yellow)] text-[var(--utopik-onyx)] flex items-center justify-center">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                        </svg>
+                      <div class="w-5 h-5 circle bg-[var(--utopik-green-yellow)] text-[var(--utopik-onyx)] flex items-center justify-center">
+                        <lucide-icon name="check" class="w-3 h-3 stroke-[3]"></lucide-icon>
                       </div>
                     } @else if (step.status === 'active') {
-                      <div class="w-5 h-5 rounded-full border-2 border-[var(--utopik-green-yellow)] border-t-transparent animate-spin"></div>
+                      <div class="w-5 h-5 circle border-2 border-[var(--utopik-green-yellow)] border-t-transparent animate-spin"></div>
                     } @else if (step.status === 'failed') {
-                      <div class="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
+                      <div class="w-5 h-5 circle bg-red-500 text-white flex items-center justify-center">
+                        <lucide-icon name="x" class="w-3 h-3 stroke-[3]"></lucide-icon>
                       </div>
                     } @else {
-                      <div class="w-5 h-5 rounded-full bg-neutral-800 text-neutral-500 flex items-center justify-center text-[10px] font-bold">
+                      <div class="w-5 h-5 circle bg-neutral-800 text-neutral-500 flex items-center justify-center text-[10px] font-bold">
                         ·
                       </div>
                     }
@@ -157,7 +146,7 @@ export interface StepItem {
             <button
               type="button"
               (click)="resetLoginState()"
-              class="w-full py-3 px-4 rounded-[var(--r-lg)] bg-[var(--utopik-onyx)] hover:bg-neutral-800 text-[var(--utopik-platinum)] font-bold text-xs uppercase tracking-wider border-none transition cursor-pointer mt-3"
+              class="w-full py-3 px-4 r-control-lg bg-[var(--utopik-onyx)] hover:bg-neutral-800 text-[var(--utopik-platinum)] font-bold text-xs uppercase tracking-wider border-none transition cursor-pointer mt-3"
             >
               Reintentar acceso
             </button>
@@ -174,7 +163,7 @@ export interface StepItem {
         >
           Políticas & Privacidad
         </button>
-        <span class="font-mono text-[11px] text-neutral-500 font-bold">utopik</span>
+        <span class="font-sans font-medium text-[11px] text-neutral-500 font-bold">utopik</span>
       </div>
     </div>
   `
@@ -222,7 +211,7 @@ export class LandingLoginFormComponent implements OnDestroy {
     this.bootstrapError = null;
     this.currentStep = 'auth';
     this.steps = LandingLoginFormComponent.buildSteps();
-    this.updateStep('auth', { status: 'active', detail: 'Validando credenciales...' });
+    this.updateStep('auth', { status: 'active', detail: 'Validando credenciales con portal UTP...' });
 
     this.authService.login({ username: this.username, password: this.password }).subscribe({
       next: (res) => {
@@ -232,7 +221,7 @@ export class LandingLoginFormComponent implements OnDestroy {
           this.updateStep('auth', { status: 'completed', detail: `Estudiante verificado (${code})` });
           this.runBootstrapPhase();
         } else {
-          this.failCurrentStep(res.error || 'Credenciales no válidas.');
+          this.failCurrentStep(res.error || 'Credenciales o sesión no válida.');
         }
       },
       error: (err) => {

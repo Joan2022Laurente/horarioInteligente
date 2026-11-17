@@ -441,6 +441,15 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
             }
 
             HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 401 && token != null && !token.isBlank()) {
+                HttpRequest publicReq = HttpRequest.newBuilder()
+                        .uri(URI.create(gatewayBaseUrl + "/syllabus/" + encodedCode + "/markdown"))
+                        .timeout(Duration.ofSeconds(15))
+                        .header("Accept", "text/markdown")
+                        .GET()
+                        .build();
+                response = httpClient.send(publicReq, HttpResponse.BodyHandlers.ofString());
+            }
             if (response.statusCode() == 200) {
                 return response.body();
             }
@@ -507,6 +516,18 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
 
             HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             log.info("[UtpPortalGatewayAdapter] Respuesta /syllabus/{} statusCode={}", courseCode, response.statusCode());
+
+            if (response.statusCode() == 401 && token != null && !token.isBlank()) {
+                log.info("[UtpPortalGatewayAdapter] Token 401 para sílabo [{}]: reintentando consulta pública a Supabase sin Authorization", courseCode);
+                HttpRequest publicReq = HttpRequest.newBuilder()
+                        .uri(URI.create(urlBuilder.toString()))
+                        .timeout(Duration.ofSeconds(30))
+                        .header("Accept", "application/json")
+                        .GET()
+                        .build();
+                response = httpClient.send(publicReq, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                log.info("[UtpPortalGatewayAdapter] Respuesta pública /syllabus/{} statusCode={}", courseCode, response.statusCode());
+            }
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());

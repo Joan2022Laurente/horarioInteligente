@@ -1,18 +1,19 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-privacy-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   template: `
     <div class="min-h-screen bg-[#070709] text-neutral-200 selection:bg-[var(--accent-lime)] selection:text-black font-sans flex flex-col justify-between">
       
       <!-- Luces de Fondo Volumétricas Sutiles -->
       <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[44rem] h-[22rem] bg-[var(--accent-lime)]/[0.04] rounded-full blur-[140px]"></div>
-        <div class="absolute top-1/3 -right-40 w-[28rem] h-[28rem] bg-blue-500/[0.03] rounded-full blur-[160px]"></div>
-        <div class="absolute -bottom-40 left-10 w-[30rem] h-[30rem] bg-[var(--accent-lime)]/[0.04] rounded-full blur-[140px]"></div>
+        <div class="absolute top-1/3 -right-40 w-[28rem] h-[28rem] bg-blue-500/[0.03] circle blur-[160px]"></div>
+        <div class="absolute -bottom-40 left-10 w-[30rem] h-[30rem] bg-[var(--accent-lime)]/[0.04] circle blur-[140px]"></div>
       </div>
 
       <!-- Top Navbar Global -->
@@ -21,15 +22,12 @@ import { CommonModule } from '@angular/common';
           (click)="goBack.emit()"
           class="inline-flex items-center gap-2 text-xs font-semibold text-neutral-300 hover:text-white transition group uppercase tracking-wider bg-transparent border-none cursor-pointer"
         >
-          <svg class="h-4 w-4 group-hover:-translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m12 19-7-7 7-7"/>
-            <path d="M19 12H5"/>
-          </svg>
+          <lucide-icon name="arrow-left" class="h-4 w-4 group-hover:-translate-x-1 transition-transform"></lucide-icon>
           <span>Volver al inicio</span>
         </button>
 
         <div class="flex items-center gap-2">
-          <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent-lime)] animate-pulse"></span>
+          <span class="h-1.5 w-1.5 circle bg-[var(--accent-lime)] animate-pulse"></span>
           <span class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
             Seguridad & Privacidad
           </span>
@@ -42,10 +40,7 @@ import { CommonModule } from '@angular/common';
         <!-- Cabecera Editorial -->
         <div class="space-y-3">
           <div class="flex items-center gap-2 text-[var(--accent-lime)] text-xs font-bold uppercase tracking-wider">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="m9 12 2 2 4-4"/>
-            </svg>
+            <lucide-icon name="shield-check" class="h-4 w-4"></lucide-icon>
             <span>Transparencia y Seguridad</span>
           </div>
 
@@ -59,12 +54,9 @@ import { CommonModule } from '@angular/common';
         </div>
 
         <!-- Principio Fundamental -->
-        <div class="p-5 sm:p-6 rounded-2xl bg-[var(--accent-lime)]/[0.04] border border-[var(--accent-lime)]/20 space-y-2">
+        <div class="p-5 sm:p-6 r-card bg-[var(--accent-lime)]/[0.04] border border-[var(--accent-lime)]/20 space-y-2">
           <div class="flex items-center gap-2.5 text-white font-bold text-sm sm:text-base">
-            <svg class="h-5 w-5 text-[var(--accent-lime)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <path d="m9 11 3 3L22 4"/>
-            </svg>
+            <lucide-icon name="check-circle" class="h-5 w-5 text-[var(--accent-lime)] shrink-0"></lucide-icon>
             <span>Garantía Fundamental: Cero Almacenamiento de Contraseñas</span>
           </div>
           <p class="text-xs sm:text-sm text-neutral-300 leading-relaxed pl-7.5">
@@ -85,7 +77,7 @@ import { CommonModule } from '@angular/common';
             </div>
             
             <p class="text-xs sm:text-sm text-neutral-400 leading-relaxed">
-              El proceso de validación se realiza en tiempo real contra el servidor central de identidad Keycloak de la universidad (<code class="text-white/90 bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono">sso.utp.edu.pe</code>).
+              El proceso de validación se realiza en tiempo real contra el servidor central de identidad Keycloak de la universidad (<code class="text-white/90 bg-white/10 px-1.5 py-0.5 r-control-xs text-xs font-mono">sso.utp.edu.pe</code>).
             </p>
 
             <ul class="space-y-2 text-xs sm:text-sm text-neutral-300 pl-4 list-disc list-outside marker:text-[var(--accent-lime)]">
@@ -129,7 +121,7 @@ import { CommonModule } from '@angular/common';
             </div>
 
             <p class="text-xs sm:text-sm text-neutral-400 leading-relaxed">
-              La sesión en tu navegador se mantiene de forma local en <code class="text-white/90 bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono">localStorage</code>. Al presionar <strong>&quot;Cerrar Sesión&quot;</strong>, todos los tokens de acceso y registros temporales son purgados de forma irreversible e inmediata de tu dispositivo.
+              La sesión en tu navegador se mantiene de forma local en <code class="text-white/90 bg-white/10 px-1.5 py-0.5 r-control-xs text-xs font-mono">localStorage</code>. Al presionar <strong>&quot;Cerrar Sesión&quot;</strong>, todos los tokens de acceso y registros temporales son purgados de forma irreversible e inmediata de tu dispositivo.
             </p>
           </section>
 
@@ -167,13 +159,10 @@ import { CommonModule } from '@angular/common';
         <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <button
             (click)="goBack.emit()"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-[var(--accent-lime)]/20 border-none cursor-pointer"
+            class="inline-flex items-center gap-2 px-6 py-3 r-control-lg bg-[var(--accent-lime)] hover:bg-[#a8e63b] text-[#0a0a0c] font-bold text-xs uppercase tracking-wider transition active:scale-95 shadow-sm border-none cursor-pointer"
           >
             <span>Volver a la Plataforma</span>
-            <svg class="h-4 w-4 text-[#0a0a0c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 12h14"/>
-              <path d="m12 5 7 7-7 7"/>
-            </svg>
+            <lucide-icon name="arrow-right" class="h-4 w-4 text-[#0a0a0c]"></lucide-icon>
           </button>
 
           <span class="text-xs text-neutral-500">

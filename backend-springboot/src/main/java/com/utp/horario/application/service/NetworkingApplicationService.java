@@ -153,6 +153,49 @@ public class NetworkingApplicationService {
         return beacon;
     }
 
+    /**
+     * El estudiante autenticado abandona la mesa de estudio, liberando un cupo.
+     * Si el estudiante es el anfitrión, debe cancelar la mesa en lugar de abandonarla.
+     */
+    public StudyBeacon leaveBeacon(String beaconId, String studentId) {
+        if (studentId == null || studentId.isBlank()) {
+            throw new IllegalArgumentException("Identidad del estudiante no disponible.");
+        }
+        StudyBeacon beacon = beaconRepository.findById(beaconId)
+                .orElseThrow(() -> new IllegalArgumentException("Mesa de estudio no encontrada."));
+
+        if (studentId.equalsIgnoreCase(beacon.getHostId())) {
+            throw new IllegalArgumentException("El anfitrión no puede abandonar su propia mesa; debe cancelarla.");
+        }
+
+        boolean left = beacon.leave();
+        if (left) {
+            beaconRepository.update(beacon);
+            log.info("[Networking] 🚪 Estudiante [{}] abandonó la mesa [{}] ({}/{}).",
+                    studentId, beacon.getId(), beacon.getCurrentCollaborators(), beacon.getMaxCollaborators());
+        }
+        return beacon;
+    }
+
+    /**
+     * Cancela una mesa de estudio. Solo el anfitrión tiene permisos para cancelarla.
+     */
+    public void cancelBeacon(String beaconId, String studentId) {
+        if (studentId == null || studentId.isBlank()) {
+            throw new IllegalArgumentException("Identidad no disponible para cancelar la mesa.");
+        }
+        StudyBeacon beacon = beaconRepository.findById(beaconId)
+                .orElseThrow(() -> new IllegalArgumentException("Mesa de estudio no encontrada."));
+
+        if (!studentId.equalsIgnoreCase(beacon.getHostId())) {
+            throw new IllegalArgumentException("Solo el anfitrión puede cancelar esta mesa de estudio.");
+        }
+
+        beacon.cancel();
+        beaconRepository.update(beacon);
+        log.info("[Networking] 🛑 Mesa [{}] cancelada por su anfitrión [{}].", beaconId, studentId);
+    }
+
     // ─── Matching Dual (perfiles candidatos) ──────────────────────────────────
 
     /** Perfiles elegibles (sin ghost mode y excluyendo al consultante autenticado). */

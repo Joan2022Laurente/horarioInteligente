@@ -34,5 +34,6 @@ public class MarketplaceDto {
     private Integer tutorCycle;
     private Integer reputation;
     private String contactMethod;
+    private String status;
     private LocalDateTime createdAt;
 }

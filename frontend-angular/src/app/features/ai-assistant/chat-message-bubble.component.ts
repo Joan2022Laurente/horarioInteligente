@@ -10,6 +10,7 @@ interface ToolBadge { label: string; icon: 'calendar' | 'book' | 'list' | 'check
 
 const TOOL_MAP: Record<string, ToolBadge> = {
  get_today_schedule: { label: 'Horario', icon: 'calendar' },
+ get_remaining_classes_today: { label: 'Clases restantes', icon: 'calendar' },
  get_syllabus_details: { label: 'Sílabo', icon: 'book' },
  get_enrolled_courses: { label: 'Cursos', icon: 'list' },
  get_upcoming_evaluations: { label: 'Evaluaciones', icon: 'check' },
@@ -25,11 +26,11 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  <div class="flex flex-col items-end gap-1.5 my-3">
  @if (userSticker) {
  <div class="animate-in zoom-in-95 duration-150 select-none my-1">
- <img [src]="userSticker.src" [alt]="userSticker.name" class="h-auto w-28 sm:w-36 max-w-[150px] rounded-[var(--r-2xl)] object-cover shadow-md block" />
+ <img [src]="userSticker.src" [alt]="userSticker.name" class="h-auto w-28 sm:w-36 max-w-[150px] r-card object-cover shadow-md block" />
  </div>
  }
  @if (userTextClean) {
- <div class="rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)] text-white px-4 py-2.5 max-w-[85%] text-xs sm:text-sm font-medium shadow-sm ">
+ <div class="r-card bg-[var(--utopik-carbon-black)] text-white px-4 py-2.5 max-w-[85%] text-xs sm:text-sm font-medium shadow-sm ">
  {{ userTextClean }}
  </div>
  }
@@ -50,52 +51,60 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  </div>
  } @else {
  <!-- Mensaje del Asistente -->
- <div class="flex flex-col gap-2.5 my-4 text-neutral-200 animate-in fade-in duration-150 text-left">
+ <div class="flex flex-col gap-2 my-4 text-neutral-200 animate-in fade-in duration-150 text-left">
 
- <!-- Cabecera sutil del Asistente -->
+ <!-- Cabecera sutil del Asistente con estado dinámico de pensamiento -->
  <div class="flex items-center gap-2 select-none">
- <app-matrix-orb [size]="26" [state]="msg.currentActivity ? 'thinking' : 'idle'" [colorMode]="'monochrome'"></app-matrix-orb>
- <span class="text-[11px] font-bold text-neutral-400">Copiloto UTP</span>
+ <app-matrix-orb [size]="24" [state]="isThinkingState ? 'thinking' : 'idle'" [colorMode]="'monochrome'"></app-matrix-orb>
+ <span class="text-[11px] font-semibold text-neutral-400">Copiloto UTP</span>
+ @if (isThinkingState && assistantContent) {
+ <span class="inline-flex items-center gap-1.5 text-[10px] text-neutral-400/80 font-normal">
+ <span class="h-1 w-1 rounded-full bg-[var(--utopik-green-yellow)] animate-ping"></span>
+ <span class="animate-pulse">Escribiendo...</span>
+ </span>
+ }
  </div>
 
- <!-- Indicador en tiempo real de actividad del agente (Píldora brillante dinámica) -->
- @if (msg.currentActivity) {
- <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-[var(--r-md)] text-xs font-medium bg-[var(--utopik-sandy-brown)]/10 text-[var(--utopik-sandy-brown)] backdrop-blur-sm animate-pulse w-fit my-0.5">
- <span class="relative flex h-2 w-2">
- <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--utopik-sandy-brown)] opacity-75"></span>
- <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--utopik-sandy-brown)]"></span>
+ <!-- Indicador en tiempo real de actividad del agente (Evolutivo, semi-opaco y fluido) -->
+ @if (activeStatusText) {
+ <div class="inline-flex items-center gap-2 py-0.5 text-xs select-none animate-in fade-in duration-200">
+ <span class="relative flex h-1.5 w-1.5 shrink-0">
+ <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--utopik-green-yellow)] opacity-75"></span>
+ <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--utopik-green-yellow)]"></span>
  </span>
- <span class="tracking-wide">{{ msg.currentActivity.label }}</span>
+ <span class="text-neutral-400/90 font-normal tracking-wide animate-pulse">
+ {{ activeStatusText }}
+ </span>
  </div>
  }
 
- <!-- Resumen colapsable de acciones completadas (Drawer moderno estilo Gemini/ChatGPT) -->
+ <!-- Resumen colapsable de acciones completadas (Drawer sutil y elegante, no tosco) -->
  @if (completedActivities.length > 0) {
  <div class="my-0.5">
  <button
  type="button"
  (click)="toggleActivities()"
- class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--r-sm)] text-[11px] font-medium text-neutral-400 hover:text-neutral-200 bg-white/[0.04] hover:bg-white/[0.08] transition cursor-pointer select-none"
+ class="group inline-flex items-center gap-1.5 py-0.5 text-[11px] text-neutral-400/80 hover:text-neutral-200 transition-colors cursor-pointer select-none"
  >
  <lucide-icon name="check" class="h-3 w-3 text-[var(--utopik-green-yellow)] shrink-0"></lucide-icon>
- <span>{{ completedActivities.length }} {{ completedActivities.length === 1 ? 'acción completada' : 'acciones completadas' }}</span>
- <lucide-icon name="chevron-down" class="h-3 w-3 opacity-60 transition-transform duration-200" [class.rotate-180]="activitiesOpen"></lucide-icon>
+ <span class="hover:underline underline-offset-2 decoration-neutral-600">
+ {{ completedSummary }}
+ </span>
+ <lucide-icon name="chevron-down" class="h-2.5 w-2.5 opacity-50 transition-transform duration-200" [class.rotate-180]="activitiesOpen"></lucide-icon>
  </button>
 
  @if (activitiesOpen) {
- <div class="mt-2 pl-2.5 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+ <div class="mt-1.5 pl-3 border-l border-white/10 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
  @for (act of completedActivities; track act.id) {
- <div class="flex items-center gap-2 text-[11px] text-neutral-300 py-0.5">
+ <div class="flex items-center gap-2 text-[11px] text-neutral-400 py-0.5">
  @if (act.phase === 'done') {
  <lucide-icon name="check" class="h-2.5 w-2.5 text-[var(--utopik-green-yellow)] shrink-0"></lucide-icon>
  } @else if (act.phase === 'error') {
- <span class="text-[var(--utopik-sandy-brown)] font-bold text-[10px]">✕</span>
- } @else {
- <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-sandy-brown)] animate-ping"></span>
+ <span class="text-rose-400 font-bold text-[10px]">✕</span>
  }
- <span>{{ act.label }}</span>
+ <span class="text-neutral-300 font-medium">{{ act.label }}</span>
  @if (act.durationMs) {
- <span class="text-[10px] text-neutral-500 font-mono">({{ act.durationMs }}ms)</span>
+ <span class="text-[10px] text-neutral-500 font-sans font-medium">({{ act.durationMs }}ms)</span>
  }
  </div>
  }
@@ -108,15 +117,20 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  @if (assistantContent) {
  <div class="w-full text-neutral-200 block pt-0.5">
  <app-markdown-renderer [content]="assistantContent"></app-markdown-renderer>
+ @if (msg.isStreaming) {
+ <span class="inline-block w-1.5 h-3.5 bg-[var(--utopik-green-yellow)] ml-1 animate-pulse align-middle rounded-[1px]"></span>
+ }
  </div>
  }
 
  <!-- Badges de herramientas fallback si no hay drawer de actividades -->
  @if (toolBadges().length > 0) {
- <div class="flex flex-wrap gap-1.5 mt-0.5">
+ <div class="flex items-center flex-wrap gap-2 text-[10px] text-neutral-500 pt-1 select-none">
+ <span class="text-neutral-600">Fuentes consultadas:</span>
  @for (badge of toolBadges(); track badge.label) {
- <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--r-xs)] text-[10px] font-medium bg-neutral-800/50 text-neutral-500 select-none tracking-wide">
- {{ badge.label }}
+ <span class="inline-flex items-center gap-1 text-neutral-400/80">
+ <span>•</span>
+ <span>{{ badge.label }}</span>
  </span>
  }
  </div>
@@ -129,7 +143,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  [href]="msg.contextInfo?.zoomLink"
  target="_blank"
  rel="noopener noreferrer"
- class="inline-flex items-center gap-2 rounded-[var(--r-md)] bg-white hover:bg-neutral-200 text-black px-4 py-2 text-xs font-bold transition shadow no-underline cursor-pointer"
+ class="inline-flex items-center gap-2 r-control-md bg-white hover:bg-neutral-200 text-black px-4 py-2 text-xs font-bold transition shadow no-underline cursor-pointer"
  >
  <lucide-icon name="video" class="h-4 w-4"></lucide-icon>
  <span>Unirse a Zoom</span>
@@ -143,7 +157,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  @for (action of chips; track action) {
  <button
  (click)="sendAction.emit(action)"
- class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-[var(--utopik-carbon-black)] hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-medium text-neutral-300 transition-all shadow-sm active:scale-95 cursor-pointer"
+ class="inline-flex items-center gap-1.5 r-control-md bg-[var(--utopik-carbon-black)] hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-medium text-neutral-300 transition-all shadow-sm active:scale-95 cursor-pointer"
  >
  <span>{{ action }}</span>
  <lucide-icon name="chevron-left" class="h-3 w-3 opacity-60"></lucide-icon>
@@ -178,7 +192,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  <span>Reintentar</span>
  </button>
 
- <span class="text-[10px] text-neutral-600 font-mono ml-auto">
+ <span class="text-[10px] text-neutral-600 font-sans font-medium ml-auto">
  {{ msg.timestamp }}
  </span>
  </div>
@@ -202,6 +216,30 @@ export class ChatMessageBubbleComponent {
 
  get completedActivities(): AgentActivity[] {
  return (this.msg.activities || []).filter(a => a.phase === 'done' || a.phase === 'error');
+ }
+
+ get isThinkingState(): boolean {
+ return !!this.msg.isStreaming || !!this.msg.currentActivity;
+ }
+
+ get activeStatusText(): string | null {
+ if (this.msg.currentActivity?.label) {
+ return this.msg.currentActivity.label;
+ }
+ if (this.msg.isStreaming && !this.assistantContent) {
+ return this.completedActivities.length > 0
+ ? 'Sintetizando respuesta con los datos obtenidos...'
+ : 'Consultando y razonando...';
+ }
+ return null;
+ }
+
+ get completedSummary(): string {
+ const count = this.completedActivities.length;
+ if (count === 1) {
+ return this.completedActivities[0].label || '1 consulta académica realizada';
+ }
+ return `${count} consultas académicas realizadas`;
  }
 
  get isWelcome(): boolean {

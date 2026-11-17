@@ -5,6 +5,7 @@ import com.utp.horario.application.service.SyllabusService;
 import com.utp.horario.infrastructure.security.CurrentStudent;
 import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "04. Sílabos Oficiales", description = "Consulta de temarios semanales y fórmulas oficiales del sílabo")
 @RestController
 @RequestMapping({"/syllabus", "/api/v1/syllabus"})
 @RequiredArgsConstructor

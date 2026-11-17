@@ -192,7 +192,7 @@ class McpServerControllerResilienceTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools =
                 (List<Map<String, Object>>) ((Map<String, Object>) response.getBody().get("result")).get("tools");
-        assertEquals(4, tools.size());
+        assertEquals(6, tools.size());
         for (Map<String, Object> tool : tools) {
             assertNotNull(tool.get("inputSchema"));
             assertFalse(tool.containsKey("studentCode"));

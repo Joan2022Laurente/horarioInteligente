@@ -34,5 +34,29 @@ public class MarketplaceItem {
     private Integer tutorCycle;
     private Integer reputation;
     private String contactMethod;
+    @Builder.Default
+    private String status = "AVAILABLE";
     private LocalDateTime createdAt;
+
+    /**
+     * Aplica la máquina de estados según sea PRODUCT o SERVICE.
+     */
+    public void changeStatus(String newStatus) {
+        if (newStatus == null || newStatus.isBlank()) {
+            throw new IllegalArgumentException("El nuevo estado no puede ser nulo o vacío.");
+        }
+        String target = newStatus.trim().toUpperCase();
+        boolean isService = "SERVICE".equalsIgnoreCase(this.itemType);
+
+        if (isService) {
+            if (!target.equals("AVAILABLE") && !target.equals("PAUSED")) {
+                throw new IllegalStateException("Para servicios o tutorías solo se permiten los estados AVAILABLE o PAUSED.");
+            }
+        } else {
+            if (!target.equals("AVAILABLE") && !target.equals("RESERVED") && !target.equals("SOLD")) {
+                throw new IllegalStateException("Para productos solo se permiten los estados AVAILABLE, RESERVED o SOLD.");
+            }
+        }
+        this.status = target;
+    }
 }

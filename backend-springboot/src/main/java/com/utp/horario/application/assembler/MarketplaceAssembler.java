@@ -36,6 +36,7 @@ public class MarketplaceAssembler {
                 .reviewsCount(0)
                 .salesCount(0)
                 .reputation(100)
+                .status("AVAILABLE")
                 .createdAt(LocalDateTime.now())
                 .build();
     }
@@ -65,6 +66,7 @@ public class MarketplaceAssembler {
                 .tutorCycle(item.getTutorCycle())
                 .reputation(item.getReputation())
                 .contactMethod(item.getContactMethod())
+                .status(item.getStatus() != null ? item.getStatus() : "AVAILABLE")
                 .createdAt(item.getCreatedAt())
                 .build();
     }

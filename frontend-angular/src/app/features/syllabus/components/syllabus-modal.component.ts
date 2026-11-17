@@ -20,16 +20,16 @@ import { LucideAngularModule } from 'lucide-angular';
             <button
               type="button"
               (click)="onClose()"
-              class="inline-flex items-center gap-2 rounded-[var(--r-md)] bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white px-3 py-1.5 text-xs font-semibold transition active:scale-95 cursor-pointer"
+              class="inline-flex items-center gap-2 r-control-sm bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white px-3 py-1.5 text-xs font-semibold transition active:scale-95 cursor-pointer"
             >
               <lucide-icon name="arrow-left" class="h-4 w-4"></lucide-icon>
               <span>Volver</span>
-              <kbd class="hidden sm:inline-block text-[10px] text-neutral-500 bg-white/5 px-1.5 py-0.5 rounded">ESC</kbd>
+              <kbd class="hidden sm:inline-block text-[10px] text-neutral-500 bg-white/5 px-1.5 py-0.5 r-control-xs">ESC</kbd>
             </button>
 
             @if (syllabus) {
               <div class="hidden md:flex items-center gap-2 text-xs text-neutral-500 pl-2">
-                <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-green-yellow)]"></span>
+                <span class="h-1.5 w-1.5 circle bg-[var(--utopik-green-yellow)]"></span>
                 <span>Oficial UTP • Periodo 2026</span>
               </div>
             }
@@ -42,7 +42,7 @@ import { LucideAngularModule } from 'lucide-angular';
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Descargar Sílabo Oficial PDF"
-                class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white px-3.5 py-1.5 text-xs font-medium transition active:scale-95 no-underline cursor-pointer"
+                class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white px-3.5 py-1.5 text-xs font-medium transition active:scale-95 no-underline cursor-pointer"
               >
                 <lucide-icon name="download" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
                 <span>Descargar PDF</span>
@@ -52,7 +52,7 @@ import { LucideAngularModule } from 'lucide-angular';
             <button
               type="button"
               (click)="onAskAi('Analiza los criterios de evaluación de ' + (syllabus?.generalInfo?.courseName || selectedCourseName) + ' y dame un plan estratégico paso a paso para obtener nota 20.'); onClose()"
-              class="inline-flex items-center gap-1.5 rounded-[var(--r-md)] bg-[var(--utopik-green-yellow)] hover:bg-[#aef036] text-black px-3.5 py-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
+              class="inline-flex items-center gap-1.5 r-control-sm bg-[var(--utopik-green-yellow)] hover:bg-[#aef036] text-black px-3.5 py-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
             >
               <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-black"></lucide-icon>
               <span>Estrategia IA</span>
@@ -61,7 +61,7 @@ import { LucideAngularModule } from 'lucide-angular';
             <button
               type="button"
               (click)="onClose()"
-              class="flex h-8 w-8 items-center justify-center rounded-[var(--r-md)] text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
+              class="flex h-8 w-8 items-center justify-center r-control-md text-neutral-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
               aria-label="Cerrar modal"
             >
               <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
@@ -75,7 +75,7 @@ import { LucideAngularModule } from 'lucide-angular';
           @if (isSyncing) {
             <!-- Loading State -->
             <div class="flex flex-col items-center justify-center py-32 space-y-4 text-center">
-              <div class="h-10 w-10 rounded-full border-2 border-[var(--utopik-green-yellow)] border-t-transparent animate-spin"></div>
+              <div class="h-10 w-10 circle border-2 border-[var(--utopik-green-yellow)] border-t-transparent animate-spin"></div>
               <div class="space-y-1">
                 <p class="text-base font-bold text-white">{{ syncStep }}</p>
                 <p class="text-xs text-neutral-500">Recuperando sílabo curricular y fórmulas oficiales...</p>
@@ -129,10 +129,10 @@ import { LucideAngularModule } from 'lucide-angular';
                       <!-- Col 1: Index + Dot + Code + Modality -->
                       <div class="flex items-center gap-3 min-w-[200px] shrink-0">
                         <span class="text-xs text-neutral-500 w-5 tabular-nums">{{ padZero(idx + 1) }}</span>
-                        <span class="h-2 w-2 rounded-[2px] bg-[var(--utopik-green-yellow)] shrink-0 shadow-[0_0_8px_rgba(187,244,81,0.5)]"></span>
+                        <span class="h-2 w-2 r-control-xs bg-[var(--utopik-green-yellow)] shrink-0 shadow-[0_0_8px_rgba(187,244,81,0.5)]"></span>
                         <span class="text-base font-bold text-white tracking-tight">{{ ev.type }}</span>
                         @if (ev.modality) {
-                          <span class="text-[10px] uppercase px-2 py-0.5 rounded bg-white/5 text-neutral-400 font-semibold">
+                          <span class="text-[10px] uppercase px-2 py-0.5 r-control-xs bg-white/5 text-neutral-400 font-semibold">
                             {{ ev.modality }}
                           </span>
                         }
@@ -201,7 +201,7 @@ import { LucideAngularModule } from 'lucide-angular';
                             {{ padZero(session.week) }}
                           </span>
                           <span 
-                            class="h-2 w-2 rounded-[2px] shrink-0" 
+                            class="h-2 w-2 r-control-xs shrink-0" 
                             [ngClass]="hasEval ? 'bg-black' : (isCurrent ? 'bg-[var(--utopik-green-yellow)] shadow-[0_0_8px_rgba(187,244,81,0.5)]' : 'bg-neutral-600')"
                           ></span>
                           <span 
@@ -213,11 +213,11 @@ import { LucideAngularModule } from 'lucide-angular';
                           
                           @if (isCurrent) {
                             <span 
-                              class="inline-flex items-center gap-1.5 rounded-[var(--r-xs)] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
+                              class="inline-flex items-center gap-1.5 r-control-xs px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
                               [ngClass]="hasEval ? 'bg-black text-[var(--utopik-green-yellow)]' : 'bg-[var(--utopik-green-yellow)] text-black'"
                             >
                               <span 
-                                class="h-1.5 w-1.5 rounded-full animate-pulse"
+                                class="h-1.5 w-1.5 circle animate-pulse"
                                 [ngClass]="hasEval ? 'bg-[var(--utopik-green-yellow)]' : 'bg-black'"
                               ></span>
                               En Curso
@@ -225,7 +225,7 @@ import { LucideAngularModule } from 'lucide-angular';
                           }
 
                           <span 
-                            class="text-[10px] uppercase px-2 py-0.5 rounded font-semibold"
+                            class="text-[10px] uppercase px-2 py-0.5 r-control-xs font-semibold"
                             [ngClass]="hasEval ? 'bg-black/10 text-neutral-800' : (isCurrent ? 'bg-white/10 text-neutral-300' : 'bg-white/5 text-neutral-500')"
                           >
                             {{ session.unit || 'Unidad ' + Math.ceil(session.week / 4) }}
@@ -234,9 +234,9 @@ import { LucideAngularModule } from 'lucide-angular';
 
                         @if (hasEval) {
                           <span 
-                            class="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-[var(--r-md)] bg-black text-[var(--utopik-green-yellow)]"
+                            class="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 r-control-md bg-black text-[var(--utopik-green-yellow)]"
                           >
-                            <span class="h-1.5 w-1.5 rounded-full bg-[var(--utopik-green-yellow)]"></span>
+                            <span class="h-1.5 w-1.5 circle bg-[var(--utopik-green-yellow)]"></span>
                             Evaluación: {{ evalLabel }}
                           </span>
                         }
@@ -302,7 +302,7 @@ import { LucideAngularModule } from 'lucide-angular';
                   </h2>
                 </div>
 
-                <div class="rounded-[var(--r-xl)] bg-[var(--utopik-carbon-black)] p-6 text-xs text-neutral-300 leading-relaxed">
+                <div class="r-panel bg-[var(--utopik-carbon-black)] p-6 text-xs text-neutral-300 leading-relaxed">
                   <p class="whitespace-pre-line">{{ syllabus.methodologySummary }}</p>
                 </div>
               </section>
@@ -321,7 +321,7 @@ import { LucideAngularModule } from 'lucide-angular';
               <button
                 type="button"
                 (click)="onRetry()"
-                class="inline-flex items-center gap-2 rounded-[var(--r-md)] bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-semibold text-white transition cursor-pointer"
+                class="inline-flex items-center gap-2 r-control-md bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-semibold text-white transition cursor-pointer"
               >
                 <lucide-icon name="rotate-ccw" class="h-3.5 w-3.5"></lucide-icon>
                 <span>Reintentar descarga</span>

@@ -34,16 +34,14 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
   ],
   template: `
     <div class="space-y-8 text-white font-sans text-left">
-      <!-- 1. Controles: Navegación de Semana, Modalidades y Exportación -->
+      <!-- 1. Controles: Navegación de Semana y Modalidades -->
       <app-schedule-controls
         [currentWeek]="currentWeek"
         [totalWeeks]="totalWeeks"
         [selectedWeek]="selectedWeek"
         [selectedModality]="selectedModality"
-        [isExporting]="isExporting()"
         (weekChange)="selectedWeek = $event"
         (modalityChange)="selectedModality = $event"
-        (exportRequested)="exportToGoogleCalendar()"
       />
 
       <!-- 2. Grid Semanal de 7 Días (Lunes a Domingo) con separación de filas generosa -->
@@ -57,7 +55,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   {{ getDayName(dayNum) }}
                 </span>
                 @if (isToday(dayNum)) {
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-[var(--r-xs)] text-[10px] font-bold bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] leading-none">
+                  <span class="inline-flex items-center px-2 py-0.5 r-control-xs text-[10px] font-bold bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] leading-none">
                     Hoy
                   </span>
                 }
@@ -67,7 +65,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
             <!-- Lista de Sesiones del Día con gap-4 vertical entre filas -->
             <div class="flex flex-col gap-4 flex-1">
               @if (getEventsForDayNumber(dayNum).length === 0) {
-                <div class="h-28 rounded-[var(--r-2xl)] bg-[var(--utopik-carbon-black)]/60 flex items-center justify-center text-center text-xs text-neutral-600 font-medium select-none">
+                <div class="h-28 r-card bg-[var(--utopik-carbon-black)]/60 flex items-center justify-center text-center text-xs text-neutral-600 font-medium select-none">
                   Sin clases
                 </div>
               } @else {
@@ -102,7 +100,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
             @for (course of virtual247Courses; track course.courseId) {
               <div
                 (click)="openVirtualCourseModal(course)"
-                class="group relative rounded-[var(--r-2xl)] p-4 transition-all duration-300 space-y-3 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0 bg-[var(--utopik-carbon-black)] hover:bg-[#282c20]"
+                class="group relative r-control-lg p-4 transition-all duration-300 space-y-3 shadow-none cursor-pointer hover:-translate-y-0.5 active:translate-y-0 bg-[var(--utopik-carbon-black)] hover:bg-[#282c20]"
               >
                 <div class="flex items-center justify-between gap-1.5">
                   <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--utopik-platinum)]">
@@ -119,7 +117,7 @@ import { UiFeedbackService } from '../../core/services/ui-feedback.service';
                   {{ formatCourseName(course.name) }}
                 </h4>
 
-                <div class="flex items-center justify-between text-xs font-mono text-neutral-400">
+                <div class="flex items-center justify-between text-xs font-sans font-medium text-neutral-400">
                   <div class="flex items-center gap-1.5 truncate">
                     <lucide-icon name="clock" class="h-3.5 w-3.5 text-neutral-500 shrink-0"></lucide-icon>
                     <span class="truncate">Sin horario fijo</span>
@@ -166,7 +164,6 @@ export class WeeklyScheduleComponent implements OnInit {
 
   selectedEventForModal: UTPEvent | null = null;
   private readonly feedback = inject(UiFeedbackService);
-  readonly isExporting = signal<boolean>(false);
 
   constructor(public scheduleService: ScheduleService) {}
 
@@ -352,32 +349,6 @@ export class WeeklyScheduleComponent implements OnInit {
 
   openZoomDirect(link: string): void {
     if (link) window.open(link, '_blank');
-  }
-
-  exportToGoogleCalendar(): void {
-    if (this.isExporting()) return;
-    this.isExporting.set(true);
-    const period = this.scheduleService.currentSchedule()?.periodName || '2026 - Ciclo 2 Agosto';
-
-    this.scheduleService.exportCalendarIcs(period).subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `horario_utp_${period.replace(/\s+/g, '_')}.ics`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        this.isExporting.set(false);
-        this.feedback.success('Horario exportado', 'Archivo .ics descargado exitosamente para Google Calendar.');
-      },
-      error: (err) => {
-        console.error('[WeeklySchedule] Error exportando horario a .ics:', err);
-        this.isExporting.set(false);
-        this.feedback.error('Error al exportar', 'No se pudo generar el archivo .ics de tu horario.');
-      }
-    });
   }
 
   openVirtualCourseModal(course: ProcessedCourse): void {

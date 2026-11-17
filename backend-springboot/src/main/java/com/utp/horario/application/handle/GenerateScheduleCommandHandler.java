@@ -44,7 +44,7 @@ public class GenerateScheduleCommandHandler {
         // ante fallo, degradación al Read Model local o intervalo honesto de ausencia.
         Optional<ScheduleInterval> fresh =
                 repository.findByStudentIdAndPeriodSyncedSince(studentId, period, LocalDate.now());
-        if (fresh.isPresent()) {
+        if (fresh.isPresent() && isNonEmpty(fresh.get())) {
             log.info("[GenerateSchedule] ⚡ Local-first Read Model: horario vigente en BD para [{}/{}] (sincronizado hoy), sin llamada a la pasarela",
                     studentId, period);
             return fresh.get();
@@ -52,19 +52,21 @@ public class GenerateScheduleCommandHandler {
 
         if (token != null && !token.isBlank()) {
             ScheduleInterval interval = utpPortalGateway.fetchSchedule(token, period);
-            if (interval != null) {
+            if (interval != null && isNonEmpty(interval)) {
                 return repository.save(studentId, interval);
             }
             log.warn("[GenerateSchedule] ⚠️ La pasarela no entregó horario para [{}/{}]: se degrada al Read Model local",
                     studentId, period);
         }
 
-        return repository.findByStudentIdAndPeriod(studentId, period)
-                .orElseGet(() -> {
-                    log.warn("[GenerateSchedule] 🚫 Sin horario oficial ni copia local para [{}/{}] — se declara ausencia (lectura)",
-                            studentId, period);
-                    return buildHonestEmptyInterval(studentId, period);
-                });
+        Optional<ScheduleInterval> stale = repository.findByStudentIdAndPeriod(studentId, period);
+        if (stale.isPresent() && isNonEmpty(stale.get())) {
+            return stale.get();
+        }
+
+        log.warn("[GenerateSchedule] 🚫 Sin horario oficial ni copia local para [{}/{}] — se declara ausencia (lectura)",
+                studentId, period);
+        return buildHonestEmptyInterval(studentId, period);
     }
 
     /**
@@ -82,6 +84,24 @@ public class GenerateScheduleCommandHandler {
                     "Horario no disponible para '" + period + "': la pasarela oficial no respondió. Reintenta en unos segundos.");
         }
         return repository.save(studentId, interval);
+    }
+
+    /**
+     * Importación directa de horario (Multi-tenant): guarda el snapshot oficial
+     * directamente en el repositorio del estudiante autenticado.
+     */
+    public ScheduleInterval importSchedule(String studentId, ScheduleInterval schedule) {
+        if (studentId == null || studentId.isBlank() || "current-student".equalsIgnoreCase(studentId)) {
+            throw new IllegalArgumentException("Identidad de estudiante inválida para importar horario");
+        }
+        if (schedule == null || !isNonEmpty(schedule)) {
+            throw new IllegalArgumentException("El horario proporcionado no contiene sesiones de clase válidas");
+        }
+        log.info("[GenerateSchedule] 📥 Importando horario para [{}] ({} clases, {} cursos)",
+                studentId,
+                schedule.getClasses() != null ? schedule.getClasses().size() : 0,
+                schedule.getCourses() != null ? schedule.getCourses().size() : 0);
+        return repository.save(studentId, schedule);
     }
 
     /**
@@ -106,7 +126,7 @@ public class GenerateScheduleCommandHandler {
 
         Optional<ScheduleInterval> fresh =
                 repository.findByStudentIdAndPeriodSyncedSince(studentId, period, minSyncDate);
-        if (fresh.isPresent()) {
+        if (fresh.isPresent() && isNonEmpty(fresh.get())) {
             log.info("[GenerateSchedule] ⚡ Bootstrap local-first: horario vigente en BD para [{}/{}] (sincronizado ≥ {}), sin llamada a la pasarela",
                     studentId, period, minSyncDate);
             return fresh.get();
@@ -116,20 +136,27 @@ public class GenerateScheduleCommandHandler {
         if (token != null && !token.isBlank()) {
             interval = utpPortalGateway.fetchSchedule(token, period);
         }
-        if (interval != null) {
+        if (interval != null && isNonEmpty(interval)) {
             return repository.save(studentId, interval);
         }
 
         // La pasarela no respondió: se sirve el snapshot oficial previo (vencido)
         // para continuar el login; el refresco remoto es reintentable después.
         Optional<ScheduleInterval> stale = repository.findByStudentIdAndPeriod(studentId, period);
-        if (stale.isPresent()) {
+        if (stale.isPresent() && isNonEmpty(stale.get())) {
             log.warn("[GenerateSchedule] ⚠️ Pasarela sin respuesta en bootstrap [{}/{}]: se sirve el snapshot previo persistido",
                     studentId, period);
             return stale.get();
         }
         throw new ScheduleUnavailableException(
                 "Horario no disponible para '" + period + "': la pasarela oficial no respondió. Reintenta en unos segundos.");
+    }
+
+    private boolean isNonEmpty(ScheduleInterval interval) {
+        return interval != null && (
+                (interval.getClasses() != null && !interval.getClasses().isEmpty()) ||
+                (interval.getCourses() != null && !interval.getCourses().isEmpty())
+        );
     }
 
     /**

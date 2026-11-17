@@ -1,5 +1,6 @@
 import { Component, AfterViewInit, OnDestroy, ViewChild, ElementRef, Output, EventEmitter, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 import { LandingStorySectorComponent } from './components/landing-story-sector.component';
 import { LandingVisualMosaicComponent } from './components/landing-visual-mosaic.component';
 import { LandingLoginFormComponent } from './landing-login-form.component';
@@ -9,6 +10,7 @@ import { LandingLoginFormComponent } from './landing-login-form.component';
   standalone: true,
   imports: [
     CommonModule,
+    LucideAngularModule,
     LandingStorySectorComponent,
     LandingVisualMosaicComponent,
     LandingLoginFormComponent
@@ -58,7 +60,7 @@ import { LandingLoginFormComponent } from './landing-login-form.component';
             cta="Comenzar" 
             color="lime"
             (ctaClick)="scrollToLogin()">
-            <div class="rounded-[var(--r-xl)] bg-[var(--utopik-carbon-black)] border border-[rgba(232,233,235,0.12)] p-4 text-xs text-neutral-300">
+            <div class="r-panel bg-[var(--utopik-carbon-black)] border border-[rgba(232,233,235,0.12)] p-4 text-xs text-neutral-300">
               Sincronización académica instantánea con tu campus
             </div>
           </app-landing-story-sector>
@@ -69,7 +71,7 @@ import { LandingLoginFormComponent } from './landing-login-form.component';
             title="Llega directo a tu aula a tiempo y sin estrés." 
             subtitle="Consulta tu horario actualizado en tiempo real. Se acabaron los PDFs borrosos y la incertidumbre de esperar a que cargue el portal cuando estás a punto de entrar al aula." 
             color="lime">
-            <div class="rounded-[var(--r-xl)] bg-[var(--utopik-green-yellow)] text-[var(--utopik-onyx)] p-4 text-xs font-bold">
+            <div class="r-panel bg-[var(--utopik-green-yellow)] text-[var(--utopik-onyx)] p-4 text-xs font-bold">
               Próxima clase: Cálculo Aplicado II · Aula 402 Torre A
             </div>
           </app-landing-story-sector>
@@ -80,7 +82,7 @@ import { LandingLoginFormComponent } from './landing-login-form.component';
             title="Conecta con compañeros de tu facultad hoy mismo." 
             subtitle="¿Necesitas armar grupo para un proyecto o resolver dudas antes del examen? Activa un Study Beacon o encuentra quién está estudiando en la biblioteca de tu campus." 
             color="sandy">
-            <div class="rounded-[var(--r-xl)] bg-[var(--utopik-sandy-brown)] text-[var(--utopik-onyx)] p-4 text-xs font-bold">
+            <div class="r-panel bg-[var(--utopik-sandy-brown)] text-[var(--utopik-onyx)] p-4 text-xs font-bold">
               Study Beacon Activo: Piso 4 Biblioteca · 8 compañeros cerca
             </div>
           </app-landing-story-sector>
@@ -91,7 +93,7 @@ import { LandingLoginFormComponent } from './landing-login-form.component';
             title="El marketplace hecho por y para estudiantes." 
             subtitle="Vende o compra libros, calculadoras, guías y materiales de ciclos pasados directamente con otros alumnos de tu universidad con total confianza." 
             color="platinum">
-            <div class="rounded-[var(--r-xl)] bg-[var(--utopik-platinum)] text-[var(--utopik-onyx)] p-4 text-xs font-bold">
+            <div class="r-panel bg-[var(--utopik-platinum)] text-[var(--utopik-onyx)] p-4 text-xs font-bold">
               Calculadora Científica Casio · S/ 45.00 · Verificado
             </div>
           </app-landing-story-sector>
@@ -120,12 +122,10 @@ import { LandingLoginFormComponent } from './landing-login-form.component';
           <button
             type="button"
             (click)="scrollToLogin()"
-            class="absolute top-6 right-8 sm:top-8 sm:right-12 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--utopik-onyx)] text-[var(--utopik-platinum)] hover:bg-black transition-all cursor-pointer border-none text-xs font-black uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 z-30"
+            class="absolute top-6 right-8 sm:top-8 sm:right-12 inline-flex items-center gap-2 px-4 py-2 r-control-md bg-[var(--utopik-onyx)] text-[var(--utopik-platinum)] hover:bg-black transition-all cursor-pointer border-none text-xs font-black uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 z-30"
           >
             <span>Acceso</span>
-            <svg class="w-3.5 h-3.5 text-[var(--utopik-green-yellow)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
-            </svg>
+            <lucide-icon name="arrow-down" class="w-3.5 h-3.5 text-[var(--utopik-green-yellow)] stroke-[2.5]"></lucide-icon>
           </button>
 
           <!-- Showcase Visual Mosaico reactivo al sector activo -->

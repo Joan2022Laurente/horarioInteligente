@@ -43,6 +43,7 @@ export interface ServiceItem {
   reputation: number;
   tags: string[];
   contactMethod: string;
+  status?: 'AVAILABLE' | 'RESERVED' | 'SOLD' | 'PAUSED';
   highlights?: string[];
 }
 
