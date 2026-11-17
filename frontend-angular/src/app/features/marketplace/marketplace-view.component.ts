@@ -21,98 +21,37 @@ import { MarketplaceStore } from './marketplace.store';
     MarketplaceFiltersComponent
   ],
   template: `
-    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-start gap-6 text-white font-sans text-left relative">
+    <div class="w-full grid grid-cols-1 md:grid-cols-4 gap-5 items-start text-white font-sans text-left relative">
       
       <!-- ===================================================================== -->
-      <!-- CENTER CONTINUOUS COLUMN (Elevated Dark Marketplace Stream)           -->
+      <!-- CENTER CONTINUOUS COLUMN (Elevated Dark Marketplace Stream - 75%)     -->
       <!-- ===================================================================== -->
-      <main class="w-full flex-1 border border-white/[0.08] bg-[#0c0d10] r-card overflow-hidden shadow-2xl min-h-screen">
-        
-        <!-- Sticky Top Channel Selector (Modern Segmented Pills) -->
-        <div class="sticky top-0 z-20 bg-[#0c0d10]/90 backdrop-blur-md border-b border-white/[0.08] p-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <button
-            (click)="setCategory('ALL')"
-            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
-            [ngClass]="filterSignal().category === 'ALL' 
-              ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
-              : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
-          >
-            Todo
-          </button>
+      <main class="w-full md:col-span-3 border border-white/[0.08] bg-[#0c0d10] r-card overflow-hidden shadow-2xl min-h-screen">
 
-          <button
-            (click)="setCategory('SNACKS_FOOD')"
-            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
-            [ngClass]="filterSignal().category === 'SNACKS_FOOD' 
-              ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
-              : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
-          >
-            Comida & Snacks
-          </button>
+        <!-- Top Action / Publish Header Bar -->
+        <div class="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.01]">
+          <div>
+            <h2 class="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+              Marketplace & Emprendimientos UTP
+            </h2>
+            <p class="text-xs text-neutral-400 mt-0.5">Comercio directo y seguro entre estudiantes de campus</p>
+          </div>
 
-          <button
-            (click)="setCategory('CLOTHING_THRIFT')"
-            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
-            [ngClass]="filterSignal().category === 'CLOTHING_THRIFT' 
-              ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
-              : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
+          <button 
+            (click)="isOfferModalOpen = true"
+            class="px-4 py-2 r-control-sm bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs transition border-none cursor-pointer shadow-md"
           >
-            Ropa Thrift
-          </button>
-
-          <button
-            (click)="setCategory('SECOND_HAND_TECH')"
-            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
-            [ngClass]="filterSignal().category === 'SECOND_HAND_TECH' 
-              ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
-              : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
-          >
-            Tech Seminuevo
-          </button>
-
-          <button
-            (click)="setCategory('TUTORING')"
-            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
-            [ngClass]="filterSignal().category === 'TUTORING' 
-              ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
-              : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
-          >
-            Tutorías 1 a 1
-          </button>
-
-          <button
-            (click)="setCategory('PRINTING_SUPPLIES')"
-            class="px-3.5 py-1.5 r-control-sm text-xs font-bold transition border-none cursor-pointer shrink-0"
-            [ngClass]="filterSignal().category === 'PRINTING_SUPPLIES' 
-              ? 'bg-[var(--accent-lime)] text-black shadow-sm' 
-              : 'bg-white/[0.04] text-neutral-400 hover:text-white hover:bg-white/[0.08]'"
-          >
-            Impresiones
+            + Publicar
           </button>
         </div>
 
-        <!-- Mobile Search & Filter Toolbar (< lg screens) -->
-        <div class="block lg:hidden p-3 border-b border-white/[0.08]">
+        <!-- Mobile Search & Filter Toolbar (< md screens) -->
+        <div class="block md:hidden p-3 border-b border-white/[0.08]">
           <app-marketplace-filters
             [filter]="filterSignal()"
             [courses]="enrolledCourses"
             (filterChange)="onFilterChange($event)"
           />
-        </div>
-
-        <!-- Top Action / Publish Header Bar -->
-        <div class="p-4 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.01]">
-          <div>
-            <h2 class="text-sm sm:text-base font-bold text-white">Marketplace & Emprendimientos UTP</h2>
-            <p class="text-xs text-neutral-400">Comercio directo y seguro entre estudiantes de campus</p>
-          </div>
-
-          <button 
-            (click)="isOfferModalOpen = true"
-            class="px-4 py-1.5 r-control-sm bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs transition border-none cursor-pointer shadow-md"
-          >
-            + Publicar
-          </button>
         </div>
 
         <!-- Products & Services Grid Container -->
@@ -129,7 +68,7 @@ import { MarketplaceStore } from './marketplace.store';
               </button>
             </div>
           } @else {
-            <div class="p-3.5 sm:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div class="p-3.5 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               @for (item of filteredItems(); track item.id) {
                 <app-marketplace-card
                   [item]="item"
@@ -143,9 +82,9 @@ import { MarketplaceStore } from './marketplace.store';
       </main>
 
       <!-- ===================================================================== -->
-      <!-- RIGHT STICKY SIDEBAR (Elevated Fixed Filters)                         -->
+      <!-- RIGHT STICKY SIDEBAR (Elevated Fixed Filters - 25%)                   -->
       <!-- ===================================================================== -->
-      <aside class="hidden lg:block w-[320px] shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
+      <aside class="hidden md:block md:col-span-1 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
         <app-marketplace-filters
           [filter]="filterSignal()"
           [courses]="enrolledCourses"

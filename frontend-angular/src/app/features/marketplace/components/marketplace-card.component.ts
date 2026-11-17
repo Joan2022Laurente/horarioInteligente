@@ -14,33 +14,28 @@ import { ServiceItem } from '@domain/models/marketplace';
     >
       
       <!-- Card Image Aspect Square Frame -->
-      <div class="relative aspect-square w-full bg-[#08090b] overflow-hidden">
+      <div class="relative aspect-square w-full bg-[#121318] flex items-center justify-center overflow-hidden">
         <img 
           [src]="item.imageUrl" 
           [alt]="item.title"
+          (error)="onImgError($event)"
           loading="lazy"
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
         />
 
         <!-- Top Badges Overlay -->
-        <div class="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5 pointer-events-none">
-          @if (item.badge && item.badge !== item.condition) {
+        @if (item.badge && item.badge !== item.condition) {
+          <div class="absolute top-2.5 left-2.5 pointer-events-none">
             <span 
               class="px-2 py-0.5 r-control-xs text-[10px] font-extrabold tracking-wide uppercase shadow-sm"
-              [ngClass]="item.badge === 'TOP TUTOR' || item.badge === 'MÁS SOLICITADO' || item.badge === 'CASERO / FRESCO' || item.badge === 'ENTREGA HOY'
+              [ngClass]="item.badge === 'TOP TUTOR' || item.badge === 'MÁS SOLICITADO' || item.badge === 'ENTREGA HOY'
                 ? 'bg-[var(--accent-lime)] text-black' 
                 : 'bg-black/80 backdrop-blur-md text-white border border-white/10'"
             >
               {{ item.badge }}
             </span>
-          } @else {
-            <span></span>
-          }
-
-          <span class="px-2 py-0.5 r-control-xs text-[10px] font-semibold bg-black/80 backdrop-blur-md text-neutral-300 border border-white/10">
-            Ciclo {{ item.tutorCycle }}
-          </span>
-        </div>
+          </div>
+        }
 
         <!-- Bottom Location / Course Pill Overlay -->
         @if (item.location || item.courseName) {
@@ -61,14 +56,10 @@ import { ServiceItem } from '@domain/models/marketplace';
       <div class="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-3">
         
         <div class="space-y-1.5">
-          <!-- Service / Product Type & Condition / Career -->
+          <!-- Service / Product Type -->
           <div class="flex items-center justify-between text-[11px] text-neutral-400">
             <span class="font-medium text-neutral-300">{{ item.serviceType }}</span>
-            @if (item.condition) {
-              <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 r-control-xs border border-emerald-500/20 font-medium truncate max-w-[120px]">
-                {{ item.condition }}
-              </span>
-            } @else {
+            @if (item.tutorCareer && item.category === 'TUTORING') {
               <span class="text-[10px] text-neutral-500 font-medium truncate max-w-[120px]">{{ item.tutorCareer }}</span>
             }
           </div>
@@ -134,4 +125,11 @@ import { ServiceItem } from '@domain/models/marketplace';
 export class MarketplaceCardComponent {
   @Input({ required: true }) item!: ServiceItem;
   @Output() selectItem = new EventEmitter<ServiceItem>();
+
+  onImgError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.src = 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?q=80&w=600&auto=format&fit=crop';
+    }
+  }
 }

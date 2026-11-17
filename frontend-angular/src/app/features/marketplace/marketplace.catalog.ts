@@ -287,7 +287,7 @@ export const INITIAL_MARKETPLACE_ITEMS: ServiceItem[] = [
       unit: '/ unidad',
       title: 'USB Kingston DataTraveler 64GB 3.2 con ISOs UTP + JDK & Herramientas',
       description: 'Memoria USB original de alta velocidad 3.2. Viene formateada y precargada con ISO booteable de Ubuntu 22.04 LTS / Windows 11, JDK 17 & 21, VS Code, Git, NetBeans y Docker.',
-      imageUrl: 'https://images.unsplash.com/photo-1618761714958-0655d13a5935?q=80&w=600&auto=format&fit=crop',
+      imageUrl: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?q=80&w=600&auto=format&fit=crop',
       badge: 'STOCK HOY',
       location: 'Torre A - Laboratorio 602',
       rating: 4.95,

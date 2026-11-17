@@ -15,14 +15,14 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
     <div class="md:hidden space-y-3 mb-4 text-left">
       <!-- Search Input + Mobile Filter Button -->
       <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <lucide-icon name="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none"></lucide-icon>
+        <div class="flex items-center gap-2.5 flex-1 bg-[#14151a] border border-white/[0.08] focus-within:border-[var(--accent-lime)] r-control-md px-3.5 py-2 transition">
+          <lucide-icon name="search" class="h-4 w-4 text-neutral-400 shrink-0"></lucide-icon>
           <input
             type="text"
             [ngModel]="filter.searchQuery"
             (ngModelChange)="onSearchChange($event)"
-            placeholder="Buscar productos, snacks, ropa o tutorías..."
-            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] r-control-md pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 outline-none transition"
+            placeholder="Buscar productos, snacks o tutorías..."
+            class="w-full bg-transparent text-xs text-white placeholder:text-neutral-500 outline-none border-none p-0"
           />
         </div>
 
@@ -61,14 +61,14 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
       
       <!-- 1. Sticky Search Box -->
       <div class="sticky top-0 z-10 bg-[#0c0d10]/95 backdrop-blur-md pb-2 pt-0.5">
-        <div class="relative">
-          <lucide-icon name="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none"></lucide-icon>
+        <div class="flex items-center gap-2.5 bg-[#14151a] border border-white/[0.08] focus-within:border-[var(--accent-lime)] focus-within:bg-[#181920] r-control-md px-3.5 py-2 transition">
+          <lucide-icon name="search" class="h-4 w-4 text-neutral-400 shrink-0"></lucide-icon>
           <input
             type="text"
             [ngModel]="filter.searchQuery"
             (ngModelChange)="onSearchChange($event)"
             placeholder="Buscar en el campus..."
-            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] focus:bg-[#181920] r-control-md pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 outline-none transition"
+            class="w-full bg-transparent text-xs text-white placeholder:text-neutral-500 outline-none border-none p-0"
           />
         </div>
       </div>
@@ -86,25 +86,21 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
           @for (trend of marketplaceTrends; track trend.tag; let idx = $index) {
             <div 
               (click)="onTagClick(trend.tag)"
-              class="p-3 hover:bg-white/[0.03] transition cursor-pointer flex items-center justify-between group"
+              class="p-2.5 hover:bg-white/[0.03] transition cursor-pointer flex items-center justify-between group"
             >
-              <div class="min-w-0 flex items-center gap-2.5">
-                <span class="text-[10px] font-sans font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-1.5 py-0.5 r-control-sm shrink-0">
+              <div class="min-w-0 flex items-center gap-2">
+                <span class="text-[9px] font-sans font-bold text-[var(--accent-lime)] bg-[var(--accent-lime)]/10 px-1.5 py-0.5 r-control-xs shrink-0">
                   #0{{ idx + 1 }}
                 </span>
                 <div class="min-w-0">
-                  <span class="text-xs font-bold text-neutral-200 group-hover:text-[var(--accent-lime)] transition block truncate">
+                  <span class="text-[11px] font-bold text-neutral-200 group-hover:text-[var(--accent-lime)] transition block truncate">
                     #{{ trend.tag }}
                   </span>
-                  <div class="flex items-center gap-1.5 text-[10px] text-neutral-500">
-                    <span>{{ trend.category }}</span>
-                    <span>•</span>
-                    <span class="font-sans font-medium">{{ trend.volume }}</span>
-                  </div>
+                  <span class="text-[9px] text-neutral-500 block truncate">{{ trend.category }}</span>
                 </div>
               </div>
 
-              <lucide-icon name="chevron-right" class="h-3.5 w-3.5 text-neutral-600 group-hover:text-white transition shrink-0"></lucide-icon>
+              <lucide-icon name="chevron-right" class="h-3 w-3 text-neutral-600 group-hover:text-white transition shrink-0 ml-1"></lucide-icon>
             </div>
           }
         </div>
@@ -113,13 +109,31 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
       <!-- 3. Marketplace Advanced Filters Card -->
       <div class="r-card bg-[#0c0d10] border border-white/[0.08] p-4 space-y-3.5 shadow-lg">
         <div class="flex items-center justify-between">
-          <h4 class="text-xs font-black uppercase tracking-wider text-white">Filtros del Campus</h4>
+          <h4 class="text-xs font-black uppercase tracking-wider text-white">Rubros & Filtros</h4>
           @if (hasActiveFilters) {
             <button
               (click)="resetFilters()"
               class="text-xs text-[var(--accent-lime)] hover:underline bg-transparent border-none p-0 cursor-pointer font-bold"
             >
               Restablecer
+            </button>
+          }
+        </div>
+
+        <!-- Categories List -->
+        <div class="space-y-1">
+          @for (cat of categories; track cat.id) {
+            <button
+              (click)="onCategoryChange(cat.id)"
+              class="w-full flex items-center justify-between px-3 py-2 r-control-sm text-xs font-medium transition border-none cursor-pointer text-left"
+              [ngClass]="filter.category === cat.id 
+                ? 'bg-[var(--accent-lime)] text-black font-bold shadow-sm' 
+                : 'bg-transparent text-neutral-400 hover:bg-white/[0.04] hover:text-white'"
+            >
+              <span>{{ cat.label }}</span>
+              @if (filter.category === cat.id) {
+                <span class="h-1.5 w-1.5 circle bg-black"></span>
+              }
             </button>
           }
         </div>
@@ -145,24 +159,24 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
         <!-- Sort Order Selector -->
         <div class="space-y-1">
           <label class="block text-[11px] text-neutral-400 font-medium">Ordenar por</label>
-          <div class="grid grid-cols-3 gap-1 bg-[#14151a] nest-1 r-control-md border border-white/[0.08]">
+          <div class="grid grid-cols-3 gap-0.5 bg-[#14151a] nest-1 r-control-md border border-white/[0.08] p-0.5">
             <button
               (click)="onSortChange('POPULAR')"
-              class="py-1 r-inner text-[11px] font-medium transition border-none cursor-pointer text-center"
+              class="py-1 r-inner text-[10px] font-medium transition border-none cursor-pointer text-center"
               [ngClass]="filter.sortBy === 'POPULAR' ? 'bg-[var(--accent-lime)] text-black font-bold' : 'bg-transparent text-neutral-400 hover:text-white'"
             >
               Popular
             </button>
             <button
               (click)="onSortChange('RATING')"
-              class="py-1 r-inner text-[11px] font-medium transition border-none cursor-pointer text-center"
+              class="py-1 r-inner text-[10px] font-medium transition border-none cursor-pointer text-center"
               [ngClass]="filter.sortBy === 'RATING' ? 'bg-[var(--accent-lime)] text-black font-bold' : 'bg-transparent text-neutral-400 hover:text-white'"
             >
               Valorados
             </button>
             <button
               (click)="onSortChange('PRICE_LOW')"
-              class="py-1 r-inner text-[11px] font-medium transition border-none cursor-pointer text-center"
+              class="py-1 r-inner text-[10px] font-medium transition border-none cursor-pointer text-center"
               [ngClass]="filter.sortBy === 'PRICE_LOW' ? 'bg-[var(--accent-lime)] text-black font-bold' : 'bg-transparent text-neutral-400 hover:text-white'"
             >
               Precio
