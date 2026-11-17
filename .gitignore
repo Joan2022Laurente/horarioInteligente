@@ -50,6 +50,8 @@ yarn-error.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 .agents/
+!.agents/rules/
+!.agents/rules/**
 .gemini/
 .DS_Store
 Thumbs.db
