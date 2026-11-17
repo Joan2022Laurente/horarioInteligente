@@ -959,6 +959,10 @@ video {
   height: 3.5rem;
 }
 
+.h-16{
+  height: 4rem;
+}
+
 .h-2{
   height: 0.5rem;
 }
@@ -969,10 +973,6 @@ video {
 
 .h-20{
   height: 5rem;
-}
-
-.h-24{
-  height: 6rem;
 }
 
 .h-28{
@@ -1125,6 +1125,10 @@ video {
 
 .w-14{
   width: 3.5rem;
+}
+
+.w-16{
+  width: 4rem;
 }
 
 .w-2{
@@ -1877,6 +1881,11 @@ video {
 
 .border-amber-500\/30{
   border-color: rgb(245 158 11 / 0.3);
+}
+
+.border-black{
+  --tw-border-opacity: 1;
+  border-color: rgb(0 0 0 / var(--tw-border-opacity, 1));
 }
 
 .border-black\/10{

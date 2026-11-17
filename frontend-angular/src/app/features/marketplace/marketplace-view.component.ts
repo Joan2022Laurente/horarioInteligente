@@ -2,9 +2,10 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { firstValueFrom } from 'rxjs';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MarketplaceService } from '@data/services/marketplace.service';
-import { MarketplaceMediaService } from '@core/services/marketplace-media.service';
+import { MarketplaceMediaService, ProcessedMedia } from '@core/services/marketplace-media.service';
 import { getCachedStudentProfile } from '@data/syllabus/client-storage';
 import { ServiceItem, ServiceFilter, ServiceCategory, ServiceSortBy, MarketplaceType } from '@domain/models/marketplace';
 import { MarketplaceCardComponent } from './components/marketplace-card.component';
@@ -435,40 +436,33 @@ import { MarketplaceStore } from './marketplace.store';
 
                     @if (isOptimizing) {
                       <!-- Processing indicator -->
-                      <div class="py-5 flex flex-col items-center justify-center space-y-2">
-                        <div class="h-6 w-6 border-2 border-[var(--accent-lime)] border-t-transparent rounded-full animate-spin"></div>
-                        <p class="text-xs font-bold text-white">Optimizando y subiendo imagen...</p>
-                        <p class="text-[11px] text-neutral-400">Generando WebP de alta resolución y miniatura ultraligera</p>
+                      <div class="py-4 flex flex-col items-center justify-center space-y-2">
+                        <div class="h-5 w-5 border-2 border-[var(--accent-lime)] border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-xs font-bold text-white">Cargando imagen...</p>
                       </div>
                     } @else if (imagePreview) {
-                      <!-- Uploaded / Processed Preview -->
-                      <div class="flex flex-col sm:flex-row items-center gap-4 text-left">
-                        <div class="relative w-24 h-24 r-control-md overflow-hidden bg-black/60 border border-white/10 shrink-0">
+                      <!-- Uploaded Preview -->
+                      <div class="flex items-center gap-3.5 text-left">
+                        <div class="relative w-16 h-16 r-control-md overflow-hidden bg-black/60 border border-white/10 shrink-0 shadow-md">
                           <img [src]="imagePreview" alt="Vista previa" class="w-full h-full object-cover" />
                         </div>
                         <div class="flex-1 space-y-1">
                           <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                            <lucide-icon name="check" class="h-4 w-4 text-emerald-400 stroke-[3]"></lucide-icon>
-                            <span>Imagen optimizada y subida</span>
+                            <lucide-icon name="check" class="h-3.5 w-3.5 text-emerald-400 stroke-[3]"></lucide-icon>
+                            <span>Imagen cargada</span>
                           </div>
-                          @if (optimizationMetrics) {
-                            <div class="text-[11px] text-neutral-400 space-y-0.5">
-                              <p>• Display: WebP {{ (optimizationMetrics.origKb).toFixed(0) }} KB</p>
-                              <p>• Miniatura: WebP {{ (optimizationMetrics.thumbKb).toFixed(0) }} KB</p>
-                            </div>
-                          }
-                          <div class="pt-1 flex items-center gap-2">
+                          <div class="pt-0.5 flex items-center gap-2">
                             <button 
                               type="button" 
                               (click)="fileInput.click()" 
-                              class="text-[11px] px-2.5 py-1 r-control-sm bg-white/10 hover:bg-white/20 text-white font-medium border-none cursor-pointer"
+                              class="text-[11px] px-2.5 py-1 r-control-sm bg-white/10 hover:bg-white/20 text-white font-medium border-none cursor-pointer transition"
                             >
-                              Cambiar foto
+                              Cambiar
                             </button>
                             <button 
                               type="button" 
                               (click)="removeSelectedImage()" 
-                              class="text-[11px] px-2.5 py-1 r-control-sm bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-medium cursor-pointer"
+                              class="text-[11px] px-2.5 py-1 r-control-sm bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-medium cursor-pointer transition"
                             >
                               Quitar
                             </button>
@@ -484,8 +478,8 @@ import { MarketplaceStore } from './marketplace.store';
                         <div class="h-9 w-9 r-panel bg-white/5 flex items-center justify-center text-[var(--accent-lime)]">
                           <lucide-icon name="upload" class="h-5 w-5"></lucide-icon>
                         </div>
-                        <p class="text-xs font-bold text-white">Haz clic para subir o arrastra una foto aquí</p>
-                        <p class="text-[11px] text-neutral-400">PNG, JPG, WebP. Optimización automática en la nube.</p>
+                        <p class="text-xs font-bold text-white">Sube una foto de tu producto o servicio</p>
+                        <p class="text-[11px] text-neutral-400">Haz clic aquí o arrastra tu imagen</p>
                       </div>
                     }
                   </div>
@@ -505,11 +499,16 @@ import { MarketplaceStore } from './marketplace.store';
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
-              <button (click)="isOfferModalOpen = false" class="px-4 py-2.5 r-control-lg bg-white/10 hover:bg-white/15 text-white font-bold text-xs border-none cursor-pointer">
+              <button (click)="isOfferModalOpen = false" [disabled]="isPublishing" class="px-4 py-2.5 r-control-lg bg-white/10 hover:bg-white/15 disabled:opacity-30 text-white font-bold text-xs border-none cursor-pointer">
                 Cancelar
               </button>
-              <button (click)="publishNewOffer()" [disabled]="!newOffer.title.trim() || !newOffer.numericPrice" class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] disabled:opacity-30 text-black font-extrabold text-xs border-none cursor-pointer">
-                Publicar en Marketplace
+              <button (click)="publishNewOffer()" [disabled]="!newOffer.title.trim() || !newOffer.numericPrice || isPublishing" class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] disabled:opacity-30 text-black font-extrabold text-xs border-none cursor-pointer flex items-center gap-2">
+                @if (isPublishing) {
+                  <div class="h-3.5 w-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  <span>Publicando...</span>
+                } @else {
+                  <span>Publicar en Marketplace</span>
+                }
               </button>
             </div>
           </div>
@@ -533,11 +532,13 @@ export class MarketplaceViewComponent implements OnInit {
 
   useManualUrl = false;
   isOptimizing = false;
+  isPublishing = false;
   isDragging = false;
   imagePreview: string | null = null;
+  pendingFile: File | null = null;
+  pendingProcessed: ProcessedMedia | null = null;
   uploadedOriginalUrl: string | null = null;
   uploadedThumbnailUrl: string | null = null;
-  optimizationMetrics: { origKb: number; thumbKb: number } | null = null;
 
   newOffer = {
     category: 'CLOTHING_THRIFT' as ServiceCategory,
@@ -644,41 +645,31 @@ export class MarketplaceViewComponent implements OnInit {
   private async handleImageFile(file: File): Promise<void> {
     try {
       this.isOptimizing = true;
-      const processed = await this.mediaService.processImage(file);
-      this.imagePreview = processed.previewUrl;
-      this.optimizationMetrics = {
-        origKb: processed.originalSizeBytes / 1024,
-        thumbKb: processed.thumbnailSizeBytes / 1024
-      };
-
-      this.mediaService.uploadMedia(processed, file.name).subscribe({
-        next: (result) => {
-          this.uploadedOriginalUrl = result.originalUrl;
-          this.uploadedThumbnailUrl = result.thumbnailUrl;
-          this.newOffer.imageUrl = result.originalUrl;
-          this.isOptimizing = false;
-        },
-        error: (err) => {
-          console.error('[MarketplaceView] Error al subir imagen optimizada:', err);
-          this.isOptimizing = false;
-        }
-      });
+      this.pendingFile = file;
+      this.pendingProcessed = await this.mediaService.processImage(file);
+      this.imagePreview = this.pendingProcessed.previewUrl;
+      this.isOptimizing = false;
     } catch (err) {
-      console.error('[MarketplaceView] Error al procesar imagen en canvas:', err);
+      console.error('[MarketplaceView] Error al procesar imagen localmente:', err);
       this.isOptimizing = false;
     }
   }
 
   removeSelectedImage(): void {
+    if (this.imagePreview && this.imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(this.imagePreview);
+    }
     this.imagePreview = null;
+    this.pendingFile = null;
+    this.pendingProcessed = null;
     this.uploadedOriginalUrl = null;
     this.uploadedThumbnailUrl = null;
-    this.optimizationMetrics = null;
     this.newOffer.imageUrl = '';
   }
 
-  publishNewOffer(): void {
-    if (!this.newOffer.title.trim() || !this.newOffer.numericPrice) return;
+  async publishNewOffer(): Promise<void> {
+    if (!this.newOffer.title.trim() || !this.newOffer.numericPrice || this.isPublishing) return;
+    this.isPublishing = true;
     
     const isFood = this.newOffer.category === 'SNACKS_FOOD';
     const isCloth = this.newOffer.category === 'CLOTHING_THRIFT';
@@ -690,8 +681,21 @@ export class MarketplaceViewComponent implements OnInit {
       ? 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=600&auto=format&fit=crop'
       : 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=600&auto=format&fit=crop';
 
-    const effectiveImg = this.uploadedOriginalUrl || this.newOffer.imageUrl.trim() || defaultImg;
-    const effectiveThumb = this.uploadedThumbnailUrl || this.uploadedOriginalUrl || this.newOffer.imageUrl.trim() || defaultImg;
+    let effectiveImg = this.newOffer.imageUrl.trim() || defaultImg;
+    let effectiveThumb = this.newOffer.imageUrl.trim() || defaultImg;
+
+    // Subir a Supabase Storage únicamente al hacer clic en Publicar
+    if (this.pendingProcessed && this.pendingFile) {
+      try {
+        const uploadResult = await firstValueFrom(
+          this.mediaService.uploadMedia(this.pendingProcessed, this.pendingFile.name)
+        );
+        effectiveImg = uploadResult.originalUrl;
+        effectiveThumb = uploadResult.thumbnailUrl;
+      } catch (err) {
+        console.error('[MarketplaceView] Error al subir imagen a Supabase al publicar:', err);
+      }
+    }
 
     const itemType: MarketplaceType = (isFood || isCloth || isTech) ? 'PRODUCT' : 'SERVICE';
 
@@ -716,44 +720,50 @@ export class MarketplaceViewComponent implements OnInit {
       tutorCycle: student?.currentCycle ?? 1
     };
 
-    this.marketplaceService.publishItem(payload).subscribe(savedItem => {
-      if (savedItem) {
-        this.marketplaceStore.addItem(savedItem);
-      } else {
-        const fallbackItem: ServiceItem = {
-          id: `m-${Date.now()}`,
-          itemType,
-          category: payload.category,
-          serviceType: payload.serviceType,
-          condition: payload.condition,
-          numericPrice: payload.numericPrice,
-          price: `S/ ${payload.numericPrice.toFixed(2)}`,
-          unit: payload.unit,
-          location: payload.location,
-          title: payload.title,
-          description: payload.description,
-          imageUrl: payload.imageUrl,
-          thumbnailUrl: payload.thumbnailUrl,
-          badge: 'NUEVO EN CAMPUS',
-          rating: 5.0,
-          reviewsCount: 1,
-          salesCount: 1,
-          tutorName: payload.tutorName,
-          tutorCareer: payload.tutorCareer,
-          tutorCycle: payload.tutorCycle,
-          reputation: 100,
-          tags: ['UTP', 'Emprendimiento', 'Campus', 'Venta'],
-          contactMethod: payload.contactMethod,
-          highlights: ['Producto verificado por estudiante', 'Entrega directa y trato en mano en campus']
-        };
-        this.marketplaceStore.addItem(fallbackItem);
+    this.marketplaceService.publishItem(payload).subscribe({
+      next: (savedItem) => {
+        if (savedItem) {
+          this.marketplaceStore.addItem(savedItem);
+        } else {
+          const fallbackItem: ServiceItem = {
+            id: `m-${Date.now()}`,
+            itemType,
+            category: payload.category,
+            serviceType: payload.serviceType,
+            condition: payload.condition,
+            numericPrice: payload.numericPrice,
+            price: `S/ ${payload.numericPrice.toFixed(2)}`,
+            unit: payload.unit,
+            location: payload.location,
+            title: payload.title,
+            description: payload.description,
+            imageUrl: payload.imageUrl,
+            thumbnailUrl: payload.thumbnailUrl,
+            badge: 'NUEVO EN CAMPUS',
+            rating: 5.0,
+            reviewsCount: 1,
+            salesCount: 1,
+            tutorName: payload.tutorName,
+            tutorCareer: payload.tutorCareer,
+            tutorCycle: payload.tutorCycle,
+            reputation: 100,
+            tags: ['UTP', 'Emprendimiento', 'Campus', 'Venta'],
+            contactMethod: payload.contactMethod,
+            highlights: ['Producto verificado por estudiante', 'Entrega directa y trato en mano en campus']
+          };
+          this.marketplaceStore.addItem(fallbackItem);
+        }
+        this.isOfferModalOpen = false;
+        this.isPublishing = false;
+        this.newOffer.title = '';
+        this.newOffer.description = '';
+        this.removeSelectedImage();
+      },
+      error: (err) => {
+        console.error('[MarketplaceView] Error al publicar ítem:', err);
+        this.isPublishing = false;
       }
     });
-
-    this.isOfferModalOpen = false;
-    this.newOffer.title = '';
-    this.newOffer.description = '';
-    this.removeSelectedImage();
   }
 
   isMyListing(item: ServiceItem): boolean {
