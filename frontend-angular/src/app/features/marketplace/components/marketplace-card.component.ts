@@ -10,7 +10,7 @@ import { ServiceItem } from '@domain/models/marketplace';
   template: `
     <article 
       (click)="selectItem.emit(item)"
-      class="group relative flex flex-col bg-[#0e0f13] hover:bg-[#14151b] border border-white/[0.08] hover:border-[var(--accent-lime)]/40 r-control-sm overflow-hidden transition duration-200 cursor-pointer text-left shadow-xl"
+      class="group relative flex flex-col bg-[#0e0f13] hover:bg-[#14151b] border border-white/[0.08] hover:border-[var(--accent-lime)]/40 r-control-lg overflow-hidden transition duration-200 cursor-pointer text-left shadow-xl"
     >
       
       <!-- Card Image Aspect Square Frame -->
@@ -24,9 +24,9 @@ import { ServiceItem } from '@domain/models/marketplace';
 
         <!-- Top Badges Overlay -->
         <div class="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5 pointer-events-none">
-          @if (item.badge) {
+          @if (item.badge && item.badge !== item.condition) {
             <span 
-              class="px-2 py-0.5 r-control-md text-[10px] font-extrabold tracking-wide uppercase shadow-sm"
+              class="px-2 py-0.5 r-control-xs text-[10px] font-extrabold tracking-wide uppercase shadow-sm"
               [ngClass]="item.badge === 'TOP TUTOR' || item.badge === 'MÁS SOLICITADO' || item.badge === 'CASERO / FRESCO' || item.badge === 'ENTREGA HOY'
                 ? 'bg-[var(--accent-lime)] text-black' 
                 : 'bg-black/80 backdrop-blur-md text-white border border-white/10'"
@@ -37,7 +37,7 @@ import { ServiceItem } from '@domain/models/marketplace';
             <span></span>
           }
 
-          <span class="px-2 py-0.5 r-control-md text-[10px] font-semibold bg-black/80 backdrop-blur-md text-neutral-300 border border-white/10">
+          <span class="px-2 py-0.5 r-control-xs text-[10px] font-semibold bg-black/80 backdrop-blur-md text-neutral-300 border border-white/10">
             Ciclo {{ item.tutorCycle }}
           </span>
         </div>
@@ -45,7 +45,7 @@ import { ServiceItem } from '@domain/models/marketplace';
         <!-- Bottom Location / Course Pill Overlay -->
         @if (item.location || item.courseName) {
           <div class="absolute bottom-2 left-2 right-2 flex items-center pointer-events-none">
-            <span class="px-2 py-0.5 r-control-md text-[10px] font-medium bg-black/85 backdrop-blur-md text-neutral-300 border border-white/10 truncate max-w-full flex items-center gap-1">
+            <span class="px-2 py-0.5 r-control-xs text-[10px] font-medium bg-black/85 backdrop-blur-md text-neutral-300 border border-white/10 truncate max-w-full flex items-center gap-1">
               @if (item.location) {
                 <lucide-icon name="map-pin" class="h-3 w-3 text-[var(--accent-lime)] shrink-0"></lucide-icon>
                 <span>{{ item.location }}</span>
@@ -65,7 +65,7 @@ import { ServiceItem } from '@domain/models/marketplace';
           <div class="flex items-center justify-between text-[11px] text-neutral-400">
             <span class="font-medium text-neutral-300">{{ item.serviceType }}</span>
             @if (item.condition) {
-              <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 r-control-sm border border-emerald-500/20 font-medium truncate max-w-[110px]">
+              <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 r-control-xs border border-emerald-500/20 font-medium truncate max-w-[120px]">
                 {{ item.condition }}
               </span>
             } @else {

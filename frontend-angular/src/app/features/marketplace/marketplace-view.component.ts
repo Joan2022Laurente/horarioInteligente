@@ -21,12 +21,12 @@ import { MarketplaceStore } from './marketplace.store';
     MarketplaceFiltersComponent
   ],
   template: `
-    <div class="max-w-[1020px] mx-auto w-full flex flex-col md:flex-row justify-center items-start gap-6 text-white font-sans text-left relative">
+    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-start gap-6 text-white font-sans text-left relative">
       
       <!-- ===================================================================== -->
       <!-- CENTER CONTINUOUS COLUMN (Elevated Dark Marketplace Stream)           -->
       <!-- ===================================================================== -->
-      <main class="w-full md:max-w-[600px] flex-1 border border-white/[0.08] bg-[#0c0d10] r-card overflow-hidden shadow-2xl min-h-screen">
+      <main class="w-full flex-1 border border-white/[0.08] bg-[#0c0d10] r-card overflow-hidden shadow-2xl min-h-screen">
         
         <!-- Sticky Top Channel Selector (Modern Segmented Pills) -->
         <div class="sticky top-0 z-20 bg-[#0c0d10]/90 backdrop-blur-md border-b border-white/[0.08] p-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -91,8 +91,8 @@ import { MarketplaceStore } from './marketplace.store';
           </button>
         </div>
 
-        <!-- Mobile Search & Filter Toolbar (< md screens) -->
-        <div class="block md:hidden p-3 border-b border-white/[0.08]">
+        <!-- Mobile Search & Filter Toolbar (< lg screens) -->
+        <div class="block lg:hidden p-3 border-b border-white/[0.08]">
           <app-marketplace-filters
             [filter]="filterSignal()"
             [courses]="enrolledCourses"
@@ -129,7 +129,7 @@ import { MarketplaceStore } from './marketplace.store';
               </button>
             </div>
           } @else {
-            <div class="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <div class="p-3.5 sm:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               @for (item of filteredItems(); track item.id) {
                 <app-marketplace-card
                   [item]="item"
@@ -143,9 +143,9 @@ import { MarketplaceStore } from './marketplace.store';
       </main>
 
       <!-- ===================================================================== -->
-      <!-- RIGHT STICKY SIDEBAR (X Style Fixed Sidebar)                          -->
+      <!-- RIGHT STICKY SIDEBAR (Elevated Fixed Filters)                         -->
       <!-- ===================================================================== -->
-      <aside class="hidden md:block w-[320px] shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
+      <aside class="hidden lg:block w-[320px] shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
         <app-marketplace-filters
           [filter]="filterSignal()"
           [courses]="enrolledCourses"

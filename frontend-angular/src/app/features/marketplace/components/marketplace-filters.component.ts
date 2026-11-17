@@ -68,7 +68,7 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
             [ngModel]="filter.searchQuery"
             (ngModelChange)="onSearchChange($event)"
             placeholder="Buscar en el campus..."
-            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] focus:bg-[#181920] r-control-lg pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-neutral-500 outline-none transition"
+            class="w-full bg-[#14151a] border border-white/[0.08] focus:border-[var(--accent-lime)] focus:bg-[#181920] r-control-md pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 outline-none transition"
           />
         </div>
       </div>
@@ -80,7 +80,6 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
             <span class="h-2 w-2 circle bg-[var(--accent-lime)] animate-pulse"></span>
             <h4 class="text-xs font-black uppercase tracking-wider text-white">Tendencias en el Campus</h4>
           </div>
-          <span class="text-[10px] font-sans font-medium text-neutral-500">Demanda UTP</span>
         </div>
 
         <div class="divide-y divide-white/[0.06]">
@@ -111,34 +110,16 @@ import { ServiceCategory, ServiceFilter, ServiceSortBy } from '@domain/models/ma
         </div>
       </div>
 
-      <!-- 3. Marketplace Categories & Filters Card -->
+      <!-- 3. Marketplace Advanced Filters Card -->
       <div class="r-card bg-[#0c0d10] border border-white/[0.08] p-4 space-y-3.5 shadow-lg">
         <div class="flex items-center justify-between">
-          <h4 class="text-xs font-black uppercase tracking-wider text-white">Rubros & Filtros</h4>
+          <h4 class="text-xs font-black uppercase tracking-wider text-white">Filtros del Campus</h4>
           @if (hasActiveFilters) {
             <button
               (click)="resetFilters()"
               class="text-xs text-[var(--accent-lime)] hover:underline bg-transparent border-none p-0 cursor-pointer font-bold"
             >
               Restablecer
-            </button>
-          }
-        </div>
-
-        <!-- Categories List -->
-        <div class="space-y-1">
-          @for (cat of categories; track cat.id) {
-            <button
-              (click)="onCategoryChange(cat.id)"
-              class="w-full flex items-center justify-between px-3 py-2 r-control-md text-xs font-medium transition border-none cursor-pointer text-left"
-              [ngClass]="filter.category === cat.id 
-                ? 'bg-[var(--accent-lime)] text-black font-bold shadow-sm' 
-                : 'bg-transparent text-neutral-400 hover:bg-white/[0.04] hover:text-white'"
-            >
-              <span>{{ cat.label }}</span>
-              @if (filter.category === cat.id) {
-                <span class="h-1.5 w-1.5 circle bg-black"></span>
-              }
             </button>
           }
         </div>
