@@ -528,13 +528,13 @@ export class ClassDetailModalComponent implements OnChanges {
  };
  this.messages = [...this.messages, aiMsg];
  } else {
- this.addFallback();
+ this.addUnavailableMessage(res.error || res.message);
  }
  this.scrollToBottom();
  },
- error: () => {
+ error: (err) => {
  this.isLoading = false;
- this.addFallback();
+ this.addUnavailableMessage(err?.error?.message || err?.message);
  this.scrollToBottom();
  },
  });
@@ -544,19 +544,15 @@ export class ClassDetailModalComponent implements OnChanges {
  if (this.lastUserPrompt) this.handleSendMessage(this.lastUserPrompt);
  }
 
- private addFallback(): void {
- const syllabus = getCachedSyllabus(this.cleanTitle);
- const sessionTopic = (syllabus?.weeklySchedule as SyllabusSession[] | null | undefined)?.find(
- (s) => s.week === this.effectiveWeek,
- );
- const topic = sessionTopic?.topic || 'los temas oficiales del sílabo';
- const fallback: ChatMessage = {
+ private addUnavailableMessage(detail?: string): void {
+ const reason = detail ? ` (${detail})` : '';
+ const message: ChatMessage = {
  id: (Date.now() + 1).toString(),
  role: 'assistant',
- content: `Para **${this.cleanTitle}** en la **Semana ${this.effectiveWeek}**, el temario se centra en: **${topic}**.\n\nTe recomiendo repasar las lecturas y guías de laboratorio disponibles en Canvas.`,
+ content: `No pude obtener una respuesta del copiloto en este momento${reason}. Verifica tu conexión e inténtalo de nuevo.`,
  timestamp: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
  };
- this.messages = [...this.messages, fallback];
+ this.messages = [...this.messages, message];
  }
 
  private scrollToBottom(): void {

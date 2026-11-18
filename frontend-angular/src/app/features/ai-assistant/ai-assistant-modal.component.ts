@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -223,7 +223,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
     }
   `]
 })
-export class AiAssistantModalComponent implements OnChanges {
+export class AiAssistantModalComponent implements OnChanges, OnDestroy {
   @Input() isOpen = false;
   @Input() interval: UTPCurrentInterval | ScheduleInterval | null = null;
   @Input() initialPrompt = '';
@@ -243,6 +243,7 @@ export class AiAssistantModalComponent implements OnChanges {
 
   private lastScrollTop = 0;
   private isProgrammaticScroll = false;
+  private isDestroyed = false;
 
   readonly stickerCategories = [
     { id: 'all', label: 'Todos' },
@@ -344,6 +345,10 @@ export class AiAssistantModalComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && !this.isOpen) {
+      // El padre cerró el modal: cancelar la lectura SSE para no dejar el stream huérfano
+      this.aiService.abortStream();
+    }
     if (changes['isOpen'] && this.isOpen) {
       this.refreshQuota();
       this.scrollToBottom('auto');
@@ -393,7 +398,13 @@ export class AiAssistantModalComponent implements OnChanges {
   }
 
   closeModal(): void {
+    this.aiService.abortStream();
     this.close.emit();
+  }
+
+  ngOnDestroy(): void {
+    this.isDestroyed = true;
+    this.aiService.abortStream();
   }
 
   onMessagesScroll(e: Event): void {
@@ -535,6 +546,7 @@ export class AiAssistantModalComponent implements OnChanges {
         this.scrollToBottom('smooth');
       }
     ).then(() => {
+      if (this.isDestroyed) return;
       this.isLoading = false;
       assistantMsg.isStreaming = false;
       assistantMsg.currentActivity = null;
@@ -544,6 +556,10 @@ export class AiAssistantModalComponent implements OnChanges {
       this.isLoading = false;
       assistantMsg.isStreaming = false;
       assistantMsg.currentActivity = null;
+      if (this.isDestroyed || err?.name === 'AbortError') {
+        // Cierre del modal o cancelación explícita: no reintentar ni mutar el chat
+        return;
+      }
       console.warn('[AiAssistantModal] Stream SSE no disponible, ejecutando fallback estándar:', err);
       // Fallback a sendMessage si SSE fallara por red
       const schedule = this.scheduleService.currentSchedule() || this.interval;
@@ -551,6 +567,7 @@ export class AiAssistantModalComponent implements OnChanges {
 
       this.aiService.sendMessage(query, userId, student, schedule, syllabi).subscribe({
         next: (res) => {
+          if (this.isDestroyed) return;
           this.isLoading = false;
           assistantMsg.isStreaming = false;
           assistantMsg.currentActivity = null;
@@ -567,6 +584,7 @@ export class AiAssistantModalComponent implements OnChanges {
           }
         },
         error: (fallbackErr) => {
+          if (this.isDestroyed) return;
           this.isLoading = false;
           this.messages = this.messages.filter(m => m.id !== assistantMsgId);
           const msg = fallbackErr?.error?.message || fallbackErr?.message || 'Error de conexión con el copiloto';

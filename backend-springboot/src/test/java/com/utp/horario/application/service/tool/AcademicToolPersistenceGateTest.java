@@ -2,6 +2,7 @@ package com.utp.horario.application.service.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.application.dtos.AcademicToolDto.SyllabusDetailsResult;
+import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IStudentRepository;
@@ -53,8 +54,12 @@ class AcademicToolPersistenceGateTest {
         studentRepository = Mockito.mock(IStudentRepository.class);
         gateway = Mockito.mock(IUtpPortalGateway.class);
 
-        when(gateway.getStudentToken(anyString())).thenReturn(TOKEN);
-        when(studentRepository.findByStudentCode(anyString())).thenReturn(Optional.empty());
+        // El gateway es stateless: sin request HTTP el token se resuelve desde BD,
+        // último recurso de AcademicToolService.resolveStudentToken.
+        StudentProfile profile = new StudentProfile();
+        profile.setStudentCode(STUDENT);
+        profile.setToken(TOKEN);
+        when(studentRepository.findByStudentCode(anyString())).thenReturn(Optional.of(profile));
         when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString())).thenReturn(Optional.empty());
         when(syllabusRepository.findByCourseCode(anyString())).thenReturn(Optional.empty());
         when(gateway.fetchCoursesSummary(anyString())).thenReturn(List.of());

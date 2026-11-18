@@ -29,7 +29,4 @@ public interface IUtpPortalGateway {
     com.fasterxml.jackson.databind.JsonNode fetchTaskDetail(String token, String sectionId, String activityId);
     String fetchSyllabusMarkdown(String token, String courseCode);
     String exportCalendarIcs(String token, String period);
-
-    void registerStudentToken(String studentCode, String token);
-    String getStudentToken(String studentCode);
 }

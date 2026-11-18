@@ -12,6 +12,7 @@ import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IStudentRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
+import com.utp.horario.infrastructure.security.CurrentRequestToken;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,9 @@ public class AcademicToolService {
     private final IStudentRepository studentRepository;
     private final IUtpPortalGateway utpPortalGateway;
     private final ObjectMapper objectMapper;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CurrentRequestToken currentRequestToken;
 
 
 
@@ -378,13 +382,13 @@ public class AcademicToolService {
 
     private String resolveStudentToken(String studentCode) {
         studentCode = resolveEffectiveStudentCode(studentCode);
-        // 1. Caché en memoria del gateway (registrado en cada request SSE)
-        String token = utpPortalGateway.getStudentToken(studentCode);
+        // 1. Token del propio request HTTP (stateless, sin registro por alumno).
+        String token = currentRequestToken != null ? currentRequestToken.bearerToken() : null;
         if (token != null && !token.isBlank()) {
-            log.debug("[AcademicTool] 🔑 Token resuelto desde caché gateway para [{}] (len={})", studentCode, token.length());
+            log.debug("[AcademicTool] Token resuelto desde la cabecera de la request para [{}]", studentCode);
             return token;
         }
-        // 2. BD MySQL (via StudentRepository)
+        // 2. BD MySQL (via StudentRepository), solo para contextos sin request HTTP
         if (studentCode != null && !studentCode.isBlank()) {
             String dbToken = studentRepository.findByStudentCode(studentCode)
                     .map(StudentProfile::getToken)

@@ -286,11 +286,13 @@ export class ScheduleService {
         message: 'Horario verificado del día',
         data: schedule,
       })),
-      catchError(() => {
-        this.feedback.show('Modo sin conexión: mostrando horario guardado localmente.', 'info');
+      catchError((err) => {
+        const detail = err?.error?.message || err?.message || 'Error de red al obtener el horario';
+        this.feedback.show(`No se pudo actualizar el horario: ${detail}`, 'error');
         return of({
-          success: true,
-          message: 'Horario mantenido en caché',
+          success: false,
+          message: detail,
+          error: detail,
           data: this.scheduleSignal(),
         });
       })

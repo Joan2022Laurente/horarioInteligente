@@ -87,7 +87,7 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
               }"
             >
               <span class="flex-1">{{ toast.message }}</span>
-              <button (click)="feedbackService.dismiss(toast.id)" class="text-white/60 hover:text-white border-none bg-transparent cursor-pointer p-0.5">✕</button>
+              <button (click)="feedbackService.dismiss(toast.id)" aria-label="Cerrar notificación" class="text-white/60 hover:text-white border-none bg-transparent cursor-pointer p-0.5 text-[11px]">Cerrar</button>
             </div>
           }
         </div>

@@ -58,7 +58,6 @@ public class ScheduleController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
         String token = identityResolver.extractBearerToken(authHeader);
-        sessionService.registerSessionToken(studentId, token);
         ScheduleInterval schedule = scheduleCommandHandler.getStudentSchedule(studentId, period, token);
         return ResponseEntity.ok(ApiResponse.ok(schedule));
     }
@@ -67,10 +66,8 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse<ScheduleInterval>> syncSchedule(
             @CurrentStudent String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(required = false) String token,
             @RequestParam(defaultValue = "2026 - Ciclo 2 Agosto") String period) {
-        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
-        sessionService.registerSessionToken(studentId, effectiveToken);
+        String effectiveToken = identityResolver.extractBearerToken(authHeader);
         GenerateScheduleCommand command = GenerateScheduleCommand.builder()
                 .studentId(studentId)
                 .period(period)
@@ -86,7 +83,6 @@ public class ScheduleController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @org.springframework.web.bind.annotation.RequestBody ScheduleInterval schedule) {
         String effectiveToken = identityResolver.extractBearerToken(authHeader);
-        sessionService.registerSessionToken(studentId, effectiveToken);
         ScheduleInterval saved = scheduleCommandHandler.importSchedule(studentId, schedule);
         return ResponseEntity.ok(ApiResponse.ok("Horario importado y sincronizado exitosamente", saved));
     }

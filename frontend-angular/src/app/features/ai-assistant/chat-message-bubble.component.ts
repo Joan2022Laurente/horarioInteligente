@@ -100,7 +100,7 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  @if (act.phase === 'done') {
  <lucide-icon name="check" class="h-2.5 w-2.5 text-[var(--utopik-green-yellow)] shrink-0"></lucide-icon>
  } @else if (act.phase === 'error') {
- <span class="text-rose-400 font-bold text-[10px]">✕</span>
+ <lucide-icon name="x" class="h-2.5 w-2.5 text-rose-400 shrink-0"></lucide-icon>
  }
  <span class="text-neutral-300 font-medium">{{ act.label }}</span>
  @if (act.durationMs) {

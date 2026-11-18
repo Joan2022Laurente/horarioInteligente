@@ -166,7 +166,7 @@ class AcademicToolServiceResilienceTest {
     @Test
     @DisplayName("Sin asignaturas persistidas, el resultado explica el motivo")
     void emptyEnrolledCoursesExplainsTheReason() {
-        lenient().when(utpPortalGateway.getStudentToken(anyString())).thenReturn(null);
+        // Sin CurrentRequestToken ni token en BD: la pasarela no se consulta (modo stateless).
         lenient().when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString()))
                 .thenReturn(Optional.empty());
 

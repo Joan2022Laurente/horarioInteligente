@@ -4,10 +4,12 @@ import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.repositories.ITaskSyncRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
 import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
+import com.utp.horario.infrastructure.security.CurrentRequestToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,13 +39,18 @@ class TaskQueryServiceTest {
 
     private ITaskSyncRepository taskRepository;
     private IUtpPortalGateway gateway;
+    private CurrentRequestToken currentRequestToken;
     private TaskQueryService queryService;
 
     @BeforeEach
     void setUp() {
         taskRepository = Mockito.mock(ITaskSyncRepository.class);
         gateway = Mockito.mock(IUtpPortalGateway.class);
+        currentRequestToken = Mockito.mock(CurrentRequestToken.class);
         queryService = new TaskQueryService(taskRepository, gateway);
+        // El servicio inyecta CurrentRequestToken de forma opcional; en tests se
+        // suministra explícitamente para simular la cabecera Authorization de la request.
+        ReflectionTestUtils.setField(queryService, "currentRequestToken", currentRequestToken);
     }
 
     private UpcomingEvaluationDto upcoming(String id, String activityId, String studentStatus) {
@@ -86,48 +93,49 @@ class TaskQueryServiceTest {
         assertEquals("t-2", second.getId());
         assertEquals("PENDING", second.getHomeworkStatus(), "Estado ausente: pendiente, nunca inventado");
         assertFalse(second.getIsDelivered());
-        verify(gateway, never()).getStudentToken(anyString());
+        verify(gateway).fetchUpcomingEvaluations("resolved-token", 15);
+        verify(currentRequestToken, never()).bearerToken();
     }
 
     @Test
-    @DisplayName("Read Model vacío y sin token del transport: intenta token de sesión; sin él, nunca hay fetch")
-    void localEmptyWithoutTransportTokenNeverFetchesFromPortal() {
+    @DisplayName("Read Model vacío y sin token del transport ni de la request: nunca hay fetch")
+    void localEmptyWithoutAnyTokenNeverFetchesFromPortal() {
         when(taskRepository.findByStudentId(STUDENT)).thenReturn(List.of());
-        // getStudentToken sin stub → Mockito responde null: sin sesión efectiva ni en el registro
+        // CurrentRequestToken sin stub → bearerToken() == null: no hay identidad de transporte.
 
         List<TaskSyncItem> result = queryService.getTasksWithPortalFallback(STUDENT, null);
 
         assertTrue(result.isEmpty());
-        verify(gateway).getStudentToken(STUDENT);
+        verify(currentRequestToken).bearerToken();
         verify(gateway, never()).fetchUpcomingEvaluations(anyString(), anyInt());
     }
 
     @Test
-    @DisplayName("Sin token del transport: recupera el token de sesión registrado del estudiante")
-    void sessionTokenFallbackIsUsedWhenTransportTokenMissing() {
+    @DisplayName("Sin token del transport: se usa el Bearer de la request actual (CurrentRequestToken)")
+    void requestTokenFallbackIsUsedWhenResolvedTokenMissing() {
         when(taskRepository.findByStudentId(STUDENT)).thenReturn(List.of());
-        when(gateway.getStudentToken(STUDENT)).thenReturn("session-token");
-        when(gateway.fetchUpcomingEvaluations("session-token", 15)).thenReturn(List.of());
+        when(currentRequestToken.bearerToken()).thenReturn("Bearer request-jwt");
+        when(gateway.fetchUpcomingEvaluations("Bearer request-jwt", 15)).thenReturn(List.of());
 
         List<TaskSyncItem> result = queryService.getTasksWithPortalFallback(STUDENT, null);
 
         assertTrue(result.isEmpty());
-        verify(gateway).getStudentToken(STUDENT);
-        verify(gateway).fetchUpcomingEvaluations("session-token", 15);
+        verify(currentRequestToken).bearerToken();
+        verify(gateway).fetchUpcomingEvaluations("Bearer request-jwt", 15);
     }
 
     @Test
     @DisplayName("Actividades oficiales: delega con el token efectivo y respeta los filtros; persiste para lecturas siguientes")
     void getActivitiesDelegatesWithEffectiveTokenAndFilters() {
         List<TaskSyncItem> official = List.of(TaskSyncItem.builder().id("a-1").title("Práctica semanal").build());
-        when(gateway.getStudentToken(STUDENT)).thenReturn("session-token");
-        when(gateway.fetchActivities(eq("session-token"), eq("week"), eq(3), eq("PENDING"), eq(true), eq("PC")))
+        when(currentRequestToken.bearerToken()).thenReturn("Bearer request-jwt");
+        when(gateway.fetchActivities(eq("Bearer request-jwt"), eq("week"), eq(3), eq("PENDING"), eq(true), eq("PC")))
                 .thenReturn(official);
 
         List<TaskSyncItem> result = queryService.getActivities(STUDENT, null, "week", 3, "PENDING", true, "PC");
 
         assertSame(official, result);
-        verify(gateway).fetchActivities("session-token", "week", 3, "PENDING", true, "PC");
+        verify(gateway).fetchActivities("Bearer request-jwt", "week", 3, "PENDING", true, "PC");
         verify(taskRepository).saveAll(official);
         assertEquals(STUDENT, official.get(0).getStudentId(), "Aislamiento multi-tenant estampado antes de persistir");
     }
@@ -166,8 +174,8 @@ class TaskQueryServiceTest {
     void fineFiltersKeepPortalSemantics() {
         when(taskRepository.findByStudentIdSyncedSince(eq(STUDENT), any(LocalDate.class)))
                 .thenReturn(List.of(TaskSyncItem.builder().id("a-1").week(11).build()));
-        when(gateway.getStudentToken(STUDENT)).thenReturn("session-token");
-        when(gateway.fetchActivities(eq("session-token"), Mockito.isNull(), eq(11), eq("PENDING"), eq(true), eq("PC")))
+        when(currentRequestToken.bearerToken()).thenReturn("Bearer request-jwt");
+        when(gateway.fetchActivities(eq("Bearer request-jwt"), Mockito.isNull(), eq(11), eq("PENDING"), eq(true), eq("PC")))
                 .thenReturn(List.of());
 
         List<TaskSyncItem> result = queryService.getActivities(STUDENT, null, null, 11, "PENDING", true, "PC");

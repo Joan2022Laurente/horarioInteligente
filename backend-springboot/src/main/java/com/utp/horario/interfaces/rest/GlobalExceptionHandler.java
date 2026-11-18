@@ -1,7 +1,10 @@
 package com.utp.horario.interfaces.rest;
 
+import com.utp.horario.domain.model.exceptions.AuthenticationException;
+import com.utp.horario.domain.model.exceptions.ResourceNotFoundException;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.exceptions.StudentNotFoundException;
+import com.utp.horario.domain.model.exceptions.UpstreamServiceException;
 import com.utp.horario.domain.model.exceptions.SyllabusUnavailableException;
 import com.utp.horario.interfaces.rest.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
@@ -36,6 +39,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ScheduleUnavailableException.class)
     public ResponseEntity<ApiResponse<Void>> handleScheduleUnavailable(ScheduleUnavailableException e) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.fail(e.getMessage()));
+    }
+
+    /** Credenciales rechazadas por la pasarela: 401 honesto, sin datos sustitutos. */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.fail(e.getMessage()));
+    }
+
+    /** Recurso inexistente en la pasarela: 404 honesto. */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.fail(e.getMessage()));
+    }
+
+    /** Caída de la pasarela institucional: 502 honesto, nunca 200 vacío. */
+    @ExceptionHandler(UpstreamServiceException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUpstream(UpstreamServiceException e) {
+        log.error("[GlobalExceptionHandler] Pasarela institucional no disponible: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ApiResponse.fail(e.getMessage()));
     }
 
     /**

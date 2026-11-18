@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
+// import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,7 +21,8 @@ import java.util.List;
  * después de los sembrados base del ciclo 1-2.
  */
 @Slf4j
-@Component
+// DESACTIVADO: la siembra de datos simulados esta prohibida.
+// @Component
 @Order(3)
 @RequiredArgsConstructor
 public class NetworkingDataInitializer implements CommandLineRunner {

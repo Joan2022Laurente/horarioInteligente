@@ -46,7 +46,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
                     .role("assistant")
                     .content("Has alcanzado el límite de " + quota.getMax() + " consultas diarias. Tu cuota se reiniciará a las 00:00.")
                     .timestamp(LocalDateTime.now())
-                    .suggestions(List.of("Ver horario de clases", "Consultar sílabos locales"))
+                    .suggestions(List.of())
                     .metadata(Map.of("rateLimitReached", true, "quota", quota))
                     .build();
         }
@@ -54,25 +54,15 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         try {
             return llmGateway.queryModel(message, schedule, syllabi, requestedModel);
         } catch (Exception e) {
-            return generateLocalFallback(message, schedule, syllabi);
+            log.error("[AiAssistant] Servicio de IA no disponible: {}", e.getMessage());
+            return AiChatMessage.builder()
+                    .id(UUID.randomUUID().toString())
+                    .role("assistant")
+                    .content("El servicio de IA no está disponible temporalmente. Inténtalo de nuevo en unos minutos.")
+                    .timestamp(LocalDateTime.now())
+                    .suggestions(List.of())
+                    .metadata(Map.of("serviceUnavailable", true))
+                    .build();
         }
-    }
-
-    private AiChatMessage generateLocalFallback(String message, ScheduleInterval schedule, Map<String, Syllabus> syllabi) {
-        int week = schedule != null && schedule.getWeekNumber() != null ? schedule.getWeekNumber() : 1;
-        int courseCount = schedule != null && schedule.getCourses() != null ? schedule.getCourses().size() : 0;
-
-        String content = "### Copiloto Académico UTP (Modo Resiliente Local)\n\n"
-                + "Actualmente te encuentras en la **Semana " + week + "** con **" + courseCount + " asignaturas** registradas.\n\n"
-                + "Para esta semana, consulta tus avances en el sílabo y asegúrate de verificar las rúbricas de evaluación en la sección de tareas.";
-
-        return AiChatMessage.builder()
-                .id(UUID.randomUUID().toString())
-                .role("assistant")
-                .content(content)
-                .timestamp(LocalDateTime.now())
-                .suggestions(List.of("¿Qué clase me toca hoy?", "¿Cuándo es mi próximo examen?", "Ver sílabos"))
-                .metadata(Map.of("modelUsed", "spring-boot-local-engine"))
-                .build();
     }
 }

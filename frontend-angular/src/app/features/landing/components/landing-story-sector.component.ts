@@ -40,7 +40,7 @@ import { LucideAngularModule } from 'lucide-angular';
             <button
               type="button"
               (click)="ctaClick.emit()"
-              class="inline-flex items-center gap-2.5 px-7 py-3.5 r-control-lg bg-[var(--utopik-green-yellow)] hover:bg-[#aee642] text-[var(--utopik-onyx)] font-black text-xs sm:text-sm tracking-wider uppercase shadow-xl shadow-[var(--utopik-green-yellow)]/20 transition-all active:scale-95 cursor-pointer border-none group"
+              class="inline-flex items-center gap-2.5 px-7 py-3.5 r-control-lg bg-[var(--utopik-green-yellow)] hover:bg-[#aee642] text-[var(--utopik-onyx)] font-black text-xs sm:text-sm tracking-wider uppercase shadow-md transition-all active:scale-95 cursor-pointer border-none group"
             >
               <span>{{ cta }}</span>
               <lucide-icon name="arrow-right" class="w-4 h-4 text-[var(--utopik-onyx)] group-hover:translate-x-1 transition-transform stroke-[2.5]"></lucide-icon>

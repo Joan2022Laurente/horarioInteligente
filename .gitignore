@@ -53,6 +53,7 @@ yarn-error.log*
 !.agents/rules/
 !.agents/rules/**
 .gemini/
+.engram/
 .DS_Store
 Thumbs.db
 desktop.ini

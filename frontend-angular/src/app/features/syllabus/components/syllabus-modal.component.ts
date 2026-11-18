@@ -129,7 +129,7 @@ import { LucideAngularModule } from 'lucide-angular';
                       <!-- Col 1: Index + Dot + Code + Modality -->
                       <div class="flex items-center gap-3 min-w-[200px] shrink-0">
                         <span class="text-xs text-neutral-500 w-5 tabular-nums">{{ padZero(idx + 1) }}</span>
-                        <span class="h-2 w-2 r-control-xs bg-[var(--utopik-green-yellow)] shrink-0 shadow-[0_0_8px_rgba(187,244,81,0.5)]"></span>
+                        <span class="h-2 w-2 r-control-xs bg-[var(--utopik-green-yellow)] shrink-0"></span>
                         <span class="text-base font-bold text-white tracking-tight">{{ ev.type }}</span>
                         @if (ev.modality) {
                           <span class="text-[10px] uppercase px-2 py-0.5 r-control-xs bg-white/5 text-neutral-400 font-semibold">
@@ -202,7 +202,7 @@ import { LucideAngularModule } from 'lucide-angular';
                           </span>
                           <span 
                             class="h-2 w-2 r-control-xs shrink-0" 
-                            [ngClass]="hasEval ? 'bg-black' : (isCurrent ? 'bg-[var(--utopik-green-yellow)] shadow-[0_0_8px_rgba(187,244,81,0.5)]' : 'bg-neutral-600')"
+                            [ngClass]="hasEval ? 'bg-black' : (isCurrent ? 'bg-[var(--utopik-green-yellow)]' : 'bg-neutral-600')"
                           ></span>
                           <span 
                             class="text-base tracking-tight"

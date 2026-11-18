@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MarketplaceService } from '@data/services/marketplace.service';
 import { MarketplaceMediaService, ProcessedMedia } from '@core/services/marketplace-media.service';
+import { UiFeedbackService } from '@core/services/ui-feedback.service';
 import { getCachedStudentProfile } from '@data/syllabus/client-storage';
 import { ServiceItem, ServiceFilter, ServiceCategory, ServiceSortBy, MarketplaceType } from '@domain/models/marketplace';
 import { MarketplaceCardComponent } from './components/marketplace-card.component';
@@ -62,12 +63,20 @@ import { MarketplaceStore } from './marketplace.store';
             <div class="p-12 text-center space-y-2">
               <p class="text-sm font-bold text-white">No hay publicaciones disponibles</p>
               <p class="text-xs text-neutral-500">Prueba cambiando los filtros o sé el primero en publicar un producto o asesoría.</p>
-              <button 
-                (click)="resetFilters()"
-                class="px-4 py-1.5 r-control-sm bg-white text-black font-bold text-xs border-none cursor-pointer mt-2"
-              >
-                Limpiar filtros
-              </button>
+              <div class="flex items-center justify-center gap-2 mt-2">
+                <button 
+                  (click)="resetFilters()"
+                  class="px-4 py-1.5 r-control-sm bg-white text-black font-bold text-xs border-none cursor-pointer"
+                >
+                  Limpiar filtros
+                </button>
+                <button 
+                  (click)="isOfferModalOpen = true"
+                  class="px-4 py-1.5 r-control-sm bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-black font-extrabold text-xs border-none cursor-pointer"
+                >
+                  + Publicar
+                </button>
+              </div>
             </div>
           } @else {
             <div class="p-3.5 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -282,7 +291,7 @@ import { MarketplaceStore } from './marketplace.store';
       @if (isOfferModalOpen) {
         <div 
           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
-          (click)="isOfferModalOpen = false"
+          (click)="closeOfferModal()"
         >
           <div 
             class="relative flex flex-col w-full max-w-xl r-control-lg bg-[#0c0d10] text-white p-6 shadow-2xl border border-white/[0.08] space-y-4 text-left max-h-[90vh] overflow-y-auto no-scrollbar"
@@ -293,7 +302,7 @@ import { MarketplaceStore } from './marketplace.store';
                 <h3 class="text-base font-bold text-white">Publicar en el Marketplace UTP</h3>
                 <p class="text-xs text-neutral-400">Ofrece comida casera, ropa, tecnología seminueva o tutorías a tus compañeros.</p>
               </div>
-              <button (click)="isOfferModalOpen = false" class="h-8 w-8 r-control-md bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer">
+              <button (click)="closeOfferModal()" class="h-8 w-8 r-control-md bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white border-none cursor-pointer">
                 <lucide-icon name="x" class="h-4 w-4"></lucide-icon>
               </button>
             </div>
@@ -461,7 +470,7 @@ import { MarketplaceStore } from './marketplace.store';
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
-              <button (click)="isOfferModalOpen = false" [disabled]="isPublishing" class="px-4 py-2.5 r-control-lg bg-white/10 hover:bg-white/15 disabled:opacity-30 text-white font-bold text-xs border-none cursor-pointer">
+              <button (click)="closeOfferModal()" [disabled]="isPublishing" class="px-4 py-2.5 r-control-lg bg-white/10 hover:bg-white/15 disabled:opacity-30 text-white font-bold text-xs border-none cursor-pointer">
                 Cancelar
               </button>
               <button (click)="publishNewOffer()" [disabled]="!newOffer.title.trim() || !newOffer.numericPrice || isPublishing" class="px-5 py-2.5 r-control-lg bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] disabled:opacity-30 text-black font-extrabold text-xs border-none cursor-pointer flex items-center gap-2">
@@ -480,10 +489,11 @@ import { MarketplaceStore } from './marketplace.store';
     </div>
   `
 })
-export class MarketplaceViewComponent implements OnInit {
+export class MarketplaceViewComponent implements OnInit, OnDestroy {
   private readonly scheduleService = inject(ScheduleService);
   private readonly marketplaceService = inject(MarketplaceService);
   private readonly mediaService = inject(MarketplaceMediaService);
+  private readonly uiFeedback = inject(UiFeedbackService);
   readonly marketplaceStore = inject(MarketplaceStore);
 
   readonly filterSignal = this.marketplaceStore.filterSignal;
@@ -515,6 +525,17 @@ export class MarketplaceViewComponent implements OnInit {
 
   ngOnInit(): void {
     this.marketplaceStore.loadItems();
+  }
+
+  ngOnDestroy(): void {
+    // Libera el ObjectURL de la vista previa aunque el modal no se haya cerrado.
+    this.removeSelectedImage();
+  }
+
+  /** Cierra el modal y revoca la vista previa. Es idempotente: removeSelectedImage deja imagePreview en null. */
+  closeOfferModal(): void {
+    this.isOfferModalOpen = false;
+    this.removeSelectedImage();
   }
 
   get hasActiveFilters(): boolean {
@@ -608,8 +629,13 @@ export class MarketplaceViewComponent implements OnInit {
     try {
       this.isOptimizing = true;
       this.pendingFile = file;
-      this.pendingProcessed = await this.mediaService.processImage(file);
-      this.imagePreview = this.pendingProcessed.previewUrl;
+      const processed = await this.mediaService.processImage(file);
+      // Si se reemplaza la imagen, se libera primero el ObjectURL anterior.
+      if (this.imagePreview && this.imagePreview !== processed.previewUrl && this.imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(this.imagePreview);
+      }
+      this.pendingProcessed = processed;
+      this.imagePreview = processed.previewUrl;
       this.isOptimizing = false;
     } catch (err) {
       console.error('[MarketplaceView] Error al procesar imagen localmente:', err);
@@ -686,11 +712,10 @@ export class MarketplaceViewComponent implements OnInit {
       next: (savedItem) => {
         if (savedItem) {
           this.marketplaceStore.addItem(savedItem);
-          this.isOfferModalOpen = false;
+          this.closeOfferModal();
           this.isPublishing = false;
           this.newOffer.title = '';
           this.newOffer.description = '';
-          this.removeSelectedImage();
         } else {
           alert('No se pudo guardar la publicación en el servidor. Por favor, verifica tu conexión o sesión e intenta nuevamente.');
           this.isPublishing = false;
@@ -730,8 +755,14 @@ export class MarketplaceViewComponent implements OnInit {
   deleteOffer(item: ServiceItem): void {
     if (!confirm('¿Estás seguro de que deseas eliminar esta publicación del Marketplace?')) return;
     this.marketplaceService.deleteItem(item.id).subscribe(ok => {
-      this.marketplaceStore.removeItem(item.id);
-      this.selectedItem = null;
+      if (ok) {
+        // Solo se muta el store cuando el backend confirma la eliminación.
+        this.marketplaceStore.removeItem(item.id);
+        this.selectedItem = null;
+        this.uiFeedback.success('Publicación eliminada del Marketplace.');
+      } else {
+        this.uiFeedback.error('No se pudo eliminar la publicación. Inténtalo nuevamente.');
+      }
     });
   }
 }

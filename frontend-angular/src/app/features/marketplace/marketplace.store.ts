@@ -66,14 +66,16 @@ export class MarketplaceStore {
   loadItems(): void {
     this.loading.set(true);
     this.marketplaceService.getItems().subscribe({
-      next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res?.data || []);
-        if (data.length > 0) {
-          this.items.set(data);
-        }
+      next: (res: ServiceItem[]) => {
+        // Se reemplaza siempre con la respuesta real, aunque esté vacía.
+        this.items.set(Array.isArray(res) ? res : []);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => {
+        // Ante un fallo no se conserva ningún catálogo previo o simulado.
+        this.items.set([]);
+        this.loading.set(false);
+      }
     });
   }
 

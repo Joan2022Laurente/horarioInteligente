@@ -204,7 +204,7 @@ export interface StepItem {
                       class="flex items-start gap-3 p-2.5 sm:p-3 r-control-lg transition-all duration-300"
                       [ngClass]="{
                         'bg-[var(--surface-card)] border border-[var(--border-subtle)] opacity-40': step.status === 'pending',
-                        'bg-[var(--surface-subtle)] border border-[rgba(187,244,81,0.3)] shadow-[0_0_15px_rgba(187,244,81,0.08)]': step.status === 'active',
+                        'bg-[var(--surface-subtle)] border border-[rgba(187,244,81,0.3)]': step.status === 'active',
                         'bg-[var(--surface-card)] border border-emerald-500/20': step.status === 'completed',
                         'bg-rose-500/10 border border-rose-500/30': step.status === 'failed'
                       }"

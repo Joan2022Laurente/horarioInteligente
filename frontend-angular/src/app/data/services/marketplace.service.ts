@@ -153,33 +153,35 @@ export class MarketplaceService {
   }
 
   private mapToServiceItem(raw: any): ServiceItem {
+    // Solo se consumen valores devueltos por el backend. Lo que falte se deja
+    // vacío ('' / 0 / [] / undefined), nunca se inventa un dato de ejemplo.
     return {
-      id: raw.id || `m-${Date.now()}`,
-      itemType: raw.itemType || 'PRODUCT',
-      category: raw.category || 'CLOTHING_THRIFT',
-      serviceType: raw.serviceType || 'General',
-      condition: raw.condition || 'SEMINUEVO',
-      price: raw.price || `S/ ${(raw.numericPrice || 0).toFixed(2)}`,
-      numericPrice: Number(raw.numericPrice) || 0,
-      originalPrice: raw.originalPrice ? Number(raw.originalPrice) : undefined,
-      unit: raw.unit || '/ unidad',
-      title: raw.title || '',
-      description: raw.description || '',
-      imageUrl: raw.imageUrl || 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=600&auto=format&fit=crop',
-      thumbnailUrl: raw.thumbnailUrl || raw.imageUrl || 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=600&auto=format&fit=crop',
-      badge: raw.badge || undefined,
-      location: raw.location || 'Campus UTP',
+      id: raw.id ?? '',
+      itemType: raw.itemType ?? undefined,
+      category: raw.category ?? 'ALL',
+      serviceType: raw.serviceType ?? '',
+      condition: raw.condition ?? undefined,
+      price: raw.price ?? '',
+      numericPrice: raw.numericPrice != null ? Number(raw.numericPrice) : 0,
+      originalPrice: raw.originalPrice != null ? Number(raw.originalPrice) : undefined,
+      unit: raw.unit ?? '',
+      title: raw.title ?? '',
+      description: raw.description ?? '',
+      imageUrl: raw.imageUrl ?? '',
+      thumbnailUrl: raw.thumbnailUrl ?? raw.imageUrl ?? '',
+      badge: raw.badge ?? undefined,
+      location: raw.location ?? '',
       rating: raw.rating != null ? Number(raw.rating) : 0,
-      reviewsCount: Number(raw.reviewsCount) || 0,
-      salesCount: Number(raw.salesCount) || 0,
-      tutorName: raw.tutorName || 'Estudiante UTP',
-      tutorCareer: raw.tutorCareer || 'Ingeniería',
-      tutorCycle: Number(raw.tutorCycle) || 1,
-      reputation: Number(raw.reputation) || 100,
-      tags: raw.tags || ['UTP', 'Estudiante', raw.category],
-      contactMethod: raw.contactMethod || 'Coordinación en campus',
-      status: raw.status || 'AVAILABLE',
-      highlights: raw.highlights || []
+      reviewsCount: raw.reviewsCount != null ? Number(raw.reviewsCount) : 0,
+      salesCount: raw.salesCount != null ? Number(raw.salesCount) : 0,
+      tutorName: raw.tutorName ?? '',
+      tutorCareer: raw.tutorCareer ?? '',
+      tutorCycle: raw.tutorCycle != null ? Number(raw.tutorCycle) : 0,
+      reputation: raw.reputation != null ? Number(raw.reputation) : 0,
+      tags: Array.isArray(raw.tags) ? raw.tags : [],
+      contactMethod: raw.contactMethod ?? '',
+      status: raw.status ?? undefined,
+      highlights: Array.isArray(raw.highlights) ? raw.highlights : []
     };
   }
 }

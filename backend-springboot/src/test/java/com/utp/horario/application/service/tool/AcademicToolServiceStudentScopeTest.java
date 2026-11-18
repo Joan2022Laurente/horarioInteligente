@@ -86,7 +86,6 @@ class AcademicToolServiceStudentScopeTest {
     void enrolledCoursesUsesResolvedStudentCode() {
         lenient().when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString()))
                 .thenReturn(java.util.Optional.empty());
-        lenient().when(utpPortalGateway.getStudentToken(anyString())).thenReturn(null);
 
         EnrolledCoursesResult result = toolService.getEnrolledCourses("U23307609");
 

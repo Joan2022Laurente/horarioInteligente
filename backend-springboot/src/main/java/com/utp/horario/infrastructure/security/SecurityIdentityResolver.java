@@ -10,129 +10,136 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * SecurityIdentityResolver â€” Resuelve la identidad inmutable del estudiante
- * extrayÃ©ndola criptogrÃ¡fica y estructuralmente del JWT Bearer Token.
+ * Resolucion de la identidad del estudiante a partir del JWT Bearer de la request.
  *
- * Previene vulnerabilidades BOLA / IDOR bloqueando cualquier intento de suplantar
- * a otro alumno mediante parÃ¡metros como ?studentId=XXXXX cuando se cuenta con un token.
+ * <p>Regla estricta: solo se acepta el esquema {@code Bearer} con un JWT de tres
+ * segmentos no vacios y un claim {@code exp} numerico. No se aceptan codigos de
+ * alumno en texto plano, tokens sueltos, cabeceras {@code x-user-id} ni parametros
+ * {@code studentId} como fuente de identidad. La verificacion criptografica de la
+ * firma se delega a la pasarela institucional; aqui se garantiza la forma y el
+ * aislamiento BOLA/IDOR.</p>
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SecurityIdentityResolver {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final ObjectMapper objectMapper;
 
     /**
-     * Extrae el token Bearer limpio del encabezado Authorization.
+     * Extrae un token Bearer estricto del encabezado Authorization, o {@code null}
+     * si el encabezado no cumple el contrato.
      */
     public String extractBearerToken(String authHeader) {
         if (authHeader == null || authHeader.isBlank()) {
             return null;
         }
         String trimmed = authHeader.trim();
-        if (trimmed.toLowerCase().startsWith("bearer ")) {
-            return trimmed.substring(7).trim();
+        if (!trimmed.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            return null;
         }
-        // Si el cliente enviÃ³ el token directo sin prefijo Bearer
-        if (trimmed.contains(".")) {
-            return trimmed;
-        }
-        return null;
+        String token = trimmed.substring(BEARER_PREFIX.length()).trim();
+        return isStrictJwt(token) ? token : null;
     }
 
     /**
-     * Extrae el cÃ³digo de estudiante (ej. U23307609) desde el payload del JWT.
-     * Busca claims estÃ¡ndar de identidad UTP: preferred_username, sub, studentCode, userId.
+     * Valida la estructura minima aceptable de un JWT de sesion UTP.
+     */
+    private boolean isStrictJwt(String token) {
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+        String[] parts = token.split("\\.");
+        if (parts.length != 3 || parts[0].isBlank() || parts[1].isBlank() || parts[2].isBlank()) {
+            return false;
+        }
+        try {
+            byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
+            JsonNode payload = objectMapper.readTree(decoded);
+            if (payload == null || !payload.isObject()) {
+                return false;
+            }
+            JsonNode exp = payload.get("exp");
+            return exp != null && exp.isNumber();
+        } catch (Exception e) {
+            log.debug("[SecurityIdentityResolver] JWT rechazado por estructura invalida: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Extrae el codigo de estudiante de los claims del JWT. Solo se consideran
+     * {@code preferred_username} y {@code sub}; se elimino el escaneo regex de todo
+     * el payload que permitia fabricar una identidad con cualquier claim.
      */
     public String extractStudentCodeFromToken(String token) {
         if (token == null || token.isBlank()) {
             return null;
         }
-        String cleanToken = token.trim();
-        if (cleanToken.toUpperCase().matches("^[Uu]\\d{8}$")) {
-            return cleanToken.toUpperCase();
+        String clean = token.trim();
+        if (clean.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            clean = clean.substring(BEARER_PREFIX.length()).trim();
         }
-        if (!cleanToken.contains(".")) {
+        String jwt = extractBearerToken(BEARER_PREFIX + clean);
+        if (jwt == null) {
             return null;
         }
         try {
-            String[] parts = cleanToken.split("\\.");
-            if (parts.length >= 2) {
-                byte[] decodedBytes = Base64.getUrlDecoder().decode(parts[1]);
-                String payloadJson = new String(decodedBytes, StandardCharsets.UTF_8);
-                JsonNode root = objectMapper.readTree(payloadJson);
-
-                // 1. Revisar claims estándar donde UTP o Azure AD colocan el identificador
-                String[] candidateFields = {"preferred_username", "studentCode", "username", "upn", "unique_name", "email", "sub", "userId", "name"};
-                for (String field : candidateFields) {
-                    if (root.hasNonNull(field) && !root.path(field).asText().isBlank()) {
-                        String val = root.path(field).asText().trim();
-                        if (val.contains("@")) {
-                            val = val.substring(0, val.indexOf("@")).trim();
-                        }
-                        if (val.matches("(?i)^[uU]\\d{8}$")) {
-                            return val.toUpperCase();
-                        }
-                    }
+            String[] parts = jwt.split("\\.");
+            byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
+            JsonNode root = objectMapper.readTree(decoded);
+            if (root == null || !root.isObject()) {
+                return null;
+            }
+            for (String field : new String[]{"preferred_username", "sub"}) {
+                JsonNode node = root.get(field);
+                if (node == null || !node.isValueNode() || node.asText().isBlank()) {
+                    continue;
                 }
-
-                // 2. Búsqueda profunda de patrón U-código en todo el JSON del payload
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)\\b([uU]\\d{8})\\b").matcher(payloadJson);
-                if (m.find()) {
-                    return m.group(1).toUpperCase();
+                String value = node.asText().trim();
+                if (value.contains("@")) {
+                    value = value.substring(0, value.indexOf('@')).trim();
                 }
-
-                if (root.hasNonNull("preferred_username") && !root.path("preferred_username").asText().isBlank()) {
-                    return root.path("preferred_username").asText().trim().toUpperCase();
-                }
-                if (root.hasNonNull("sub") && !root.path("sub").asText().isBlank()) {
-                    return root.path("sub").asText().trim();
+                if (value.matches("(?i)^[uU]\\d{8}$")) {
+                    return value.toUpperCase();
                 }
             }
         } catch (Exception e) {
-            log.debug("[SecurityIdentityResolver] No se pudo parsear claims del token: {}", e.getMessage());
+            log.debug("[SecurityIdentityResolver] No se pudieron leer los claims del JWT: {}", e.getMessage());
         }
         return null;
     }
 
     /**
-     * Resuelve de forma autoritativa el código del estudiante.
-     * Si existe un token Bearer en el request, el código extraído del token TIENE PRIORIDAD ABSOLUTA
-     * sobre cualquier parámetro studentId enviado en query o body, neutralizando ataques IDOR/BOLA.
+     * Resuelve de forma autoritativa el codigo del estudiante. El token manda:
+     * cualquier parametro distinto se considera un intento BOLA/IDOR.
      */
     public String resolveStudentCode(String authHeader, String xUserIdHeader, String paramStudentId) {
         String token = extractBearerToken(authHeader);
-        if (token != null && !token.isBlank()) {
-            String tokenStudentCode = extractStudentCodeFromToken(token);
-            if (tokenStudentCode != null && !tokenStudentCode.isBlank()) {
-                if (paramStudentId != null && !paramStudentId.isBlank()
-                        && !paramStudentId.equalsIgnoreCase(tokenStudentCode)
-                        && !"current-student".equalsIgnoreCase(paramStudentId)) {
-                    log.warn("[SecurityIdentityResolver] ⚠️ Intento BOLA/IDOR bloqueado: Token pertenece a [{}] pero el request intentó consultar [{}].",
-                            tokenStudentCode, paramStudentId);
-                    throw new SecurityException("Acceso prohibido (403): Intento de consulta cruzada no autorizada al recurso del estudiante [" + paramStudentId + "].");
-                }
-                return tokenStudentCode;
-            }
-
-            // Si el token no expone claims legibles en claro pero está presente,
-            // verificar si el cliente adjuntó una identidad con formato oficial (ej. x-user-id)
-            if (xUserIdHeader != null && xUserIdHeader.trim().toUpperCase().matches("^[Uu]\\d{8}$")) {
-                return xUserIdHeader.trim().toUpperCase();
-            }
-
-            if (paramStudentId != null && paramStudentId.trim().toUpperCase().matches("^[Uu]\\d{8}$")) {
-                return paramStudentId.trim().toUpperCase();
-            }
+        if (token == null) {
+            throw new SecurityException(
+                    "Acceso no autorizado: se requiere Authorization: Bearer <JWT> con expiracion valida.");
         }
-
-        // Si NO hay token legítimo, rechazo terminante para evitar acceso no autenticado o IDOR
-        throw new SecurityException("Acceso no autorizado: Se requiere un token de sesión legítimo de UTP.");
+        String tokenStudentCode = extractStudentCodeFromToken(token);
+        if (tokenStudentCode == null || tokenStudentCode.isBlank()) {
+            throw new SecurityException(
+                    "Acceso no autorizado: el token no expone una identidad de estudiante valida.");
+        }
+        if (paramStudentId != null && !paramStudentId.isBlank()
+                && !paramStudentId.equalsIgnoreCase(tokenStudentCode)
+                && !"current-student".equalsIgnoreCase(paramStudentId)) {
+            log.warn("[SecurityIdentityResolver] Intento BOLA/IDOR bloqueado: token [{}] vs solicitado [{}]",
+                    tokenStudentCode, paramStudentId);
+            throw new SecurityException(
+                    "Acceso prohibido (403): intento de consulta cruzada no autorizada al recurso del estudiante ["
+                            + paramStudentId + "].");
+        }
+        return tokenStudentCode;
     }
 
     public String resolveStudentCode(String authHeader, String paramStudentId) {
         return resolveStudentCode(authHeader, null, paramStudentId);
     }
 }
-

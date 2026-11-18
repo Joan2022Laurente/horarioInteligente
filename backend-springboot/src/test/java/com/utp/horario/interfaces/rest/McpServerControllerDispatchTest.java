@@ -44,6 +44,10 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class McpServerControllerDispatchTest {
 
+    /** JWT de prueba: 3 segmentos, payload Base64Url con preferred_username y exp numérico. */
+    private static final String BEARER =
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJVMjMzMDc2MDkiLCJleHAiOjQxMDI0NDQ4MDB9.c2lnbmF0dXJl";
+
     @Mock
     private AcademicToolService toolService;
 
@@ -68,7 +72,7 @@ class McpServerControllerDispatchTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequest("tools/list"));
+                null, BEARER, rpcRequest("tools/list"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         @SuppressWarnings("unchecked")
@@ -90,7 +94,7 @@ class McpServerControllerDispatchTest {
         when(toolService.getSyllabusDetails(anyString(), anyString()))
                 .thenReturn(syllabus("100000SI68", "SERVICIOS CLOUD"));
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_syllabus_details", Map.of("course_query", "servicios cloud")));
 
         verify(toolService).getSyllabusDetails(eq("U23307609"), eq("servicios cloud"));
@@ -103,7 +107,7 @@ class McpServerControllerDispatchTest {
         when(toolService.getSyllabusDetails(anyString(), anyString()))
                 .thenReturn(syllabus("100000SI68", "SERVICIOS CLOUD"));
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_syllabus_details", Map.of("course_code", "100000SI68")));
 
         verify(toolService).getSyllabusDetails(eq("U23307609"), eq("100000SI68"));
@@ -115,7 +119,7 @@ class McpServerControllerDispatchTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "simulate_target_grade", Map.of()));
 
         @SuppressWarnings("unchecked")
@@ -136,7 +140,7 @@ class McpServerControllerDispatchTest {
         when(toolService.getEnrolledCourses(anyString()))
                 .thenReturn(new EnrolledCoursesResult("U23307609", 0, List.of(), null));
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_enrolled_courses", Map.of()));
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
@@ -151,7 +155,7 @@ class McpServerControllerDispatchTest {
                 .thenThrow(new SecurityException("Acceso no autorizado: Se requiere un token de sesion legitimo de UTP."));
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, null, null, rpcRequest("tools/list"));
+                null, null, rpcRequest("tools/list"));
 
         // El canal JSON-RPC siempre responde 200 OK con envelope valido: el cliente MCP nunca
         // debe interpretar un rechazo de autenticacion como un fallo de transporte (HTTP 5xx).
@@ -159,7 +163,7 @@ class McpServerControllerDispatchTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> error = (Map<String, Object>) response.getBody().get("error");
         assertEquals(-32000, error.get("code"));
-        assertTrue(((String) error.get("message")).contains("token"),
+        assertTrue(((String) error.get("message")).contains("Authorization: Bearer"),
                 "El mensaje de rechazo debe indicar como autenticarse");
         verify(toolService, never()).getEnrolledCourses(anyString());
     }
@@ -170,7 +174,7 @@ class McpServerControllerDispatchTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequest("does/not/exist"));
+                null, BEARER, rpcRequest("does/not/exist"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> error = (Map<String, Object>) response.getBody().get("error");
@@ -184,7 +188,7 @@ class McpServerControllerDispatchTest {
         when(toolService.getEnrolledCourses(anyString()))
                 .thenReturn(new EnrolledCoursesResult("U23307609", 0, List.of(), null));
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_enrolled_courses", Map.of("studentCode", "U99999999")));
 
         verify(toolService).getEnrolledCourses(eq("U23307609"));

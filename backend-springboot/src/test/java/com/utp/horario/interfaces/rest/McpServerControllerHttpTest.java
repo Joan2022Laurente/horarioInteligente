@@ -2,7 +2,6 @@ package com.utp.horario.interfaces.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.application.dtos.AcademicToolDto.DayScheduleResult;
-import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
 import com.utp.horario.application.service.StudentSessionService;
 import com.utp.horario.application.service.tool.AcademicToolDispatcher;
 import com.utp.horario.application.service.tool.AcademicToolService;
@@ -42,6 +41,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @MockitoSettings(strictness = Strictness.LENIENT)
 class McpServerControllerHttpTest {
 
+    /** JWT de prueba: 3 segmentos, payload Base64Url con preferred_username y exp numérico. */
+    private static final String BEARER =
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJVMjMzMDc2MDkiLCJleHAiOjQxMDI0NDQ4MDB9.c2lnbmF0dXJl";
+
     @Mock
     private AcademicToolService toolService;
 
@@ -70,8 +73,7 @@ class McpServerControllerHttpTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":1,"method":"initialize"}
@@ -91,8 +93,7 @@ class McpServerControllerHttpTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         mockMvc.perform(post("/api/v1/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":"t-1","method":"tools/list"}
@@ -115,8 +116,7 @@ class McpServerControllerHttpTest {
                                 "A", "A0402", "Docente UTP")), null));
 
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":1,"method":"tools/call",
@@ -134,8 +134,7 @@ class McpServerControllerHttpTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":1,"method":"tools/call",
@@ -149,8 +148,7 @@ class McpServerControllerHttpTest {
     @DisplayName("Un cuerpo vacio responde 200 con error -32700")
     void emptyBodyReturnsParseError() throws Exception {
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(""))
                 .andExpect(status().isOk())
@@ -161,8 +159,7 @@ class McpServerControllerHttpTest {
     @DisplayName("Una peticion sin JSON valido responde 200 con error -32700")
     void malformedJsonReturnsParseError() throws Exception {
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{no-es-json"))
                 .andExpect(status().isOk())
@@ -195,8 +192,7 @@ class McpServerControllerHttpTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":1,"method":"tools/call",
@@ -209,16 +205,12 @@ class McpServerControllerHttpTest {
     }
 
     @Test
-    @DisplayName("Sin token y sin registro persistido, la respuesta es 200 con mensaje limpio")
+    @DisplayName("Sin Bearer, la respuesta es 200 con error JSON-RPC -32000 (sin fallback a registro)")
     void missingIdentityYieldsCleanJsonRpcError() throws Exception {
         when(identityResolver.resolveStudentCode(any(), any()))
                 .thenThrow(new SecurityException("Acceso no autorizado: Se requiere un token de sesion legitimo de UTP."));
-        when(toolService.resolvePersistedStudentCode(anyString())).thenReturn(null);
-        when(toolService.getEnrolledCourses(anyString()))
-                .thenReturn(new EnrolledCoursesResult("U99999999", 0, List.of(), "sin datos"));
 
         mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U99999999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":1,"method":"tools/call",
@@ -227,7 +219,7 @@ class McpServerControllerHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.error.code").value(-32000))
                 .andExpect(jsonPath("$.error.message")
-                        .value(org.hamcrest.Matchers.containsString("token")));
+                        .value(org.hamcrest.Matchers.containsString("Authorization: Bearer")));
     }
 
     @Test
@@ -236,8 +228,7 @@ class McpServerControllerHttpTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         String body = mockMvc.perform(post("/mcp/message")
-                        .param("studentCode", "U23307609")
-                        .header("Authorization", "Bearer U23307609")
+                        .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"jsonrpc":"2.0","id":1,"method":"tools/list"}

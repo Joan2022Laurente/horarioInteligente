@@ -1,6 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, map, catchError } from 'rxjs';
+import { Observable, of, map, catchError, throwError } from 'rxjs';
 import { ApiResponse } from '@domain/models/utp.model';
 import {
   StudentNetworkingProfile,
@@ -14,6 +14,7 @@ import {
   MOCK_STUDENTS_LIMA_CENTRO
 } from '../networking/matching-engine';
 import { environment } from '@env/environment';
+import { UiFeedbackService } from '@core/services/ui-feedback.service';
 import { ScheduleService } from './schedule.service';
 import { getCachedStudentProfile } from '../syllabus/client-storage';
 
@@ -25,14 +26,16 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos TTL
 /**
  * Fase 1.0: servicio de Networking Universitario persistido.
  * Los beacons, candidatos y el perfil de networking viven en la base de datos
- * MySQL vía el módulo REST `/api/v1/networking` del backend Spring Boot; ante
- * un error de red el servicio degrada a su última señal en memoria o al pool
- * local de mocks (vacío por diseño: nunca se inventan perfiles reales).
+ * MySQL vía el módulo REST `/api/v1/networking` del backend Spring Boot. Ante
+ * un error de red el servicio devuelve estados vacíos y notifica el fallo al
+ * usuario; nunca inventa perfiles ni mesas de estudio.
  */
 @Injectable({
   providedIn: 'root'
 })
 export class NetworkingService {
+  private readonly uiFeedback = inject(UiFeedbackService);
+
   private matchesSignal = signal<StudyBuddyMatch[]>([]);
   readonly matches = this.matchesSignal.asReadonly();
 
@@ -149,22 +152,25 @@ export class NetworkingService {
       return of(true);
     }
 
-    localStorage.setItem(NETWORKING_HASH_KEY, currentHash);
     return this.http.post<ApiResponse<StudentNetworkingProfile>>(
       `${this.apiUrl}/profile/sync`,
       profile
     ).pipe(
       map(res => {
         if (res.success) {
-          console.log('[NetworkingService] ☁️ Perfil de networking sincronizado en base de datos.');
+          // Solo se marca como sincronizado cuando el backend confirma la escritura.
+          localStorage.setItem(NETWORKING_HASH_KEY, currentHash);
+          console.log('[NetworkingService] Perfil de networking sincronizado en base de datos.');
           return true;
         }
         console.warn('[NetworkingService] El backend rechazó la sincronización del perfil:', res.error);
-        return true;
+        this.uiFeedback.error('No se pudo sincronizar el perfil de networking.', res.error);
+        return false;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ Error de red al sincronizar perfil; se mantiene local:', err?.message || err);
-        return of(true);
+        console.warn('[NetworkingService] Error de red al sincronizar perfil:', err?.message || err);
+        this.uiFeedback.error('No se pudo sincronizar el perfil de networking.', err?.message);
+        return of(false);
       })
     );
   }
@@ -212,7 +218,7 @@ export class NetworkingService {
         return matches;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ Sin conexión con perfiles reales; fallback local:', err?.message || err);
+        console.warn('[NetworkingService] Sin conexión con perfiles reales; se muestran 0 candidatos:', err?.message || err);
         const matches = this.generateLocalFallbackMatches(myProf);
         this.publishMatches(matches);
         return of(matches);
@@ -282,8 +288,8 @@ export class NetworkingService {
 
   /**
    * Consulta las mesas activas de estudio in-campus en base de datos
-   * (GET /networking/beacons?campus=...); ante error de red degrada a la
-   * última lista en memoria o al set demo local.
+   * (GET /networking/beacons?campus=...). Ante error de red devuelve una lista
+   * vacía y notifica el fallo; nunca recurre a mesas simuladas.
    */
   getBeacons(): Observable<StudyBeaconRow[]> {
     const myProf = this.getMyProfile();
@@ -303,45 +309,12 @@ export class NetworkingService {
         return res.data;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ Fallback de beacons a estado local:', err?.message || err);
-        const list = this.beaconsSignal().length > 0 ? this.beaconsSignal() : this.getMockBeacons(myProf.campus);
-        this.beaconsSignal.set(list);
-        return of(list);
+        console.warn('[NetworkingService] No se pudieron cargar las mesas de estudio:', err?.message || err);
+        this.beaconsSignal.set([]);
+        this.uiFeedback.error('No se pudieron cargar las mesas de estudio.', err?.message);
+        return of([]);
       })
     );
-  }
-
-  private getMockBeacons(campus: string): StudyBeaconRow[] {
-    return [
-      {
-        id: 'bcn-101',
-        host_id: 'u23214589',
-        host_name: 'Camila Rodriguez',
-        campus: campus,
-        location_name: 'Torre A - Piso 8 (Laboratorio PC)',
-        course_name: 'Desarrollo Web Integrado',
-        objective: 'Resolviendo laboratorio de Spring Boot + JPA para APF1',
-        max_collaborators: 4,
-        current_collaborators: 2,
-        status: 'ACTIVE',
-        expires_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
-        created_at: new Date().toISOString()
-      },
-      {
-        id: 'bcn-102',
-        host_id: 'u23109842',
-        host_name: 'Sebastian Morales',
-        campus: campus,
-        location_name: 'Pabellón B - Piso 4 (Biblioteca Silenciosa)',
-        course_name: 'Servicios Cloud',
-        objective: 'Configurando VPC, Subnets y EC2 en AWS Academy',
-        max_collaborators: 4,
-        current_collaborators: 3,
-        status: 'ACTIVE',
-        expires_at: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
-        created_at: new Date().toISOString()
-      }
-    ];
   }
 
   /**
@@ -351,12 +324,12 @@ export class NetworkingService {
   createBeacon(beacon: Partial<StudyBeaconRow>): Observable<StudyBeaconRow | null> {
     const myProf = this.getMyProfile();
     const payload = {
-      location_name: beacon.location_name || 'Torre A - Piso 8',
-      course_name: beacon.course_name || 'Desarrollo Web Integrado',
-      section_code: beacon.section_code || null,
-      objective: beacon.objective || 'Sesión de estudio colaborativo',
+      location_name: beacon.location_name ?? '',
+      course_name: beacon.course_name ?? '',
+      section_code: beacon.section_code ?? null,
+      objective: beacon.objective ?? '',
       campus: myProf.campus || null,
-      max_collaborators: beacon.max_collaborators || 4
+      max_collaborators: beacon.max_collaborators ?? 4
     };
 
     return this.http.post<ApiResponse<StudyBeaconRow>>(`${this.apiUrl}/beacons`, payload).pipe(
@@ -369,24 +342,9 @@ export class NetworkingService {
         return created;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ Fallback local al crear mesa:', err?.message || err);
-        const localBeacon: StudyBeaconRow = {
-          id: `bcn_local_${Date.now()}`,
-          host_id: myProf.student_code,
-          host_name: myProf.full_name,
-          campus: myProf.campus || (beacon.campus ?? ''),
-          location_name: payload.location_name,
-          course_name: payload.course_name,
-          section_code: payload.section_code ?? undefined,
-          objective: payload.objective,
-          max_collaborators: payload.max_collaborators,
-          current_collaborators: 1,
-          status: 'ACTIVE',
-          expires_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
-          created_at: new Date().toISOString()
-        };
-        this.beaconsSignal.update(list => [localBeacon, ...list]);
-        return of(localBeacon);
+        console.warn('[NetworkingService] No se pudo crear la mesa de estudio:', err?.message || err);
+        this.uiFeedback.error('No se pudo crear la mesa de estudio.', err?.message);
+        return throwError(() => err);
       })
     );
   }
@@ -409,7 +367,7 @@ export class NetworkingService {
         return updated;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ No se pudo unir a la mesa:', err?.message || err);
+        console.warn('[NetworkingService] No se pudo unir a la mesa:', err?.message || err);
         return of(null);
       })
     );
@@ -432,7 +390,7 @@ export class NetworkingService {
         return updated;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ No se pudo abandonar la mesa:', err?.message || err);
+        console.warn('[NetworkingService] No se pudo abandonar la mesa:', err?.message || err);
         return of(null);
       })
     );
@@ -453,7 +411,7 @@ export class NetworkingService {
         return true;
       }),
       catchError(err => {
-        console.warn('[NetworkingService] ⚠️ No se pudo cancelar la mesa:', err?.message || err);
+        console.warn('[NetworkingService] No se pudo cancelar la mesa:', err?.message || err);
         return of(false);
       })
     );

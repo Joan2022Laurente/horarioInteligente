@@ -161,24 +161,7 @@ public class SessionBootstrapService {
             });
         }
 
-        // Si no había schedule en BD pero sí obtuvimos cursos, generar snapshot base multi-tenant
-        if (schedule == null && !targets.isEmpty()) {
-            List<Course> coursesList = targets.stream()
-                    .map(t -> Course.builder().code(t.courseCode()).name(t.courseCode()).build())
-                    .toList();
-            ScheduleInterval baseInterval = ScheduleInterval.builder()
-                    .id("interval-" + studentCode)
-                    .periodName(effectivePeriod)
-                    .weekNumber(1)
-                    .totalWeeks(18)
-                    .startDate(LocalDate.now())
-                    .endDate(LocalDate.now().plusWeeks(18))
-                    .courses(coursesList)
-                    .classes(List.of())
-                    .build();
-            schedule = scheduleSyncHandler.importSchedule(studentCode, baseInterval);
-        }
-
+        // Sin horario oficial no se fabrica ningún intervalo: se declara la ausencia.
         log.info("[SessionBootstrap] 📚 {} curso(s) matriculado(s) detectado(s) para [{}]", targets.size(), studentCode);
 
         // Paso 3: sílabos locales-first, faltantes en paralelo
@@ -188,10 +171,10 @@ public class SessionBootstrapService {
         // segundo plano — la vista HOY servirá del Read Model de MySQL sin scraping.
         launchActivitiesPrimer(studentCode, token);
 
-        boolean success = !targets.isEmpty() || schedule != null;
-        log.info("[SessionBootstrap] ✔ Bootstrap integral de [{}] completado: sílabos {}/{} (success={})",
-                studentCode, synced, targets.size(), success);
-        return new SessionBootstrapResult(success, targets.size(), synced, targets.size());
+        boolean scheduleSynced = schedule != null;
+        log.info("[SessionBootstrap] Bootstrap de [{}]: horario={} sílabos {}/{}",
+                studentCode, scheduleSynced, synced, targets.size());
+        return new SessionBootstrapResult(scheduleSynced, targets.size(), synced, targets.size());
     }
 
     /**

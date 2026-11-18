@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, of, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { ChatMessage, DailyQuotaStatus, AiChatRequest, AgentActivity } from '@domain/models/ai.model';
 import { ApiResponse } from '@domain/models/utp.model';
 import { getCachedStudentProfile } from '@data/syllabus/client-storage';
@@ -22,6 +22,14 @@ export class AiAssistantService {
 
   readonly isThinking = this.isThinkingSignal.asReadonly();
   readonly quota = this.quotaSignal.asReadonly();
+
+  private streamAbortController: AbortController | null = null;
+
+  /** Cancela la lectura SSE activa al cerrar el modal o destruir el componente. */
+  abortStream(): void {
+    this.streamAbortController?.abort();
+    this.streamAbortController = null;
+  }
 
   constructor(private http: HttpClient) {}
 
@@ -50,26 +58,6 @@ export class AiAssistantService {
       tap({
         next: () => this.isThinkingSignal.set(false),
         error: () => this.isThinkingSignal.set(false),
-      }),
-      catchError((err) => {
-        this.isThinkingSignal.set(false);
-        console.error('[AiAssistantService] Error conectando con el backend de IA:', err);
-        // Fallback dinámico local resiliente si el servidor no responde
-        const fallbackMessage: ChatMessage = {
-          id: `fallback-${Date.now()}`,
-          role: 'assistant',
-          content: `### Copiloto Académico UTP\n\nEstoy analizando tu consulta: *"${userPrompt}"*.\n\nActualmente tienes acceso directo a tu horario, tus clases sincrónicas y los temas semanales de cada curso. ¿Deseas consultar las evaluaciones de esta semana o el detalle de alguna asignatura?`,
-          timestamp: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
-          suggestions: [
-            '¿Qué clases tengo hoy y en qué aula?',
-            '¿Qué temas tocan esta semana según el sílabo?',
-            '¿Cuáles son mis próximas evaluaciones y porcentajes?',
-          ],
-        };
-        return of({
-          success: true,
-          data: fallbackMessage,
-        });
       })
     );
   }
@@ -97,6 +85,8 @@ export class AiAssistantService {
     onActivity?: (activity: AgentActivity) => void
   ): Promise<void> {
     this.isThinkingSignal.set(true);
+    const abortController = new AbortController();
+    this.streamAbortController = abortController;
     try {
       const profile = getCachedStudentProfile();
       let studentCode = (profile?.studentCode || profile?.username || '').trim().toUpperCase();
@@ -140,7 +130,8 @@ export class AiAssistantService {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body
+        body,
+        signal: abortController.signal,
       });
 
       console.log("[AiChat] 📥 Respuesta recibida. Status:", response.status, response.statusText);
@@ -256,6 +247,9 @@ export class AiAssistantService {
       console.error("[AiChat] 🚨 Excepción durante el streaming:", error);
       throw error;
     } finally {
+      if (this.streamAbortController === abortController) {
+        this.streamAbortController = null;
+      }
       this.isThinkingSignal.set(false);
       console.log("[AiChat] 🏁 Flujo de streaming finalizado.");
     }

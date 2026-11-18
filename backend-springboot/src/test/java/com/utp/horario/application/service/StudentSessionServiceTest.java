@@ -6,12 +6,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
- * Gestión de sesión de estudiante: la pasarela solo recibe el registro cuando
- * código y token vienen con contenido real.
+ * Gestión de sesión de estudiante en modo 100% stateless.
+ *
+ * <p>El gateway ya no expone registro de tokens: el backend es stateless y la
+ * identidad se resuelve en cada petición desde el JWT Bearer. Estas pruebas
+ * blindan que {@code registerSessionToken} sea un/no-op inocuo: no lanza,
+ * no persiste credenciales y no interactúa con la pasarela, tenga o no datos.</p>
  */
 class StudentSessionServiceTest {
 
@@ -25,10 +28,11 @@ class StudentSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Código y token legítimos: se registra la sesión en la pasarela")
-    void registersWhenCodeAndTokenPresent() {
+    @DisplayName("Código y token legítimos: no se registra nada (modo stateless)")
+    void registersNothingWhenCodeAndTokenPresent() {
         sessionService.registerSessionToken("U23307609", "Bearer session-token");
-        verify(gateway).registerStudentToken("U23307609", "Bearer session-token");
+
+        verifyNoInteractions(gateway);
     }
 
     @Test
@@ -37,7 +41,8 @@ class StudentSessionServiceTest {
         sessionService.registerSessionToken(null, "token");
         sessionService.registerSessionToken("", "token");
         sessionService.registerSessionToken("   ", "token");
-        verify(gateway, never()).registerStudentToken(Mockito.anyString(), Mockito.anyString());
+
+        verifyNoInteractions(gateway);
     }
 
     @Test
@@ -46,6 +51,7 @@ class StudentSessionServiceTest {
         sessionService.registerSessionToken("U23307609", null);
         sessionService.registerSessionToken("U23307609", "");
         sessionService.registerSessionToken("U23307609", "   ");
-        verify(gateway, never()).registerStudentToken(Mockito.anyString(), Mockito.anyString());
+
+        verifyNoInteractions(gateway);
     }
 }

@@ -100,7 +100,6 @@ public class AuthenticateStudentCommandHandler {
                             .token(token)
                             .enrolledCourseCodes(List.of())
                             .build();
-                    utpPortalGateway.registerStudentToken(profile.getStudentCode(), token);
                     StudentProfile saved = repository.save(profile);
                     if (saved != null) {
                         saved.setToken(token);

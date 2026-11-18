@@ -47,6 +47,10 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class McpServerControllerResilienceTest {
 
+    /** JWT de prueba: 3 segmentos, payload Base64Url con preferred_username y exp numérico. */
+    private static final String BEARER =
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJVMjMzMDc2MDkiLCJleHAiOjQxMDI0NDQ4MDB9.c2lnbmF0dXJl";
+
     @Mock
     private AcademicToolService toolService;
 
@@ -75,7 +79,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequest("initialize"));
+                null, BEARER, rpcRequest("initialize"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         @SuppressWarnings("unchecked")
@@ -103,21 +107,21 @@ class McpServerControllerResilienceTest {
 
         // id numerico
         ResponseEntity<Map<String, Object>> numeric = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequestWithId(7L));
+                null, BEARER, rpcRequestWithId(7L));
         assertEquals("7", ((JsonNode) numeric.getBody().get("id")).asText());
         assertTrue(numeric.getBody().get("id") instanceof JsonNode node && node.isNumber(),
                 "Un id numerico debe reflejarse como numero, no como cadena");
 
         // id textual
         ResponseEntity<Map<String, Object>> textual = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequestWithId("abc-123"));
+                null, BEARER, rpcRequestWithId("abc-123"));
         assertEquals("abc-123", ((JsonNode) textual.getBody().get("id")).asText());
         assertTrue(textual.getBody().get("id") instanceof JsonNode node && node.isTextual(),
                 "Un id textual debe reflejarse como cadena, no como numero");
 
         // id explicitoamente nulo
         ResponseEntity<Map<String, Object>> nullId = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequestWithId(null));
+                null, BEARER, rpcRequestWithId(null));
         assertTrue(nullId.getBody().containsKey("id"));
         assertTrue(((JsonNode) nullId.getBody().get("id")).isNull());
     }
@@ -128,14 +132,14 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> notification = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcNotification("notifications/initialized"));
         assertEquals(HttpStatus.OK, notification.getStatusCode());
         assertTrue(notification.getBody() == null || notification.getBody().isEmpty(),
                 "Una notificacion no debe producir cuerpo de respuesta");
 
         ResponseEntity<Map<String, Object>> ping = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequest("ping"));
+                null, BEARER, rpcRequest("ping"));
         assertEquals(HttpStatus.OK, ping.getStatusCode());
         assertNotNull(ping.getBody().get("result"));
     }
@@ -146,7 +150,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("notifications/initialized", 1L, null, null));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -159,7 +163,7 @@ class McpServerControllerResilienceTest {
     @DisplayName("Un cuerpo vacio responde -32700 con HTTP 200 en lugar de propagating 400")
     void emptyBodyReturnsParseError() throws Exception {
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", null);
+                null, BEARER, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         @SuppressWarnings("unchecked")
@@ -173,7 +177,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequest("does/not/exist"));
+                null, BEARER, rpcRequest("does/not/exist"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         @SuppressWarnings("unchecked")
@@ -187,7 +191,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609", rpcRequest("tools/list"));
+                null, BEARER, rpcRequest("tools/list"));
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools =
@@ -204,38 +208,39 @@ class McpServerControllerResilienceTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Sin token pero con registro persistido, la identidad se resuelve contra MySQL")
-    void degradedIdentityFallsBackToPersistedStudent() throws Exception {
+    @DisplayName("Sin Bearer, aunque exista registro persistido, se rechaza con -32000 (sin fallback)")
+    void missingBearerRejectsEvenWithPersistedStudent() throws Exception {
         when(identityResolver.resolveStudentCode(any(), any()))
                 .thenThrow(new SecurityException("Acceso no autorizado: Se requiere un token de sesion legitimo de UTP."));
-        when(toolService.resolvePersistedStudentCode("U23307609")).thenReturn("U23307609");
-        when(toolService.getEnrolledCourses(anyString()))
-                .thenReturn(new EnrolledCoursesResult("U23307609", 1,
-                        List.of(new com.utp.horario.application.dtos.AcademicToolDto.EnrolledCourseDto(
-                                "100000SI58", "SERVICIOS CLOUD")), null));
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", null,
+                null, null,
                 rpcRequest("tools/call", "get_enrolled_courses", Map.of()));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(toolService).resolvePersistedStudentCode("U23307609");
-        verify(toolService).getEnrolledCourses("U23307609");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> error = (Map<String, Object>) response.getBody().get("error");
+        assertEquals(-32000, error.get("code"));
+        verify(toolService, never()).resolvePersistedStudentCode(anyString());
+        verify(toolService, never()).getEnrolledCourses(anyString());
     }
 
     @Test
-    @DisplayName("Sin token y sin registro persistido, se responde con mensaje limpio (nunca 500)")
-    void missingPersistedStudentYieldsCleanError() throws Exception {
+    @DisplayName("Sin Bearer se responde -32000 con mensaje limpio (nunca 500)")
+    void missingBearerYieldsCleanAuthError() throws Exception {
         when(identityResolver.resolveStudentCode(any(), any()))
                 .thenThrow(new SecurityException("Acceso no autorizado: Se requiere un token de sesion legitimo de UTP."));
-        when(toolService.resolvePersistedStudentCode(anyString())).thenReturn(null);
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U99999999", null,
+                null, null,
                 rpcRequest("tools/call", "get_today_schedule", Map.of()));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().containsKey("error"), "Debe informarse el rechazo de identidad");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> error = (Map<String, Object>) response.getBody().get("error");
+        assertEquals(-32000, error.get("code"));
+        assertTrue(((String) error.get("message")).contains("Authorization: Bearer"),
+                "El mensaje debe indicar la autenticación requerida");
         verify(toolService, never()).getTodaySchedule(anyString(), anyString());
     }
 
@@ -249,7 +254,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "get_today_schedule", Map.of("date", "ayer")));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -266,7 +271,7 @@ class McpServerControllerResilienceTest {
         when(toolService.getTodaySchedule(anyString(), anyString()))
                 .thenReturn(new DayScheduleResult("U23307609", "2026-10-21", 0, List.of(), "Sin clases"));
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_today_schedule", Map.of()));
 
         verify(toolService).getTodaySchedule(eq("U23307609"),
@@ -279,7 +284,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "get_syllabus_details", Map.of()));
 
         @SuppressWarnings("unchecked")
@@ -294,11 +299,11 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
         when(toolService.getUpcomingEvaluations(anyString(), anyInt())).thenReturn(List.of());
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", 9)));
         verify(toolService).getUpcomingEvaluations("U23307609", 9);
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", "11")));
         verify(toolService).getUpcomingEvaluations("U23307609", 11);
     }
@@ -310,7 +315,7 @@ class McpServerControllerResilienceTest {
         when(toolService.resolveCurrentWeek(anyString())).thenReturn(4);
         when(toolService.getUpcomingEvaluations(anyString(), anyInt())).thenReturn(List.of());
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", "semana seis")));
 
         verify(toolService).getUpcomingEvaluations("U23307609", 4);
@@ -323,7 +328,7 @@ class McpServerControllerResilienceTest {
         when(toolService.resolveCurrentWeek(anyString())).thenReturn(null);
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", "semana seis")));
 
         @SuppressWarnings("unchecked")
@@ -338,11 +343,11 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
         when(toolService.getUpcomingEvaluations(anyString(), anyInt())).thenReturn(List.of());
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", 99)));
         verify(toolService).getUpcomingEvaluations("U23307609", 18);
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", "Bearer U23307609",
+        controller.handleJsonRpcMessage(null, BEARER,
                 rpcRequest("tools/call", "get_upcoming_evaluations", Map.of("current_week", 0)));
         verify(toolService).getUpcomingEvaluations("U23307609", 1);
     }
@@ -355,7 +360,7 @@ class McpServerControllerResilienceTest {
                 .thenReturn(new EnrolledCoursesResult("U23307609", 0, List.of(), null));
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "get_enrolled_courses", Map.of()));
 
         @SuppressWarnings("unchecked")
@@ -377,7 +382,7 @@ class McpServerControllerResilienceTest {
         when(identityResolver.resolveStudentCode(any(), any())).thenReturn("U23307609");
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "simulate_target_grade", Map.of()));
 
         @SuppressWarnings("unchecked")
@@ -400,7 +405,7 @@ class McpServerControllerResilienceTest {
                 .thenThrow(new IllegalStateException("Fallo transitorio de la pasarela externa"));
 
         ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
-                null, null, null, "U23307609", "Bearer U23307609",
+                null, BEARER,
                 rpcRequest("tools/call", "get_today_schedule", Map.of()));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -411,19 +416,20 @@ class McpServerControllerResilienceTest {
     }
 
     @Test
-    @DisplayName("El cliente MCP no puede inyectar su propio studentCode en la sesion degradada")
+    @DisplayName("Sin Bearer, el studentCode inyectado por el cliente no puede suplantar la identidad")
     void clientCannotOverrideIdentityInDegradedMode() throws Exception {
         when(identityResolver.resolveStudentCode(any(), any()))
                 .thenThrow(new SecurityException("Acceso no autorizado: Se requiere un token de sesion legitimo de UTP."));
-        when(toolService.resolvePersistedStudentCode("U23307609")).thenReturn("U23307609");
-        when(toolService.getEnrolledCourses(anyString()))
-                .thenReturn(new EnrolledCoursesResult("U23307609", 0, List.of(), "sin datos"));
 
-        controller.handleJsonRpcMessage(null, null, null, "U23307609", null,
+        ResponseEntity<Map<String, Object>> response = controller.handleJsonRpcMessage(
+                null, null,
                 rpcRequest("tools/call", "get_enrolled_courses", Map.of("studentCode", "U99999999")));
 
-        verify(toolService).getEnrolledCourses("U23307609");
-        verify(toolService, never()).getEnrolledCourses("U99999999");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> error = (Map<String, Object>) response.getBody().get("error");
+        assertEquals(-32000, error.get("code"));
+        verify(toolService, never()).resolvePersistedStudentCode(anyString());
+        verify(toolService, never()).getEnrolledCourses(anyString());
     }
 
     // ─────────────────────────────────────────────────────────────────────────

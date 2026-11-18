@@ -3,6 +3,7 @@ package com.utp.horario.application.handle;
 import com.utp.horario.domain.model.exceptions.ScheduleUnavailableException;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
+import com.utp.horario.domain.model.value_objects.Course;
 import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +51,12 @@ class GenerateScheduleHonestyTest {
         handler = new GenerateScheduleCommandHandler(repository, gateway);
     }
 
+    /**
+     * Snapshot oficial con contenido académico real. El handler considera "no vacío"
+     * solo si hay clases o cursos; un intervalo con listas vacías se descarta como
+     * ausencia honesta. Se aporta un curso real (sin fechas ni clases inventadas)
+     * para que el fixture represente efectivamente un horario sincronizado.
+     */
     private ScheduleInterval realInterval() {
         return ScheduleInterval.builder()
                 .id("interval-123")
@@ -57,7 +64,10 @@ class GenerateScheduleHonestyTest {
                 .startDate(java.time.LocalDate.parse("2026-08-17"))
                 .endDate(java.time.LocalDate.parse("2026-12-20"))
                 .classes(List.of())
-                .courses(List.of())
+                .courses(List.of(Course.builder()
+                        .code("100000ST61")
+                        .name("DESARROLLO WEB INTEGRADO")
+                        .build()))
                 .build();
     }
 

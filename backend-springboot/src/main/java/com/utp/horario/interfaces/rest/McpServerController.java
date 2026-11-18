@@ -117,7 +117,7 @@ public class McpServerController {
         info.put("transport", "sse");
         info.put("tools", AcademicToolRegistry.getSupportedToolNames());
         info.put("authRequired", true);
-        info.put("authParam", "token | studentCode");
+        info.put("authParam", "Authorization: Bearer <JWT>");
         info.put("sseEndpoint", "/mcp/sse");
         info.put("messageEndpoint", "/mcp/message");
         info.put("activeSessions", activeSessions.size());
@@ -126,45 +126,23 @@ public class McpServerController {
 
     /**
      * 1. Handshake SSE: Gemini o cualquier cliente MCP remoto se conecta a esta URL.
-     * Requiere autenticación mediante Token JWT en Header Authorization o Query Param 'token' / 'studentCode'.
+     * Requiere autenticación mediante Authorization: Bearer <JWT>. No se aceptan
+     * identidades por query param ni registros persistidos como sustituto del token.
      * La identidad del estudiante queda blindada e inmutable para toda la duración de la sesión.
      */
     @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter handleSseConnection(
-            @RequestParam(required = false) String token,
-            @RequestParam(required = false) String studentId,
-            @RequestParam(required = false) String studentCode,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-
-        String effectiveAuthHeader = normalizeAuthHeader(authHeader, token);
-        String effectiveStudentParam = firstNonBlank(studentCode, studentId);
 
         String resolvedStudentCode;
         try {
-            resolvedStudentCode = identityResolver.resolveStudentCode(effectiveAuthHeader, effectiveStudentParam);
+            resolvedStudentCode = identityResolver.resolveStudentCode(authHeader, null);
         } catch (Exception ex) {
-            // Modo demostración: sin token UTP en vivo, la identidad se respalda en el registro
-            // persistido en MySQL. Nunca se sintetizan datos: si no existe registro, se rechaza.
-            String persisted = resolvePersistedStudent(effectiveStudentParam);
-            if (persisted == null) {
-                log.warn("[MCP-SSE] Conexión rechazada por falta de credenciales válidas: {}", ex.getMessage());
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                        "Acceso no autorizado: se requiere un token de sesión válido o un código de "
-                                + "estudiante con registro persistido en la base de datos.");
-            }
-            resolvedStudentCode = persisted;
-            log.info("[MCP-SSE] Modo demostración: identidad respaldada por registro persistido [{}]", persisted);
+            log.warn("[MCP-SSE] Conexión rechazada: {}", ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Acceso no autorizado: se requiere Authorization: Bearer <JWT> de sesión UTP.");
         }
         final String authenticatedStudentCode = resolvedStudentCode;
-
-        // El registro del token en la administración de sesión es best-effort:
-        // nunca debe abortar el handshake.
-        try {
-            studentSessionService.registerSessionToken(authenticatedStudentCode, effectiveAuthHeader);
-        } catch (Exception ex) {
-            log.warn("[MCP-SSE] No se pudo registrar el token en la pasarela para [{}]: {}",
-                    authenticatedStudentCode, ex.getMessage());
-        }
 
         String sessionId = UUID.randomUUID().toString();
         SseEmitter emitter = new SseEmitter(sessionTimeoutMs);
@@ -173,32 +151,22 @@ public class McpServerController {
         evictOldestSessionsIfNeeded();
 
         activeSessions.put(sessionId, new McpSession(sessionId, authenticatedStudentCode, emitter, createdAt));
-        emitter.onCompletion(() -> {
-            activeSessions.remove(sessionId);
-            log.info("[MCP-SSE] Sesión completada: {} (Estudiante: {})", sessionId, authenticatedStudentCode);
-        });
+        emitter.onCompletion(() -> activeSessions.remove(sessionId));
         emitter.onTimeout(() -> {
             activeSessions.remove(sessionId);
-            log.warn("[MCP-SSE] Sesión expirada por timeout: {} (Estudiante: {})", sessionId, authenticatedStudentCode);
             safeComplete(emitter);
         });
-        emitter.onError(e -> {
-            activeSessions.remove(sessionId);
-            log.info("[MCP-SSE] Sesión cerrada: {} ({})", sessionId, e.getMessage());
-        });
+        emitter.onError(e -> activeSessions.remove(sessionId));
 
         try {
-            String messageEndpoint = "/mcp/message?sessionId=" + sessionId;
             emitter.send(SseEmitter.event()
                     .name("endpoint")
-                    .data(messageEndpoint));
-            log.info("[MCP-SSE] Sesión MCP autenticada para [{}] -> Session: {}", authenticatedStudentCode, sessionId);
+                    .data("/mcp/message?sessionId=" + sessionId));
+            log.info("[MCP-SSE] Sesión autenticada para [{}] -> {}", authenticatedStudentCode, sessionId);
         } catch (IOException | IllegalStateException e) {
-            log.error("[MCP-SSE] Error emitiendo evento inicial 'endpoint': {}", e.getMessage());
             activeSessions.remove(sessionId);
             emitter.completeWithError(e);
         }
-
         return emitter;
     }
 
@@ -210,9 +178,6 @@ public class McpServerController {
     @PostMapping(value = {"/message", "/sse", ""}, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> handleJsonRpcMessage(
             @RequestParam(required = false) String sessionId,
-            @RequestParam(required = false) String token,
-            @RequestParam(required = false) String studentId,
-            @RequestParam(value = "studentCode", required = false) String queryStudentCode,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody(required = false) JsonNode request) {
 
@@ -240,33 +205,28 @@ public class McpServerController {
                 return ResponseEntity.ok(rpcResponse);
             }
 
-            // ── Resolución de identidad ─────────────────────────────────────────────────────
-            if (sessionId != null && !sessionId.isBlank()) {
-                McpSession session = activeSessions.get(sessionId);
-                if (session != null) {
-                    emitter = session.emitter();
-                    studentCode = session.studentCode();
-                }
-            }
-
-            if (studentCode == null || studentCode.isBlank()) {
-                String effectiveAuthHeader = normalizeAuthHeader(authHeader, token);
-                String effectiveStudentParam = firstNonBlank(queryStudentCode, studentId);
-                try {
-                    studentCode = identityResolver.resolveStudentCode(effectiveAuthHeader, effectiveStudentParam);
-                } catch (Exception ex) {
-                    String persisted = resolvePersistedStudent(effectiveStudentParam);
-                    if (persisted == null) {
-                        log.warn("[MCP-JSONRPC] Petición rechazada por falta de credenciales válidas: {}", ex.getMessage());
+            // ── Resolución de identidad: solo Bearer; la sesión no basta ──────────────
+            try {
+                String authenticatedStudentCode = identityResolver.resolveStudentCode(authHeader, null);
+                if (sessionId != null && !sessionId.isBlank()) {
+                    McpSession session = activeSessions.get(sessionId);
+                    if (session == null) {
                         rpcResponse.put("error", jsonRpcError(AUTH_REQUIRED,
-                                "Acceso no autorizado: se requiere un token de sesión válido o un código de "
-                                        + "estudiante con registro persistido en la base de datos."));
+                                "Sesión MCP inexistente; realice el handshake /mcp/sse con Bearer."));
                         return ResponseEntity.ok(rpcResponse);
                     }
-                    studentCode = persisted;
-                    log.info("[MCP-JSONRPC] Modo demostración: identidad respaldada por registro persistido [{}]",
-                            studentCode);
+                    if (!session.studentCode().equalsIgnoreCase(authenticatedStudentCode)) {
+                        rpcResponse.put("error", jsonRpcError(AUTH_REQUIRED,
+                                "La identidad del token no coincide con la sesión MCP."));
+                        return ResponseEntity.ok(rpcResponse);
+                    }
+                    emitter = session.emitter();
                 }
+                studentCode = authenticatedStudentCode;
+            } catch (Exception ex) {
+                rpcResponse.put("error", jsonRpcError(AUTH_REQUIRED,
+                        "Acceso no autorizado: se requiere Authorization: Bearer <JWT> de sesión UTP."));
+                return ResponseEntity.ok(rpcResponse);
             }
 
             String method = request.path("method").asText("");

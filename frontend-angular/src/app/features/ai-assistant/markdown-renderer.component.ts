@@ -34,7 +34,28 @@ export class MarkdownRendererComponent implements OnChanges {
     return text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * Valida el esquema de un enlace antes de inyectarlo en un atributo href.
+   * Solo se permiten http:, https:, mailto: y rutas relativas que empiecen por # o /.
+   * El texto de entrada ya vino escapado por escapeHtml().
+   */
+  private sanitizeLinkUrl(rawUrl: string): string | null {
+    const url = rawUrl.trim();
+    if (!url) return null;
+
+    // Relativos permitidos (anclas y rutas absolutas del sitio, incluido //host)
+    if (url.startsWith('#') || url.startsWith('/')) return url;
+
+    const schemeMatch = url.match(/^([a-z][a-z0-9+.-]*):/i);
+    if (!schemeMatch) return null;
+
+    const scheme = schemeMatch[1].toLowerCase();
+    return scheme === 'http' || scheme === 'https' || scheme === 'mailto' ? url : null;
   }
 
   private renderStickerCard(stickerId: string): string {
@@ -68,8 +89,15 @@ export class MarkdownRendererComponent implements OnChanges {
 
     let out = this.escapeHtml(processed);
 
-    // Links [text](url)
-    out = out.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#3a86ff] hover:text-[#60a5fa] hover:underline font-bold transition">$1</a>');
+    // Links [text](url) — se valida el esquema antes de inyectar el href
+    out = out.replace(/\[(.*?)\]\((.*?)\)/g, (_match, label: string, rawUrl: string) => {
+      const url = this.sanitizeLinkUrl(rawUrl);
+      if (!url) {
+        // Esquema no permitido: se conserva solo la etiqueta como texto plano (ya escapada)
+        return label;
+      }
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[#3a86ff] hover:text-[#60a5fa] hover:underline font-bold transition">${label}</a>`;
+    });
 
     // Bold **text** or __text__
     out = out.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-white">$1</strong>');

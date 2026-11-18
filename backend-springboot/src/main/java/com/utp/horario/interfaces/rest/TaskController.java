@@ -36,7 +36,7 @@ public class TaskController {
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token) {
-        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        String resolvedToken = identityResolver.extractBearerToken(authHeader);
         return ResponseEntity.ok(ApiResponse.ok(taskQueryService.getTasksWithPortalFallback(studentId, resolvedToken)));
     }
 
@@ -44,13 +44,12 @@ public class TaskController {
     public ResponseEntity<ApiResponse<List<TaskSyncItem>>> getActivities(
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(required = false) String token,
             @RequestParam(required = false) String intervalMode,
             @RequestParam(required = false) Integer week,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean onlyGraded,
             @RequestParam(required = false) String type) {
-        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        String resolvedToken = identityResolver.extractBearerToken(authHeader);
         List<TaskSyncItem> activities = taskQueryService.getActivities(
                 studentId, resolvedToken, intervalMode, week, status, onlyGraded, type);
         return ResponseEntity.ok(ApiResponse.ok(activities));
@@ -63,7 +62,7 @@ public class TaskController {
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String token) {
-        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        String resolvedToken = identityResolver.extractBearerToken(authHeader);
         com.fasterxml.jackson.databind.JsonNode detail =
                 taskQueryService.getTaskDetail(studentId, resolvedToken, sectionId, activityId);
         if (detail == null) {
@@ -76,9 +75,8 @@ public class TaskController {
     public ResponseEntity<ApiResponse<List<UpcomingEvaluationDto>>> getUpcoming(
             @CurrentStudent(required = false) String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(required = false) String token,
             @RequestParam(defaultValue = "15") int limit) {
-        String resolvedToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        String resolvedToken = identityResolver.extractBearerToken(authHeader);
         List<UpcomingEvaluationDto> upcoming = taskQueryService.getUpcomingEvaluations(studentId, resolvedToken, limit);
         return ResponseEntity.ok(ApiResponse.ok(upcoming));
     }
@@ -87,9 +85,8 @@ public class TaskController {
     public ResponseEntity<ApiResponse<List<TaskSyncItem>>> syncTasks(
             @CurrentStudent String studentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(required = false) String token,
             @RequestParam(required = false) String sectionId) {
-        String effectiveToken = (token != null && !token.isBlank()) ? token : identityResolver.extractBearerToken(authHeader);
+        String effectiveToken = identityResolver.extractBearerToken(authHeader);
         if (effectiveToken == null || effectiveToken.isBlank()) {
             throw new SecurityException("Se requiere un token de sesión legítimo para sincronizar tareas");
         }

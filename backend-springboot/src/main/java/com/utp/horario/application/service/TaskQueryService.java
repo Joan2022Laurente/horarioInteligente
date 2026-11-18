@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.utp.horario.domain.model.aggregate.TaskSyncItem;
 import com.utp.horario.domain.model.repositories.ITaskSyncRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
+import com.utp.horario.infrastructure.security.CurrentRequestToken;
 import com.utp.horario.domain.model.value_objects.UpcomingEvaluationDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,9 @@ public class TaskQueryService {
 
     private final ITaskSyncRepository taskRepository;
     private final IUtpPortalGateway utpPortalGateway;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CurrentRequestToken currentRequestToken;
 
     /**
      * Read Model local: tareas ya sincronizadas para ese estudiante.
@@ -134,8 +138,9 @@ public class TaskQueryService {
         if (resolvedToken != null && !resolvedToken.isBlank()) {
             return resolvedToken;
         }
-        if (studentId != null) {
-            return utpPortalGateway.getStudentToken(studentId);
+        // El token se toma del request actual; nunca de un registro global por alumno.
+        if (currentRequestToken != null) {
+            return currentRequestToken.bearerToken();
         }
         return null;
     }
