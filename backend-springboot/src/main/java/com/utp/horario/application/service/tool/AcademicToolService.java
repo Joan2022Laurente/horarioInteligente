@@ -2,6 +2,7 @@ package com.utp.horario.application.service.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.domain.model.value_objects.ClassSession;
+import com.utp.horario.domain.model.value_objects.Course;
 import com.utp.horario.domain.model.value_objects.ScheduleInterval;
 import com.utp.horario.domain.model.aggregate.StudentProfile;
 import com.utp.horario.domain.model.aggregate.Syllabus;
@@ -26,7 +27,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -434,11 +437,16 @@ public class AcademicToolService {
             try {
                 List<CourseSummaryDto> summaries = utpPortalGateway.fetchCoursesSummary(token);
                 if (summaries != null && !summaries.isEmpty()) {
+                    ScheduleInterval persistedSchedule = scheduleRepository
+                            .findByStudentIdAndPeriod(studentCode, getCurrentPeriod()).orElse(null);
                     List<EnrolledCourseDto> courses = summaries.stream()
-                            .map(s -> new EnrolledCourseDto(
-                                    (s.courseCode() != null && !s.courseCode().isBlank()) ? s.courseCode() : s.courseId(),
-                                    s.courseName()
-                            ))
+                            .map(s -> {
+                                String code = trimToNull(s.courseCode());
+                                if (code == null) {
+                                    code = resolveOfficialCode(persistedSchedule, trimToNull(s.courseName()));
+                                }
+                                return new EnrolledCourseDto(code != null ? code : "", s.courseName());
+                            })
                             .distinct()
                             .toList();
                     log.info("[AcademicTool] 🏛️ {} cursos oficiales obtenidos desde API Externa Gateway para [{}]", courses.size(), studentCode);
@@ -452,29 +460,9 @@ public class AcademicToolService {
 
         // 2. Base de datos (MySQL / Caché local)
         Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, getCurrentPeriod());
-
-        List<EnrolledCourseDto> courses = new ArrayList<>();
-        if (scheduleOpt.isPresent()) {
-            ScheduleInterval schedule = scheduleOpt.get();
-            // Prioridad 1: campo courses explícito
-            if (schedule.getCourses() != null && !schedule.getCourses().isEmpty()) {
-                for (var c : schedule.getCourses()) {
-                    courses.add(new EnrolledCourseDto(c.getCode(), c.getName()));
-                }
-            }
-            // Prioridad 2: derivar cursos únicos desde las sesiones (estructura persistida en MySQL)
-            if (courses.isEmpty() && schedule.getClasses() != null) {
-                java.util.LinkedHashMap<String, String> seen = new java.util.LinkedHashMap<>();
-                for (var cl : schedule.getClasses()) {
-                    String code = cl.getCourseCode() != null ? cl.getCourseCode().trim() : "";
-                    String name = cl.getCourseName() != null ? cl.getCourseName().trim() : code;
-                    if (!code.isBlank()) {
-                        seen.putIfAbsent(code, name);
-                    }
-                }
-                seen.forEach((code, name) -> courses.add(new EnrolledCourseDto(code, name)));
-            }
-        }
+        List<EnrolledCourseDto> courses = scheduleOpt
+                .map(this::resolveCoursesFromPersistedSchedule)
+                .orElseGet(List::of);
         log.info("[AcademicTool] 📚 Cursos matriculados encontrados (fallback): {}", courses.size());
         if (courses.isEmpty()) {
             if (gatewayException != null) {
@@ -666,6 +654,7 @@ public class AcademicToolService {
         String source = syllabusOpt.isPresent() ? "MySQL-Repository" : "Markdown-API";
         log.info("[AcademicTool] ✅ [RESULTADO FINAL] Sílabo '{}' servido desde [{}]", cleanQuery, source);
 
+        final boolean hasMarkdown = markdown != null && !markdown.isBlank();
         Syllabus s = syllabusOpt.orElseGet(() -> {
             // Regla de honestidad de datos: si solo hay markdown oficial sin franja de
             // créditos o meta, los campos quedan null; nunca se inflan con cadenas inventadas.
@@ -673,7 +662,7 @@ public class AcademicToolService {
             fallback.setCourseCode(courseCode);
             fallback.setCourseName(cleanQuery.toUpperCase());
             fallback.setFormula("");
-            fallback.setLearningGoal(null);
+            fallback.setLearningGoal(hasMarkdown ? "Obtenido directamente desde el Sílabo Oficial UTP" : null);
             return fallback;
         });
 
@@ -799,14 +788,31 @@ public class AcademicToolService {
         List<EnrolledCourseDto> courseList = enrolled.courses();
 
         for (EnrolledCourseDto course : courseList) {
-            String code = course.courseCode();
-            Optional<Syllabus> sylOpt = syllabusRepository.findByCourseCode(code);
+            String code = trimToNull(course.courseCode());
+            Optional<Syllabus> sylOpt = code != null
+                    ? syllabusRepository.findByCourseCode(code)
+                    : Optional.empty();
 
-            if (sylOpt.isPresent() && sylOpt.get().getEvaluations() != null) {
-                sylOpt.get().getEvaluations().stream()
+            if (sylOpt.isEmpty() && trimToNull(course.courseName()) != null) {
+                sylOpt = syllabusRepository.findByCourseName(course.courseName().trim());
+            }
+
+            if (sylOpt.isEmpty()) {
+                log.warn("[AcademicTool] ⚠️ Sin sílabo persistido para '{}' (cod='{}'); curso omitido sin inventar evaluaciones",
+                        course.courseName(), course.courseCode());
+                continue;
+            }
+
+            Syllabus syllabus = sylOpt.get();
+            String officialCode = sylOpt.map(Syllabus::getCourseCode)
+                    .map(AcademicToolService::trimToNull)
+                    .orElse(code != null ? code : "");
+
+            if (syllabus.getEvaluations() != null) {
+                syllabus.getEvaluations().stream()
                         .filter(e -> e.getWeek() != null && e.getWeek() >= week && e.getWeek() <= week + 3)
                         .forEach(e -> upcoming.add(new EvaluationSummaryDto(
-                                code,
+                                officialCode,
                                 course.courseName(),
                                 e.getType(),
                                 e.getDescription(),
@@ -1142,6 +1148,80 @@ public class AcademicToolService {
         }
     }
 
+    /**
+     * Resuelve el código oficial de un curso a partir del horario persistido (sesiones) o del catálogo de sílabos.
+     */
+    private String resolveOfficialCode(ScheduleInterval schedule, String courseName) {
+        if (courseName == null || courseName.isBlank()) {
+            return null;
+        }
+        String key = normalizeTerm(courseName);
+        if (schedule != null && schedule.getClasses() != null) {
+            for (ClassSession cl : schedule.getClasses()) {
+                String code = trimToNull(cl.getCourseCode());
+                String name = trimToNull(cl.getCourseName());
+                if (code != null && name != null && key.equals(normalizeTerm(name))) {
+                    return code;
+                }
+            }
+        }
+        return syllabusRepository.findByCourseName(courseName)
+                .map(Syllabus::getCourseCode)
+                .map(AcademicToolService::trimToNull)
+                .orElse(null);
+    }
+
+    /**
+     * Resuelve el código oficial de cada curso declarado en el horario persistido:
+     * 1. Course.code si la entidad ya lo contiene.
+     * 2. ClassSession.courseCode del mismo horario, emparejando por nombre normalizado.
+     * 3. syllabusRepository.findByCourseName(...) en MySQL como recurso institucional.
+     */
+    private List<EnrolledCourseDto> resolveCoursesFromPersistedSchedule(ScheduleInterval schedule) {
+        if (schedule == null) {
+            return List.of();
+        }
+
+        Map<String, EnrolledCourseDto> resolved = new LinkedHashMap<>();
+        List<Course> declared = schedule.getCourses();
+
+        if (declared != null && !declared.isEmpty()) {
+            for (Course c : declared) {
+                String name = trimToNull(c.getName());
+                String code = trimToNull(c.getCode());
+
+                if (code == null && name != null) {
+                    code = resolveOfficialCode(schedule, name);
+                }
+                if (code == null) {
+                    log.warn("[AcademicTool] ⚠️ Curso '{}' sin código oficial resoluble en horario ni sílabo", name);
+                }
+
+                String key = code != null ? code : "name:" + normalizeTerm(name == null ? "" : name);
+                resolved.putIfAbsent(key, new EnrolledCourseDto(code == null ? "" : code, name));
+            }
+        }
+
+        // Si no hay cursos declarados, derivar de las sesiones (comportamiento original)
+        if (resolved.isEmpty() && schedule.getClasses() != null) {
+            Map<String, String> nameByCode = new LinkedHashMap<>();
+            for (ClassSession cl : schedule.getClasses()) {
+                String code = trimToNull(cl.getCourseCode());
+                if (code == null) continue;
+                String name = trimToNull(cl.getCourseName());
+                nameByCode.putIfAbsent(code, name);
+            }
+            nameByCode.forEach((code, name) -> resolved.put(code, new EnrolledCourseDto(code, name != null ? name : code)));
+        }
+
+        return new ArrayList<>(resolved.values());
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 
 }
 

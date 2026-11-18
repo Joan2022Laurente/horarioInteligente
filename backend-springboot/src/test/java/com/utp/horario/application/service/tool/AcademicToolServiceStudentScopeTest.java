@@ -2,10 +2,18 @@ package com.utp.horario.application.service.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.application.dtos.AcademicToolDto.EnrolledCoursesResult;
+import com.utp.horario.application.dtos.AcademicToolDto.EvaluationSummaryDto;
+import com.utp.horario.domain.model.aggregate.StudentProfile;
+import com.utp.horario.domain.model.aggregate.Syllabus;
 import com.utp.horario.domain.model.repositories.IScheduleRepository;
 import com.utp.horario.domain.model.repositories.IStudentRepository;
 import com.utp.horario.domain.model.repositories.ISyllabusRepository;
 import com.utp.horario.domain.model.repositories.IUtpPortalGateway;
+import com.utp.horario.domain.model.value_objects.ClassSession;
+import com.utp.horario.domain.model.value_objects.Course;
+import com.utp.horario.domain.model.value_objects.CourseSummaryDto;
+import com.utp.horario.domain.model.value_objects.ScheduleInterval;
+import com.utp.horario.domain.model.value_objects.SyllabusEvaluation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -107,5 +115,96 @@ class AcademicToolServiceStudentScopeTest {
     @DisplayName("getUpcomingEvaluations sin studentCode devuelve lista vacia")
     void upcomingEvaluationsWithoutStudentCodeReturnsEmpty() {
         assertEquals(List.of(), toolService.getUpcomingEvaluations(null, 6));
+    }
+
+    @Test
+    @DisplayName("Regresion: Course.code vacio en MySQL se resuelve desde las sesiones ClassSession.courseCode")
+    void blankCourseCodeResolvesFromClassSessions() {
+        ScheduleInterval schedule = ScheduleInterval.builder()
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of(Course.builder().name("DESARROLLO WEB INTEGRADO").code("").build()))
+                .classes(List.of(ClassSession.builder().courseName("DESARROLLO WEB INTEGRADO").courseCode("100000ST61").build()))
+                .build();
+
+        when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString()))
+                .thenReturn(java.util.Optional.of(schedule));
+
+        EnrolledCoursesResult result = toolService.getEnrolledCourses("U23307609");
+
+        assertNotNull(result);
+        assertEquals(1, result.totalCourses());
+        assertEquals("100000ST61", result.courses().get(0).courseCode());
+        assertEquals("DESARROLLO WEB INTEGRADO", result.courses().get(0).courseName());
+    }
+
+    @Test
+    @DisplayName("Regresion: Evaluaciones resuelven silabo por nombre y adoptan codigo oficial cuando findByCourseCode es vacio")
+    void evaluationsResolveSyllabusByCourseName() {
+        ScheduleInterval schedule = ScheduleInterval.builder()
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of(Course.builder().name("DESARROLLO WEB INTEGRADO").code("").build()))
+                .classes(List.of(ClassSession.builder().courseName("DESARROLLO WEB INTEGRADO").courseCode("100000ST61").build()))
+                .build();
+
+        Syllabus syllabus = Syllabus.builder()
+                .id("100000ST61")
+                .courseCode("100000ST61")
+                .courseName("DESARROLLO WEB INTEGRADO")
+                .evaluations(List.of(
+                        SyllabusEvaluation.builder()
+                                .type("APF3")
+                                .description("Avance de Proyecto Final 3")
+                                .weightPercent(20)
+                                .week(15)
+                                .build()
+                ))
+                .build();
+
+        when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString()))
+                .thenReturn(java.util.Optional.of(schedule));
+        when(syllabusRepository.findByCourseCode("100000ST61")).thenReturn(java.util.Optional.empty());
+        when(syllabusRepository.findByCourseName("DESARROLLO WEB INTEGRADO")).thenReturn(java.util.Optional.of(syllabus));
+
+        List<EvaluationSummaryDto> evals = toolService.getUpcomingEvaluations("U23307609", 15);
+
+        assertNotNull(evals);
+        assertEquals(1, evals.size());
+        assertEquals("100000ST61", evals.get(0).courseCode());
+        assertEquals("APF3", evals.get(0).evaluationType());
+        assertEquals(Integer.valueOf(15), evals.get(0).weekScheduled());
+    }
+
+    @Test
+    @DisplayName("Regresion: Rama gateway con courseCode vacio se resuelve desde el horario persistido")
+    void gatewayBlankCourseCodeResolvesFromPersistedSchedule() {
+        StudentProfile profile = new StudentProfile();
+        profile.setStudentCode("U23307609");
+        profile.setToken("Bearer fake-token");
+        when(studentRepository.findByStudentCode("U23307609")).thenReturn(java.util.Optional.of(profile));
+
+        CourseSummaryDto summary = new CourseSummaryDto(
+                "sec-491",
+                "",
+                "DESARROLLO WEB INTEGRADO",
+                "Fórmula UTP",
+                "Docente UTP",
+                2,
+                List.of()
+        );
+        when(utpPortalGateway.fetchCoursesSummary("Bearer fake-token")).thenReturn(List.of(summary));
+
+        ScheduleInterval schedule = ScheduleInterval.builder()
+                .periodName("2026 - Ciclo 2 Agosto")
+                .classes(List.of(ClassSession.builder().courseName("DESARROLLO WEB INTEGRADO").courseCode("100000ST61").build()))
+                .build();
+        when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString()))
+                .thenReturn(java.util.Optional.of(schedule));
+
+        EnrolledCoursesResult result = toolService.getEnrolledCourses("U23307609");
+
+        assertNotNull(result);
+        assertEquals(1, result.totalCourses());
+        assertEquals("100000ST61", result.courses().get(0).courseCode());
+        assertEquals("DESARROLLO WEB INTEGRADO", result.courses().get(0).courseName());
     }
 }
