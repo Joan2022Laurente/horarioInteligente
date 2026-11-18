@@ -13,8 +13,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Mapper bidireccional entre el Value Object {@link ScheduleInterval} del dominio
@@ -66,9 +69,20 @@ public class ScheduleMapper {
                 .courses(new java.util.LinkedHashSet<>())
                 .build();
 
+        Map<String, String> sessionCatalogCodesByName = new LinkedHashMap<>();
+        if (schedule.getClasses() != null) {
+            for (ClassSession cl : schedule.getClasses()) {
+                String code = cl.getCourseCode() != null ? cl.getCourseCode().trim() : null;
+                String name = cl.getCourseName() != null ? cl.getCourseName().trim() : null;
+                if (code != null && isOfficialCatalogCode(code) && name != null) {
+                    sessionCatalogCodesByName.putIfAbsent(normalizeTerm(name), code.toUpperCase());
+                }
+            }
+        }
+
         if (schedule.getCourses() != null) {
             for (Course course : schedule.getCourses()) {
-                root.getCourses().add(toCourseEntity(root, course));
+                root.getCourses().add(toCourseEntity(root, course, sessionCatalogCodesByName));
             }
         }
         if (schedule.getClasses() != null) {
@@ -168,12 +182,75 @@ public class ScheduleMapper {
 
     // ── Escritura: dominio → entidades ──
 
-    private ScheduleCourseEntity toCourseEntity(StudentScheduleEntity root, Course course) {
+    /**
+     * Patrón canónico del código de catálogo de la UTP:
+     * Exactamente 6 dígitos seguidos de 4 caracteres alfanuméricos (ej. "100000ST61", "100000SI82").
+     */
+    private static final Pattern UTP_CATALOG_CODE_PATTERN = Pattern.compile("(?i)^\\d{6}[A-Z0-9]{4}$");
+
+    private static boolean isOfficialCatalogCode(String code) {
+        return code != null && UTP_CATALOG_CODE_PATTERN.matcher(code.trim()).matches();
+    }
+
+    private static String normalizeTerm(String text) {
+        if (text == null) return "";
+        String normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{M}", "").toLowerCase().replaceAll("[^a-z0-9]", "");
+    }
+
+    private static boolean isBogusCode(String code) {
+        if (code == null) return true;
+        String clean = code.trim().toLowerCase();
+        return clean.isBlank() || clean.equals("null") || clean.equals("undefined")
+                || clean.equals("tbd") || clean.equals("n/a") || clean.equals("na")
+                || clean.equals("-") || clean.equals("0") || clean.equals("error")
+                || clean.equals("none");
+    }
+
+    private static String resolveSanitizedCourseCode(Course course, Map<String, String> sessionCatalogCodesByName) {
+        if (course == null) return null;
+        String rawCode = course.getCode() != null ? course.getCode().trim() : null;
+        String rawName = course.getName() != null ? course.getName().trim() : null;
+
+        // 1. Si las sesiones de clase ya tienen un código oficial canónico para esta asignatura, tiene máxima prioridad.
+        if (rawName != null && sessionCatalogCodesByName != null) {
+            String fromSession = sessionCatalogCodesByName.get(normalizeTerm(rawName));
+            if (fromSession != null && isOfficialCatalogCode(fromSession)) {
+                return fromSession.toUpperCase();
+            }
+        }
+
+        // 2. Si el código candidato es un código oficial UTP legítimo
+        if (isOfficialCatalogCode(rawCode)) {
+            return rawCode.toUpperCase();
+        }
+
+        // 3. Si el código candidato es espurio (es null, idéntico al nombre del curso, contiene espacios o es placeholder)
+        if (isBogusCode(rawCode)) {
+            return null;
+        }
+        if (rawName != null && normalizeTerm(rawCode).equals(normalizeTerm(rawName))) {
+            return null;
+        }
+        if (rawCode.contains(" ")) {
+            return null;
+        }
+
+        // 4. Preservar código candidato no espurio (se truncará de forma segura a VARCHAR(128))
+        return rawCode;
+    }
+
+    private ScheduleCourseEntity toCourseEntity(StudentScheduleEntity root, Course course,
+                                                Map<String, String> sessionCatalogCodesByName) {
+        String sanitizedCode = resolveSanitizedCourseCode(course, sessionCatalogCodesByName);
+        String name = course.getName() != null && !course.getName().isBlank()
+                ? course.getName()
+                : (sanitizedCode != null ? sanitizedCode : (course.getCode() != null ? course.getCode() : ""));
+
         ScheduleCourseEntity row = ScheduleCourseEntity.builder()
                 .id(rowId(course.getId()))
-                .courseCode(truncateSafely(course.getCode(), 128))
-                .courseName(truncateSafely(course.getName() != null ? course.getName()
-                        : (course.getCode() != null ? course.getCode() : ""), 255))
+                .courseCode(truncateSafely(sanitizedCode, 128))
+                .courseName(truncateSafely(name, 255))
                 .section(truncateSafely(course.getSection(), 64))
                 .credits(course.getCredits())
                 .teacher(truncateSafely(course.getTeacher(), 255))

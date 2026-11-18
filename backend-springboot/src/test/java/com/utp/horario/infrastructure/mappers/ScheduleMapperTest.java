@@ -360,4 +360,65 @@ class ScheduleMapperTest {
         assertEquals("https://zoom.us/j/utp-demo/seccion/rola-muy-larga", row.getZoomLink());
         assertEquals("https://utp.puo.edu/section/rola-muy-larga", row.getClassLink());
     }
+
+    @Test
+    @DisplayName("toEntity sanea course_code cuando contiene el nombre del curso resolviéndolo desde las sesiones")
+    void courseCodeConNombreRepetidoSeSaneaDesdeSesiones() {
+        Course corruptedCourse = Course.builder()
+                .id("c-corrupted-1")
+                .code("DESARROLLO WEB INTEGRADO") // El nombre del curso en lugar de código
+                .name("DESARROLLO WEB INTEGRADO")
+                .section("NRC12345")
+                .credits(3)
+                .build();
+
+        ClassSession sessionWithOfficialCode = ClassSession.builder()
+                .id("s-1")
+                .courseCode("100000ST61") // Código oficial canónico UTP
+                .courseName("DESARROLLO WEB INTEGRADO")
+                .section("NRC12345")
+                .build();
+
+        ScheduleInterval interval = ScheduleInterval.builder()
+                .id("sched-corrupted")
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of(corruptedCourse))
+                .classes(List.of(sessionWithOfficialCode))
+                .build();
+
+        StudentScheduleEntity root = mapper.toEntity("U23307609", interval);
+
+        assertEquals(1, root.getCourses().size());
+        ScheduleCourseEntity courseEntity = root.getCourses().iterator().next();
+        assertEquals("100000ST61", courseEntity.getCourseCode(),
+                "Debe resolver el código de catálogo UTP desde las sesiones en lugar de persistir el nombre");
+        assertEquals("DESARROLLO WEB INTEGRADO", courseEntity.getCourseName());
+    }
+
+    @Test
+    @DisplayName("toEntity guarda null en course_code si es espurio y no hay sesión con código oficial")
+    void courseCodeEspurioSinSesionesSeGuardaComoNull() {
+        Course corruptedCourse = Course.builder()
+                .id("c-corrupted-2")
+                .code("DESARROLLO WEB INTEGRADO") // Nombre en vez de código
+                .name("DESARROLLO WEB INTEGRADO")
+                .section("NRC99999")
+                .credits(3)
+                .build();
+
+        ScheduleInterval interval = ScheduleInterval.builder()
+                .id("sched-corrupted-no-session")
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of(corruptedCourse))
+                .classes(List.of())
+                .build();
+
+        StudentScheduleEntity root = mapper.toEntity("U23307609", interval);
+
+        assertEquals(1, root.getCourses().size());
+        ScheduleCourseEntity courseEntity = root.getCourses().iterator().next();
+        assertNull(courseEntity.getCourseCode(),
+                "Si el código coincide con el nombre o es espurio sin respaldo, debe guardarse como null");
+        assertEquals("DESARROLLO WEB INTEGRADO", courseEntity.getCourseName());
+    }
 }

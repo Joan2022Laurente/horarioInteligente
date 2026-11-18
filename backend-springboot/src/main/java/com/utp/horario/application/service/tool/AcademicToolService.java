@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -442,10 +443,7 @@ public class AcademicToolService {
                     List<EnrolledCourseDto> courses = summaries.stream()
                             .map(s -> {
                                 String name = trimToNull(s.courseName());
-                                String code = trimToNull(s.courseCode());
-                                if (!isOfficialCatalogCode(code, name)) {
-                                    code = resolveOfficialCode(persistedSchedule, name);
-                                }
+                                String code = resolveOfficialCode(persistedSchedule, name, s.courseCode());
                                 return new EnrolledCourseDto(code != null ? code : "", s.courseName());
                             })
                             .distinct()
@@ -791,7 +789,7 @@ public class AcademicToolService {
         for (EnrolledCourseDto course : courseList) {
             String code = trimToNull(course.courseCode());
             String name = trimToNull(course.courseName());
-            Optional<Syllabus> sylOpt = isOfficialCatalogCode(code, name)
+            Optional<Syllabus> sylOpt = isOfficialCatalogCode(code)
                     ? syllabusRepository.findByCourseCode(code)
                     : Optional.empty();
 
@@ -1151,25 +1149,34 @@ public class AcademicToolService {
     }
 
     /**
-     * Valida si una cadena corresponde a un código de catálogo oficial de la UTP.
-     * En la UTP los códigos oficiales son alfanuméricos cortos (ej. "100000ST61", "100000SI82")
-     * y nunca coinciden con la denominación del curso ni contienen espacios.
+     * Patrón canónico del código de catálogo de la UTP:
+     * Exactamente 6 dígitos seguidos de 4 caracteres alfanuméricos (ej. "100000ST61", "100000SI82").
      */
-    private boolean isOfficialCatalogCode(String code, String name) {
+    private static final Pattern UTP_CATALOG_CODE_PATTERN = Pattern.compile("(?i)^\\d{6}[A-Z0-9]{4}$");
+
+    /**
+     * Valida si una cadena cumple con el formato del código de catálogo oficial de la UTP.
+     */
+    private boolean isOfficialCatalogCode(String code) {
         if (code == null || code.isBlank()) {
             return false;
         }
-        String trimmedCode = code.trim();
-        if (name != null && normalizeTerm(trimmedCode).equals(normalizeTerm(name))) {
-            return false;
-        }
-        return !trimmedCode.contains(" ") && trimmedCode.length() <= 20;
+        return UTP_CATALOG_CODE_PATTERN.matcher(code.trim()).matches();
     }
 
     /**
-     * Resuelve el código oficial de un curso a partir del horario persistido (sesiones) o del catálogo de sílabos.
+     * Resuelve el código oficial de un curso a partir del candidato, horario persistido (sesiones) o del catálogo de sílabos.
+     * Exige evidencia institucional comprobable (sesión en horario o sílabo registrado), no solo formato sintáctico.
      */
-    private String resolveOfficialCode(ScheduleInterval schedule, String courseName) {
+    private String resolveOfficialCode(ScheduleInterval schedule, String courseName, String candidateCode) {
+        String candidate = trimToNull(candidateCode);
+        if (isOfficialCatalogCode(candidate)) {
+            boolean backedBySession = schedule != null && schedule.getClasses() != null && schedule.getClasses().stream()
+                    .anyMatch(cl -> candidate.equalsIgnoreCase(trimToNull(cl.getCourseCode())));
+            if (backedBySession || syllabusRepository.findByCourseCode(candidate).isPresent()) {
+                return candidate.toUpperCase();
+            }
+        }
         if (courseName == null || courseName.isBlank()) {
             return null;
         }
@@ -1178,20 +1185,21 @@ public class AcademicToolService {
             for (ClassSession cl : schedule.getClasses()) {
                 String code = trimToNull(cl.getCourseCode());
                 String name = trimToNull(cl.getCourseName());
-                if (code != null && name != null && key.equals(normalizeTerm(name)) && isOfficialCatalogCode(code, name)) {
-                    return code;
+                if (code != null && name != null && key.equals(normalizeTerm(name)) && isOfficialCatalogCode(code)) {
+                    return code.toUpperCase();
                 }
             }
         }
         return syllabusRepository.findByCourseName(courseName)
                 .map(Syllabus::getCourseCode)
                 .map(AcademicToolService::trimToNull)
+                .map(String::toUpperCase)
                 .orElse(null);
     }
 
     /**
      * Resuelve el código oficial de cada curso declarado en el horario persistido:
-     * 1. Course.code si la entidad ya lo contiene y es un código de catálogo válido.
+     * 1. Course.code si la entidad ya lo contiene y cuenta con respaldo institucional verificable.
      * 2. ClassSession.courseCode del mismo horario, emparejando por nombre normalizado.
      * 3. syllabusRepository.findByCourseName(...) en MySQL como recurso institucional.
      */
@@ -1206,11 +1214,7 @@ public class AcademicToolService {
         if (declared != null && !declared.isEmpty()) {
             for (Course c : declared) {
                 String name = trimToNull(c.getName());
-                String code = trimToNull(c.getCode());
-
-                if (!isOfficialCatalogCode(code, name)) {
-                    code = resolveOfficialCode(schedule, name);
-                }
+                String code = resolveOfficialCode(schedule, name, c.getCode());
                 if (code == null) {
                     log.warn("[AcademicTool] ⚠️ Curso '{}' sin código oficial resoluble en horario ni sílabo", name);
                 }
@@ -1230,11 +1234,12 @@ public class AcademicToolService {
                 nameByCode.putIfAbsent(code, name);
             }
             nameByCode.forEach((code, name) -> {
-                String resolvedCode = code;
-                if (!isOfficialCatalogCode(resolvedCode, name)) {
-                    resolvedCode = resolveOfficialCode(schedule, name);
-                }
-                resolved.put(resolvedCode != null ? resolvedCode : code, new EnrolledCourseDto(resolvedCode != null ? resolvedCode : code, name != null ? name : code));
+                String resolvedCode = resolveOfficialCode(schedule, name, code);
+                String finalCode = resolvedCode != null ? resolvedCode : (isOfficialCatalogCode(code) ? code : "");
+                String key = (finalCode != null && !finalCode.isBlank())
+                        ? finalCode
+                        : "name:" + normalizeTerm(name == null ? "" : name);
+                resolved.putIfAbsent(key, new EnrolledCourseDto(finalCode != null ? finalCode : "", name != null ? name : code));
             });
         }
 
