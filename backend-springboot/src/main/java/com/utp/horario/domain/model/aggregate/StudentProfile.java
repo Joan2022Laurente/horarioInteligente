@@ -36,6 +36,20 @@ public class StudentProfile {
     private Integer expiresIn;
     private List<String> enrolledCourseCodes;
 
+    @JsonAlias({"phone_whatsapp", "phone", "whatsapp"})
+    private String phoneWhatsapp;
+
+    @JsonAlias({"avatar_url", "avatar", "photoUrl"})
+    private String avatarUrl;
+
+    @JsonAlias({"social_link", "socialUrl", "portfolioUrl"})
+    private String socialLink;
+
+    @JsonAlias({"campus_location", "meetingPoint", "location"})
+    private String campusLocation;
+
+    private String bio;
+
     // Patrón Builder del Agregado con validaciones de invariantes de negocio (Estándar UTP)
     public static class Builder {
         private final StudentProfile student = new StudentProfile();
@@ -100,6 +114,31 @@ public class StudentProfile {
 
         public Builder enrolledCourseCodes(List<String> enrolledCourseCodes) {
             this.student.enrolledCourseCodes = enrolledCourseCodes;
+            return this;
+        }
+
+        public Builder phoneWhatsapp(String phoneWhatsapp) {
+            this.student.phoneWhatsapp = phoneWhatsapp;
+            return this;
+        }
+
+        public Builder avatarUrl(String avatarUrl) {
+            this.student.avatarUrl = avatarUrl;
+            return this;
+        }
+
+        public Builder socialLink(String socialLink) {
+            this.student.socialLink = socialLink;
+            return this;
+        }
+
+        public Builder campusLocation(String campusLocation) {
+            this.student.campusLocation = campusLocation;
+            return this;
+        }
+
+        public Builder bio(String bio) {
+            this.student.bio = bio;
             return this;
         }
 

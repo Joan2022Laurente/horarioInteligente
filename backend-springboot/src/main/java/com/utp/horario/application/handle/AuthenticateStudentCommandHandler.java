@@ -70,6 +70,12 @@ public class AuthenticateStudentCommandHandler {
                     String campus = payload.hasNonNull("campus") ? payload.path("campus").asText() : (payload.hasNonNull("campusDesc") ? payload.path("campusDesc").asText() : (payload.hasNonNull("sede") ? payload.path("sede").asText() : ""));
                     int cycle = payload.hasNonNull("cycle") ? payload.path("cycle").asInt(1) : (payload.hasNonNull("ciclo") ? payload.path("ciclo").asInt(1) : 1);
 
+                    String phoneWhatsapp = null;
+                    String avatarUrl = null;
+                    String socialLink = null;
+                    String campusLocation = null;
+                    String bio = null;
+
                     if (!studentCode.isBlank()) {
                         Optional<StudentProfile> existingOpt = repository.findByStudentCode(studentCode);
                         if (existingOpt.isPresent()) {
@@ -86,6 +92,11 @@ public class AuthenticateStudentCommandHandler {
                             if ((name.isBlank() || name.equalsIgnoreCase(studentCode)) && existing.getFullName() != null && !existing.getFullName().equalsIgnoreCase(studentCode)) {
                                 name = existing.getFullName();
                             }
+                            phoneWhatsapp = existing.getPhoneWhatsapp();
+                            avatarUrl = existing.getAvatarUrl();
+                            socialLink = existing.getSocialLink();
+                            campusLocation = existing.getCampusLocation();
+                            bio = existing.getBio();
                         }
                     }
 
@@ -97,6 +108,11 @@ public class AuthenticateStudentCommandHandler {
                             .career(career)
                             .campus(campus)
                             .currentCycle(cycle)
+                            .phoneWhatsapp(phoneWhatsapp)
+                            .avatarUrl(avatarUrl)
+                            .socialLink(socialLink)
+                            .campusLocation(campusLocation)
+                            .bio(bio)
                             .token(token)
                             .enrolledCourseCodes(List.of())
                             .build();

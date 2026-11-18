@@ -5,7 +5,7 @@ import { AuthService } from '@data/services/auth.service';
 import { ScheduleService } from '@data/services/schedule.service';
 import { MatrixOrbComponent } from '../ai-assistant/matrix-orb.component';
 
-export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'marketplace';
+export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'marketplace' | 'profile';
 
 @Component({
   selector: 'app-navbar',
@@ -46,10 +46,15 @@ export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'mar
             </button>
           </nav>
 
-          <!-- Account Code Indicator -->
-          <div class="account-pill" (click)="openSettings.emit()" title="Ajustes de cuenta">
+          <!-- Account Code Indicator / Perfil -->
+          <div 
+            class="account-pill" 
+            [class.active]="activeTab === 'profile'"
+            (click)="selectTab('profile')" 
+            title="Mi Perfil y Canales de Contacto"
+          >
             <span class="account-dot"></span>
-            <span class="account-code mono">{{ authService.currentStudent()?.studentCode || authService.currentStudent()?.username || 'ESTUDIANTE' }}</span>
+            <span class="account-code mono">{{ authService.currentStudent()?.studentCode || authService.currentStudent()?.username || 'PERFIL' }}</span>
           </div>
         </div>
 
@@ -91,6 +96,18 @@ export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'mar
             <app-matrix-orb [size]="18" [state]="'idle'"></app-matrix-orb>
           </div>
           <span class="dock-label copilot-label">COPILOTO</span>
+        </button>
+
+        <!-- Mobile Profile Button -->
+        <button 
+          class="dock-item" 
+          [class.active]="activeTab === 'profile'"
+          (click)="selectTab('profile')"
+        >
+          <div class="dock-icon-wrapper">
+            <lucide-icon name="user" class="dock-icon"></lucide-icon>
+          </div>
+          <span class="dock-label">Perfil</span>
         </button>
       </div>
     </nav>
@@ -218,6 +235,10 @@ export type NavigationTab = 'today' | 'weekly' | 'courses' | 'networking' | 'mar
     }
     .account-pill:hover {
       opacity: 0.8;
+    }
+    .account-pill.active .account-code {
+      color: var(--accent-lime);
+      font-weight: 700;
     }
     .account-dot {
       width: 6px;

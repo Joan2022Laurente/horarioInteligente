@@ -104,6 +104,24 @@ export class AuthService {
     }
   }
 
+  updateProfile(updated: StudentProfile): void {
+    const current = this.currentStudentSignal();
+    const merged: StudentProfile = {
+      ...(current || {}),
+      ...updated,
+      token: current?.token || updated.token,
+      name: updated.fullName || updated.name || current?.name || '',
+      username: updated.studentCode || updated.username || current?.username || '',
+    };
+    this.currentStudentSignal.set(merged);
+    saveCachedStudentProfile(merged);
+    try {
+      localStorage.setItem('utp_auth_profile', JSON.stringify(merged));
+    } catch (e) {
+      console.warn('[AuthService] Error guardando utp_auth_profile:', e);
+    }
+  }
+
   /**
    * Cancela el intento de sesión si el usuario aborta durante el onboarding.
    */

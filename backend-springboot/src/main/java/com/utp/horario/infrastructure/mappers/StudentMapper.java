@@ -17,6 +17,11 @@ public class StudentMapper {
                 .career(entity.getCareer())
                 .campus(entity.getCampus())
                 .currentCycle(entity.getCurrentCycle())
+                .phoneWhatsapp(entity.getPhoneWhatsapp())
+                .avatarUrl(entity.getAvatarUrl())
+                .socialLink(entity.getSocialLink())
+                .campusLocation(entity.getCampusLocation())
+                .bio(entity.getBio())
                 .build();
     }
 
@@ -30,6 +35,11 @@ public class StudentMapper {
                 .career(domain.getCareer())
                 .campus(domain.getCampus())
                 .currentCycle(domain.getCurrentCycle())
+                .phoneWhatsapp(domain.getPhoneWhatsapp())
+                .avatarUrl(domain.getAvatarUrl())
+                .socialLink(domain.getSocialLink())
+                .campusLocation(domain.getCampusLocation())
+                .bio(domain.getBio())
                 .build();
     }
 }

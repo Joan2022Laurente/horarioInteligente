@@ -70,6 +70,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Validación de Bean Validation (@Valid en request bodies): 400 con mensaje específico.
+     */
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(org.springframework.web.bind.MethodArgumentNotValidException e) {
+        String msg = e.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getDefaultMessage())
+                .findFirst()
+                .orElse("Parámetros de solicitud inválidos");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.fail(msg));
+    }
+
+    /**
      * Entidad de dominio no encontrada en una consulta de identidad real: 404.
      */
     @ExceptionHandler(StudentNotFoundException.class)

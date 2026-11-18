@@ -12,6 +12,7 @@ import { LandingPageComponent } from './features/landing/landing-page.component'
 import { PrivacyPageComponent } from './features/privacy/privacy-page.component';
 import { NetworkingViewComponent } from './features/networking/networking-view.component';
 import { MarketplaceViewComponent } from './features/marketplace/marketplace-view.component';
+import { ProfileViewComponent } from './features/profile/profile-view.component';
 
 import { UiFeedbackService } from './core/services/ui-feedback.service';
 
@@ -29,7 +30,8 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
     LandingPageComponent,
     PrivacyPageComponent,
     NetworkingViewComponent,
-    MarketplaceViewComponent
+    MarketplaceViewComponent,
+    ProfileViewComponent
   ],
   template: `
     @if (showPrivacy) {
@@ -42,7 +44,7 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
           [activeTab]="activeTab"
           (tabChange)="activeTab = $event" 
           (openAiModal)="isAiModalOpen = true"
-          (openSettings)="isSettingsModalOpen = true">
+          (openSettings)="activeTab = 'profile'">
         </app-navbar>
 
         <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
@@ -59,6 +61,8 @@ import { UiFeedbackService } from './core/services/ui-feedback.service';
             <app-networking-view (askAi)="openAiWithPrompt($event)"></app-networking-view>
           } @else if (activeTab === 'marketplace') {
             <app-marketplace-view></app-marketplace-view>
+          } @else if (activeTab === 'profile') {
+            <app-profile-view></app-profile-view>
           }
         </main>
 

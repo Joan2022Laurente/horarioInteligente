@@ -81,12 +81,24 @@ export interface StudentProfile {
   accessToken?: string;
   refreshToken?: string;
   avatarUrl?: string;
+  phoneWhatsapp?: string;
+  socialLink?: string;
+  campusLocation?: string;
+  bio?: string;
   dni?: string;
   career?: string;
   campus?: string;
   currentCycle?: number;
   peopleCode?: string;
   enrolledCourseCodes?: string[];
+}
+
+export interface UpdateProfileRequest {
+  phoneWhatsapp?: string;
+  avatarUrl?: string;
+  socialLink?: string;
+  campusLocation?: string;
+  bio?: string;
 }
 
 export interface CourseSessionSchedule {

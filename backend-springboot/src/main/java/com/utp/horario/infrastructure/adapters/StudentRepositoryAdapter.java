@@ -52,6 +52,21 @@ public class StudentRepositoryAdapter implements IStudentRepository {
                 if (studentProfile.getCurrentCycle() != null && studentProfile.getCurrentCycle() > 0) {
                     existing.setCurrentCycle(studentProfile.getCurrentCycle());
                 }
+                if (studentProfile.getPhoneWhatsapp() != null) {
+                    existing.setPhoneWhatsapp(studentProfile.getPhoneWhatsapp());
+                }
+                if (studentProfile.getAvatarUrl() != null) {
+                    existing.setAvatarUrl(studentProfile.getAvatarUrl());
+                }
+                if (studentProfile.getSocialLink() != null) {
+                    existing.setSocialLink(studentProfile.getSocialLink());
+                }
+                if (studentProfile.getCampusLocation() != null) {
+                    existing.setCampusLocation(studentProfile.getCampusLocation());
+                }
+                if (studentProfile.getBio() != null) {
+                    existing.setBio(studentProfile.getBio());
+                }
                 return mapper.toDomain(jpa.save(existing));
             }
         }

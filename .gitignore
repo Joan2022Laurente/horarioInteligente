@@ -12,7 +12,6 @@
 backend-springboot/target/
 **/target/
 backend-springboot/data/
-**/data/
 *.mv.db
 *.trace.db
 !.mvn/wrapper/maven-wrapper.jar
