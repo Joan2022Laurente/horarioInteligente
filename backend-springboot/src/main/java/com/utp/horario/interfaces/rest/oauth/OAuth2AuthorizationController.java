@@ -402,7 +402,7 @@ public class OAuth2AuthorizationController {
             String errorMessage) {
 
         String errorBlock = errorMessage != null ? String.format(
-                "<div style='background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:12px;border-radius:8px;font-size:13px;margin-bottom:16px;'>%s</div>",
+                "<div class='error-box'>%s</div>",
                 errorMessage
         ) : "";
 
@@ -412,35 +412,179 @@ public class OAuth2AuthorizationController {
             <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Conectar con Horario Inteligente UTP</title>
+              <title>utopik. &middot; Acceso IA</title>
               <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-                body { background: #0c0d0e; color: #f4f4f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-                .card { background: #18191b; border: 1px solid #27272a; border-radius: 16px; padding: 32px; max-width: 420px; width: 100%%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-                .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
-                .badge { width: 10px; height: 10px; border-radius: 50%%; background: #bbf451; display: inline-block; }
-                h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-                p.sub { font-size: 13px; color: #a1a1aa; margin-top: 6px; line-height: 1.4; margin-bottom: 24px; }
-                label { display: block; font-size: 12px; font-weight: 600; color: #d4d4d8; margin-bottom: 6px; }
+                body {
+                  background: #090a0c;
+                  color: #f4f4f5;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  min-height: 100vh;
+                  padding: 24px;
+                }
+                .wrap {
+                  width: 100%%;
+                  max-width: 420px;
+                  text-align: center;
+                }
+                .brand {
+                  margin-bottom: 8px;
+                }
+                h1.logo {
+                  font-size: 48px;
+                  font-weight: 900;
+                  letter-spacing: -0.04em;
+                  color: #f4f4f6;
+                  line-height: 1;
+                }
+                h1.logo span {
+                  color: #bbf451;
+                }
+                p.sub {
+                  font-size: 13.5px;
+                  color: #a1a1aa;
+                  margin-top: 8px;
+                  font-weight: 500;
+                }
+                .ai-pill {
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 8px;
+                  margin-top: 14px;
+                  margin-bottom: 28px;
+                  padding: 5px 14px;
+                  border-radius: 9999px;
+                  background: rgba(187, 244, 81, 0.08);
+                  border: 1px solid rgba(187, 244, 81, 0.28);
+                  color: #bbf451;
+                  font-size: 11px;
+                  font-weight: 700;
+                  letter-spacing: 0.05em;
+                  text-transform: uppercase;
+                }
+                .ai-dot {
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%%;
+                  background: #bbf451;
+                }
+                .error-box {
+                  background: rgba(239, 68, 68, 0.12);
+                  border: 1px solid rgba(239, 68, 68, 0.3);
+                  color: #fca5a5;
+                  padding: 12px 14px;
+                  border-radius: 10px;
+                  font-size: 12.5px;
+                  text-align: left;
+                  margin-bottom: 20px;
+                  font-weight: 500;
+                }
+                form {
+                  text-align: left;
+                }
+                .field {
+                  margin-bottom: 18px;
+                }
+                label {
+                  display: block;
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #e4e4e7;
+                  letter-spacing: 0.05em;
+                  text-transform: uppercase;
+                  margin-bottom: 8px;
+                }
+                .input-wrap {
+                  position: relative;
+                  width: 100%%;
+                }
                 input[type="text"], input[type="password"] {
-                  width: 100%%; padding: 10px 14px; background: #0c0d0e; border: 1px solid #3f3f46; border-radius: 8px; color: #fff; font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color 0.2s;
+                  width: 100%%;
+                  height: 52px;
+                  padding: 0 16px;
+                  background: #eaf1fb;
+                  border: none;
+                  border-radius: 10px;
+                  color: #090a0c;
+                  font-size: 15px;
+                  font-weight: 600;
+                  outline: none;
+                  transition: box-shadow 0.15s ease-out;
                 }
-                input[type="text"]:focus, input[type="password"]:focus { border-color: #bbf451; }
-                button {
-                  width: 100%%; padding: 12px; background: #bbf451; color: #0c0d0e; font-weight: 700; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
+                input[type="text"]:focus, input[type="password"]:focus {
+                  box-shadow: 0 0 0 2px #bbf451;
                 }
-                button:hover { opacity: 0.9; }
-                .footer { font-size: 11px; color: #71717a; text-align: center; margin-top: 20px; }
+                input::placeholder {
+                  color: #64748b;
+                  font-weight: 400;
+                }
+                .toggle-btn {
+                  position: absolute;
+                  right: 14px;
+                  top: 50%%;
+                  transform: translateY(-50%%);
+                  background: none;
+                  border: none;
+                  color: #64748b;
+                  font-size: 12px;
+                  font-weight: 700;
+                  cursor: pointer;
+                  padding: 6px;
+                }
+                .toggle-btn:hover {
+                  color: #090a0c;
+                }
+                button.submit-btn {
+                  width: 100%%;
+                  height: 52px;
+                  margin-top: 10px;
+                  background: #bbf451;
+                  color: #090a0c;
+                  border: none;
+                  border-radius: 10px;
+                  font-size: 13.5px;
+                  font-weight: 900;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 8px;
+                  transition: opacity 0.15s ease-out, transform 0.08s ease-out;
+                }
+                button.submit-btn:hover {
+                  opacity: 0.95;
+                }
+                button.submit-btn:active {
+                  transform: scale(0.98);
+                }
+                .footer-links {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-top: 32px;
+                  font-size: 11.5px;
+                  color: #52525b;
+                  font-weight: 500;
+                }
               </style>
             </head>
             <body>
-              <div class="card">
+              <div class="wrap">
                 <div class="brand">
-                  <span class="badge"></span>
-                  <h1>Horario Inteligente UTP</h1>
+                  <h1 class="logo">utopik<span>.</span></h1>
+                  <p class="sub">Código institucional y contraseña del portal.</p>
+                  <div class="ai-pill">
+                    <span class="ai-dot"></span>
+                    <span>Conexión Copiloto IA &middot; MCP</span>
+                  </div>
                 </div>
-                <p class="sub">Inicia sesión con tu cuenta UTP institucional para autorizar la conexión segura de tu asistente de IA.</p>
+
                 %s
+
                 <form method="POST" action="/oauth/authorize">
                   <input type="hidden" name="client_id" value="%s">
                   <input type="hidden" name="redirect_uri" value="%s">
@@ -449,16 +593,44 @@ public class OAuth2AuthorizationController {
                   <input type="hidden" name="code_challenge_method" value="%s">
                   <input type="hidden" name="resource" value="%s">
 
-                  <label for="username">Código de estudiante</label>
-                  <input type="text" id="username" name="username" placeholder="U23307609" required autofocus>
+                  <div class="field">
+                    <label for="username">CÓDIGO DE ESTUDIANTE</label>
+                    <input type="text" id="username" name="username" placeholder="Ej. U23307609" required autofocus autocomplete="username">
+                  </div>
 
-                  <label for="password">Contraseña institucional</label>
-                  <input type="password" id="password" name="password" placeholder="Tu contraseña UTP" required>
+                  <div class="field">
+                    <label for="password">CONTRASEÑA</label>
+                    <div class="input-wrap">
+                      <input type="password" id="password" name="password" placeholder="Tu contraseña del portal" required autocomplete="current-password">
+                      <button type="button" class="toggle-btn" id="toggleBtn" onclick="togglePassword()">Ver</button>
+                    </div>
+                  </div>
 
-                  <button type="submit">Autorizar y Conectar</button>
+                  <button type="submit" class="submit-btn">
+                    <span>ACCEDER</span>
+                    <span>&rarr;</span>
+                  </button>
                 </form>
-                <p class="footer">Protección OAuth 2.1 con aislamiento estricto por estudiante. Cero almacenamiento de contraseñas.</p>
+
+                <div class="footer-links">
+                  <span>Políticas &amp; Privacidad</span>
+                  <span>utopik</span>
+                </div>
               </div>
+
+              <script>
+                function togglePassword() {
+                  var p = document.getElementById('password');
+                  var b = document.getElementById('toggleBtn');
+                  if (p.type === 'password') {
+                    p.type = 'text';
+                    b.textContent = 'Ocultar';
+                  } else {
+                    p.type = 'password';
+                    b.textContent = 'Ver';
+                  }
+                }
+              </script>
             </body>
             </html>
             """,

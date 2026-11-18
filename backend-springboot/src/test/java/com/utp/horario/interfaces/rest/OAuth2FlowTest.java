@@ -90,7 +90,7 @@ class OAuth2FlowTest {
                         .param("code_challenge_method", "S256"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Horario Inteligente UTP")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("utopik")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"username\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"password\"")));
     }
