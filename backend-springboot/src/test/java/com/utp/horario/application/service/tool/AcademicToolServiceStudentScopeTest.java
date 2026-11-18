@@ -207,4 +207,30 @@ class AcademicToolServiceStudentScopeTest {
         assertEquals("100000ST61", result.courses().get(0).courseCode());
         assertEquals("DESARROLLO WEB INTEGRADO", result.courses().get(0).courseName());
     }
+
+    @Test
+    @DisplayName("Regresion: Course.code con el propio nombre del curso se sanitiza y resuelve a codigo oficial")
+    void courseCodeEqualsCourseNameResolvesFromClassSessions() {
+        ScheduleInterval schedule = ScheduleInterval.builder()
+                .periodName("2026 - Ciclo 2 Agosto")
+                .courses(List.of(Course.builder()
+                        .name("DESARROLLO WEB INTEGRADO")
+                        .code("DESARROLLO WEB INTEGRADO")
+                        .build()))
+                .classes(List.of(ClassSession.builder()
+                        .courseName("DESARROLLO WEB INTEGRADO")
+                        .courseCode("100000ST61")
+                        .build()))
+                .build();
+
+        when(scheduleRepository.findByStudentIdAndPeriod(anyString(), anyString()))
+                .thenReturn(java.util.Optional.of(schedule));
+
+        EnrolledCoursesResult result = toolService.getEnrolledCourses("U23307609");
+
+        assertNotNull(result);
+        assertEquals(1, result.totalCourses());
+        assertEquals("100000ST61", result.courses().get(0).courseCode());
+        assertEquals("DESARROLLO WEB INTEGRADO", result.courses().get(0).courseName());
+    }
 }
