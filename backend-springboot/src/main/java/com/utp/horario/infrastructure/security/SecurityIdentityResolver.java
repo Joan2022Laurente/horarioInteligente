@@ -28,6 +28,15 @@ public class SecurityIdentityResolver {
 
     private final ObjectMapper objectMapper;
 
+    @org.springframework.beans.factory.annotation.Value("${app.jwt.secret:}")
+    private String jwtSecret;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.utp.horario.domain.model.repositories.IStudentRepository studentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.utp.horario.domain.model.repositories.IUtpPortalGateway utpPortalGateway;
+
     /**
      * Extrae un token Bearer estricto del encabezado Authorization, o {@code null}
      * si el encabezado no cumple el contrato.
@@ -45,7 +54,7 @@ public class SecurityIdentityResolver {
     }
 
     /**
-     * Valida la estructura minima aceptable de un JWT de sesion UTP.
+     * Valida la estructura mínima, algoritmo, expiración y firma de un JWT.
      */
     private boolean isStrictJwt(String token) {
         if (token == null || token.isBlank()) {
@@ -56,13 +65,45 @@ public class SecurityIdentityResolver {
             return false;
         }
         try {
+            // 1. Validar encabezado: algoritmo prohibido 'none'
+            byte[] headerBytes = Base64.getUrlDecoder().decode(parts[0]);
+            JsonNode header = objectMapper.readTree(headerBytes);
+            if (header == null || !header.isObject() || "none".equalsIgnoreCase(header.path("alg").asText(""))) {
+                log.warn("[SecurityIdentityResolver] JWT rechazado: algoritmo ausente o 'none'");
+                return false;
+            }
+
+            // 2. Validar payload y expiración temporal
             byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
             JsonNode payload = objectMapper.readTree(decoded);
             if (payload == null || !payload.isObject()) {
                 return false;
             }
             JsonNode exp = payload.get("exp");
-            return exp != null && exp.isNumber();
+            if (exp == null || !exp.isNumber()) {
+                return false;
+            }
+            long expSeconds = exp.asLong();
+            long nowSeconds = System.currentTimeMillis() / 1000;
+            if (expSeconds <= nowSeconds) {
+                log.warn("[SecurityIdentityResolver] JWT expirado: exp={} vs now={}", expSeconds, nowSeconds);
+                return false;
+            }
+
+            // 3. Verificación de firma simétrica HMAC si hay secreto configurado
+            if (jwtSecret != null && !jwtSecret.isBlank() && header.path("alg").asText("").startsWith("HS")) {
+                try {
+                    io.jsonwebtoken.Jwts.parser()
+                            .verifyWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)))
+                            .build()
+                            .parseSignedClaims(token);
+                } catch (Exception sigEx) {
+                    log.warn("[SecurityIdentityResolver] Firma HMAC JWT inválida: {}", sigEx.getMessage());
+                    return false;
+                }
+            }
+
+            return true;
         } catch (Exception e) {
             log.debug("[SecurityIdentityResolver] JWT rechazado por estructura invalida: {}", e.getMessage());
             return false;
@@ -136,6 +177,20 @@ public class SecurityIdentityResolver {
                     "Acceso prohibido (403): intento de consulta cruzada no autorizada al recurso del estudiante ["
                             + paramStudentId + "].");
         }
+
+        if (studentRepository != null) {
+            java.util.Optional<com.utp.horario.domain.model.aggregate.StudentProfile> existing = studentRepository.findByStudentCode(tokenStudentCode);
+            if (existing.isEmpty() && utpPortalGateway != null) {
+                try {
+                    utpPortalGateway.fetchCoursesSummary(token);
+                } catch (Exception ex) {
+                    log.warn("[SecurityIdentityResolver] Rechazo BOLA: el token para [{}] no fue validado por la pasarela institucional: {}",
+                            tokenStudentCode, ex.getMessage());
+                    throw new SecurityException("Acceso no autorizado: la identidad del token no pudo ser verificada por la pasarela institucional.");
+                }
+            }
+        }
+
         return tokenStudentCode;
     }
 

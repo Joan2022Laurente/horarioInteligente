@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utp.horario.application.dtos.AcademicToolDto.DayScheduleResult;
 import com.utp.horario.application.service.StudentSessionService;
 import com.utp.horario.application.service.tool.AcademicToolDispatcher;
+import com.utp.horario.application.service.tool.AcademicToolRegistry;
 import com.utp.horario.application.service.tool.AcademicToolService;
 import com.utp.horario.infrastructure.security.SecurityIdentityResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,16 +52,13 @@ class McpServerControllerHttpTest {
     @Mock
     private SecurityIdentityResolver identityResolver;
 
-    @Mock
-    private StudentSessionService studentSessionService;
-
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         McpServerController controller =
-                new McpServerController(toolService, mapper, identityResolver, studentSessionService,
+                new McpServerController(toolService, mapper, identityResolver,
                         new AcademicToolDispatcher(toolService, mapper));
         this.mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -100,7 +98,7 @@ class McpServerControllerHttpTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("t-1"))
-                .andExpect(jsonPath("$.result.tools.length()").value(6))
+                .andExpect(jsonPath("$.result.tools.length()").value(AcademicToolRegistry.getSupportedToolNames().size()))
                 .andExpect(jsonPath("$.result.tools[0].name").value("get_today_schedule"))
                 .andExpect(jsonPath("$.result.tools[0].inputSchema").exists());
     }
@@ -145,25 +143,67 @@ class McpServerControllerHttpTest {
     }
 
     @Test
-    @DisplayName("Un cuerpo vacio responde 200 con error -32700")
+    @DisplayName("Un cuerpo vacio responde 200 con error -32700 e id null")
     void emptyBodyReturnsParseError() throws Exception {
         mockMvc.perform(post("/mcp/message")
                         .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(""))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.error.code").value(-32700));
     }
 
     @Test
-    @DisplayName("Una peticion sin JSON valido responde 200 con error -32700")
+    @DisplayName("Una peticion sin JSON valido responde 200 con error -32700 e id null")
     void malformedJsonReturnsParseError() throws Exception {
         mockMvc.perform(post("/mcp/message")
                         .header("Authorization", BEARER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{no-es-json"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.error.code").value(-32700));
+    }
+
+    @Test
+    @DisplayName("Petición con jsonrpc distinto a 2.0 responde con error -32600")
+    void invalidJsonRpcVersionReturnsInvalidRequest() throws Exception {
+        mockMvc.perform(post("/mcp/message")
+                        .header("Authorization", BEARER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"jsonrpc":"1.0","id":1,"method":"ping"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.error.code").value(-32600));
+    }
+
+    @Test
+    @DisplayName("Peticiones batch (array) son rechazadas con código -32600")
+    void batchRequestsAreRejected() throws Exception {
+        mockMvc.perform(post("/mcp/message")
+                        .header("Authorization", BEARER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                [{"jsonrpc":"2.0","id":1,"method":"ping"}]
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.error.code").value(-32600));
+    }
+
+    @Test
+    @DisplayName("Content-Type no soportado responde 200 con error JSON-RPC -32600")
+    void unsupportedMediaTypeReturnsJsonRpcError() throws Exception {
+        mockMvc.perform(post("/mcp/message")
+                        .header("Authorization", BEARER)
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hello"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.error.code").value(-32600));
     }
 
     @Test
@@ -173,7 +213,7 @@ class McpServerControllerHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("horario-inteligente-mcp"))
                 .andExpect(jsonPath("$.protocolVersion").value("2024-11-05"))
-                .andExpect(jsonPath("$.tools.length()").value(6));
+                .andExpect(jsonPath("$.tools.length()").value(AcademicToolRegistry.getSupportedToolNames().size()));
     }
 
     @Test

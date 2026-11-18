@@ -54,8 +54,8 @@ public class AcademicToolDto {
             String courseName,
             String evaluationType,
             String description,
-            int weightPercent,
-            int weekScheduled
+            Integer weightPercent,
+            Integer weekScheduled
     ) {}
 
     /**
@@ -63,7 +63,7 @@ public class AcademicToolDto {
      * topics: temas del día concatenados; activities: actividad prevista; evaluation: evaluación si aplica.
      */
     public record WeeklySessionDto(
-            int week,
+            Integer week,
             String unit,
             String topics,
             String activities,
@@ -171,6 +171,70 @@ public class AcademicToolDto {
                                            List<RemainingClassSessionDto> remainingClasses,
                                            String message) {
             this(studentCode, date, null, currentTime, currentWeek, totalRemainingClasses, remainingClasses, message);
+        }
+    }
+
+    /**
+     * Tarea o actividad individual del estudiante en un curso.
+     */
+    public record CourseTaskDto(
+            String id,
+            String title,
+            Integer week,
+            String dueDate,
+            String homeworkStatus,
+            boolean isDelivered,
+            boolean isQualified,
+            Double score,
+            Double maxScore,
+            String evaluationType,
+            String evaluationDescription,
+            String timingStatus
+    ) {}
+
+    /**
+     * Agrupación de tareas por rubro de evaluación oficial del sílabo.
+     */
+    public record EvaluationTaskGroupingDto(
+            String evaluationType,
+            String evaluationDescription,
+            Integer weightPercent,
+            int totalTasks,
+            int deliveredCount,
+            int pendingCount,
+            int pastDueUnsubmittedCount,
+            List<CourseTaskDto> tasks
+    ) {}
+
+    /**
+     * Resultado estructurado de tareas y actividades de un curso para el agente IA y MCP.
+     */
+    public record CourseTasksAndActivitiesResult(
+            String studentCode,
+            String courseCode,
+            String courseName,
+            Integer currentWeek,
+            String gradingFormula,
+            boolean hasParticipationGrade,
+            Integer participationWeightPercent,
+            int totalCourseTasks,
+            int totalDelivered,
+            int totalPending,
+            int totalPastDueUnsubmitted,
+            List<EvaluationTaskGroupingDto> evaluationBreakdown,
+            List<CourseTaskDto> tasks,
+            String message
+    ) {
+        public CourseTasksAndActivitiesResult(String studentCode, String courseCode, String courseName,
+                                              Integer currentWeek, String gradingFormula,
+                                              boolean hasParticipationGrade, Integer participationWeightPercent,
+                                              int totalCourseTasks, int totalDelivered, int totalPending,
+                                              int totalPastDueUnsubmitted,
+                                              List<EvaluationTaskGroupingDto> evaluationBreakdown,
+                                              List<CourseTaskDto> tasks) {
+            this(studentCode, courseCode, courseName, currentWeek, gradingFormula, hasParticipationGrade,
+                    participationWeightPercent, totalCourseTasks, totalDelivered, totalPending,
+                    totalPastDueUnsubmitted, evaluationBreakdown, tasks, null);
         }
     }
 

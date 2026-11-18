@@ -28,11 +28,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        // Prefijar automáticamente todos los @RestController de la aplicación con /api/v1 (excepto endpoints estándar como MCP y .well-known)
+        // Prefijar automáticamente todos los @RestController de la aplicación con /api/v1 (excepto endpoints estándar como MCP, OAuth y .well-known)
         configurer.addPathPrefix("/api/v1", c -> c.isAnnotationPresent(RestController.class) 
                 && c.getPackageName().startsWith("com.utp.horario")
                 && !c.getSimpleName().equals("McpServerController")
-                && !c.getSimpleName().equals("WellKnownController"));
+                && !c.getSimpleName().equals("WellKnownController")
+                && !c.getSimpleName().startsWith("OAuth2"));
     }
 
     @Override
@@ -44,9 +45,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        // NO servir index.html para endpoints de sistema como .well-known, mcp, api o swagger (debe devolver 404 real o el recurso webjar)
+                        // NO servir index.html para endpoints de sistema como .well-known, mcp, oauth, api o swagger (debe devolver 404 real o el recurso webjar)
                         if (resourcePath.startsWith(".well-known") 
                                 || resourcePath.startsWith("mcp") 
+                                || resourcePath.startsWith("oauth") 
                                 || resourcePath.startsWith("api")
                                 || resourcePath.startsWith("swagger")
                                 || resourcePath.startsWith("v3")) {

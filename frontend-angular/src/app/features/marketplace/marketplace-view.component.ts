@@ -712,6 +712,9 @@ export class MarketplaceViewComponent implements OnInit, OnDestroy {
       next: (savedItem) => {
         if (savedItem) {
           this.marketplaceStore.addItem(savedItem);
+          // Garantiza visibilidad inmediata: cualquier filtro/categoria activo podria
+          // ocultar la publicacion recien creada.
+          this.marketplaceStore.resetFilters();
           this.closeOfferModal();
           this.isPublishing = false;
           this.newOffer.title = '';

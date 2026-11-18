@@ -795,6 +795,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 case "get_today_schedule" -> "Consultando horario de clases y aulas...";
                 case "get_remaining_classes_today" -> "Consultando clases restantes y temario del día...";
                 case "get_upcoming_evaluations" -> "Verificando evaluaciones y entregas pendientes...";
+                case "get_course_tasks_and_activities" -> detail.isBlank() ? "Consultando tareas y actividades del curso..." : "Verificando entregas y tareas de " + detail + "...";
                 case "get_enrolled_courses" -> "Sincronizando asignaturas y secciones activas...";
                 default -> "Ejecutando consulta académica...";
             };
@@ -804,6 +805,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
                 case "get_today_schedule" -> "Horario y sesiones recuperadas";
                 case "get_remaining_classes_today" -> "Clases restantes y temario del día obtenidos";
                 case "get_upcoming_evaluations" -> "Próximas evaluaciones identificadas";
+                case "get_course_tasks_and_activities" -> "Tareas, foros y actividades verificadas";
                 case "get_enrolled_courses" -> "Asignaturas sincronizadas con éxito";
                 default -> "Acción completada con éxito";
             };

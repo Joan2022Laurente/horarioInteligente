@@ -17,6 +17,7 @@ import {
   formatTime, 
   parseEventTitle, 
   parseDate,
+  formatCourseName,
   getDynamicStudentEvaluations,
   getCanonicalCourseKey 
 } from '@data/schedule-parser';
@@ -42,493 +43,579 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
     ClassDetailModalComponent, 
     LucideAngularModule
   ],
+  styles: [`
+    .tn { font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+    svg.i, lucide-icon.i { width: 15px; height: 15px; stroke-width: 1.75; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+    .today-layout { width: 100%; display: flex; flex-direction: column; gap: 24px; padding-bottom: 60px; }
+    @media(min-width: 1024px) {
+      .today-layout { display: grid; grid-template-columns: 380px 1fr; gap: 32px; align-items: start; padding-bottom: 24px; }
+      .today-sidebar { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px; }
+      .today-content { min-width: 0; }
+    }
+    @media(min-width: 1280px) {
+      .today-layout { grid-template-columns: 420px 1fr; gap: 36px; }
+    }
+    .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
+    .date { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
+    h1 { font-size: 34px; line-height: 1; font-weight: 800; letter-spacing: -0.035em; color: var(--foreground); }
+    .clock { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-control-md); background: var(--surface-card); }
+    .dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--text-muted); flex: none; }
+    .dot.live { background: var(--accent-lime); animation: dotPulse 1.8s ease-out infinite; }
+    @keyframes dotPulse { 0% { box-shadow: 0 0 0 0 rgba(187, 244, 81, 0.4); } 100% { box-shadow: 0 0 0 7px rgba(187, 244, 81, 0); } }
+    .hero { background: var(--utopik-carbon-black); border: 1px solid var(--border-subtle); border-radius: var(--r-card); padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .hero.live { border-color: rgba(187, 244, 81, 0.35); }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--foreground); }
+    .hero.next .status { color: var(--accent-orange); }
+    .hero h2 { font-size: 20px; line-height: 1.25; font-weight: 700; letter-spacing: -0.02em; color: var(--foreground); margin-bottom: 6px; }
+    .code { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+    .times { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--utopik-platinum); }
+    .bar { height: 4px; border-radius: var(--r-control-xs); background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+    .bar > i { display: block; height: 100%; background: var(--accent-lime); border-radius: inherit; transition: width 400ms ease-out; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .cell { background: rgba(0, 0, 0, 0.28); border: 1px solid var(--border-subtle); border-radius: var(--r-panel); padding: 10px 12px; min-height: 48px; }
+    .cell small { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 3px; }
+    .cell b { font-size: 13px; font-weight: 600; display: block; color: var(--foreground); }
+    .na { color: var(--text-muted) !important; font-weight: 400 !important; font-style: normal; }
+    .free { display: flex; gap: 16px; align-items: center; }
+    .free svg { width: 56px; height: 56px; flex: none; stroke: var(--border-medium); fill: none; }
+    .free h2 { font-size: 18px; margin-bottom: 4px; }
+    .free p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--r-control-xs); font-size: 11px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+    .b-presencial { background: var(--badge-solid-presencial-bg); color: var(--badge-solid-presencial-text); border-color: var(--badge-solid-presencial-border); }
+    .b-zoom { background: var(--badge-solid-zoom-bg); color: var(--badge-solid-zoom-text); border-color: var(--badge-solid-zoom-border); }
+    .b-virtual { background: var(--badge-solid-virtual-bg); color: var(--badge-solid-virtual-text); border-color: var(--badge-solid-virtual-border); }
+    .chip { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: var(--r-control-md); font-size: 11px; font-weight: 600; background: var(--surface-subtle); color: var(--text-muted); border: 1px solid var(--border-subtle); transition: all 150ms ease-out; }
+    .chip.on { color: var(--accent-lime); border-color: rgba(187, 244, 81, 0.4); background: rgba(187, 244, 81, 0.08); }
+    .chip.nx { color: var(--accent-orange); border-color: rgba(238, 150, 75, 0.4); background: rgba(238, 150, 75, 0.08); }
+    .seg { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--r-panel); padding: 4px; margin-bottom: 16px; }
+    .seg .thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); background: var(--surface-subtle); border: 1px solid var(--border-medium); border-radius: var(--r-control-md); transition: transform 200ms ease-out; }
+    .seg button { position: relative; z-index: 1; height: 38px; padding: 0 8px; display: flex; align-items: center; justify-content: center; border: 0; background: none; cursor: pointer; color: var(--text-muted); transition: color 150ms ease-out; }
+    .seg button .tab-inner { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 500; line-height: 1; color: inherit; }
+    .seg button .tn { font-size: 13px; font-weight: 600; line-height: 1; color: inherit; }
+    .seg button[aria-selected="true"] { color: var(--foreground); }
+    .panels { overflow: hidden; }
+    .tl { list-style: none; padding: 0; margin: 0; position: relative; }
+    .tl li { display: grid; grid-template-columns: 56px 1fr; gap: 12px; position: relative; padding-bottom: 12px; }
+    .tl .t { font-size: 13px; font-weight: 600; line-height: 1.3; padding-top: 14px; color: var(--foreground); }
+    .tl .t span { display: block; color: var(--text-muted); font-weight: 400; font-size: 12px; }
+    .card { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--r-panel); padding: 14px; transition: background 150ms ease-out, border-color 150ms ease-out; }
+    .card:hover { background: var(--surface-card-hover); border-color: var(--border-medium); }
+    li.done .card { opacity: 0.55; }
+    li.live .card { border-color: rgba(187, 244, 81, 0.4); background: rgba(30, 32, 25, 0.8); }
+    .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card h3 { font-size: 14.5px; font-weight: 600; line-height: 1.35; margin: 6px 0 10px; color: var(--foreground); letter-spacing: -0.01em; }
+    .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-muted); align-items: center; }
+    .facts span { display: inline-flex; align-items: center; gap: 5px; min-height: 20px; }
+    .sec { font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 4px 0 10px; }
+    .list { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+    .task-grid { display: grid; grid-template-columns: 1fr; gap: 12px; list-style: none; padding: 0; margin: 0; }
+    @media(min-width: 1100px) {
+      .task-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .urg-badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: var(--r-control-xs); }
+    .urg-badge.hoy { background: rgba(238, 150, 75, 0.15); color: var(--accent-orange); border: 1px solid rgba(238, 150, 75, 0.3); }
+    .urg-badge.man { background: rgba(187, 244, 81, 0.15); color: var(--accent-lime); border: 1px solid rgba(187, 244, 81, 0.3); }
+    .urg-badge.sem { background: var(--surface-subtle); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+    .w { font-size: 18px; font-weight: 700; color: var(--accent-lime); letter-spacing: -0.02em; }
+    .topics { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-subtle); font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+    .sk { background: linear-gradient(90deg, var(--surface-card) 0%, var(--surface-subtle) 50%, var(--surface-card) 100%); background-size: 200% 100%; animation: skeletonShimmer 1.4s linear infinite; border-radius: var(--r-panel); }
+    @keyframes skeletonShimmer { to { background-position: -200% 0; } }
+  `],
   template: `
-    <div class="space-y-6 text-white font-sans text-left">
-      @if (isLoading) {
-        <!-- Skeleton Loading State -->
-        <div class="space-y-6 animate-pulse">
-          <div class="r-card p-6 bg-[var(--utopik-carbon-black)] space-y-4">
-            <div class="flex items-center gap-2">
-              <div class="h-5 w-24 bg-white/10 rounded-full"></div>
-              <div class="h-5 w-20 bg-white/10 rounded-full"></div>
-            </div>
-            <div class="h-7 w-2/3 bg-white/10 r-panel"></div>
-            <div class="h-4 w-1/3 bg-white/5 r-control-md"></div>
+    <div class="today-layout text-white font-sans text-left">
+      <!-- Columna Izquierda: Header + Sticky Hero Card -->
+      <aside class="today-sidebar">
+        <!-- Header Editorial -->
+        <header class="head">
+          <div>
+            <p class="date">{{ formattedTodayDate }} · Semana {{ currentWeek }}</p>
+            <h1>Hoy</h1>
           </div>
-
-          <div class="space-y-3">
-            <div class="h-6 w-48 bg-white/10 r-control-md"></div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="h-32 r-card bg-[var(--utopik-carbon-black)] p-4 space-y-3">
-                <div class="h-4 w-1/4 bg-white/10 r-control-sm"></div>
-                <div class="h-5 w-3/4 bg-white/10 r-control-sm"></div>
-              </div>
-              <div class="h-32 r-card bg-[var(--utopik-carbon-black)] p-4 space-y-3">
-                <div class="h-4 w-1/4 bg-white/10 r-control-sm"></div>
-                <div class="h-5 w-3/4 bg-white/10 r-control-sm"></div>
-              </div>
-            </div>
+          <div class="clock" role="timer" aria-label="Hora actual">
+            <span class="dot" [class.live]="isLiveNow"></span>
+            <span class="tn">{{ now | date:'HH:mm' }}</span>
           </div>
-        </div>
-      } @else {
-        <!-- 1. Hero Status Banner -->
-        @if (bannerClass) {
-          <div 
-            class="r-card p-5 sm:p-6 transition-all duration-300 shadow-none bg-[var(--utopik-carbon-black)]"
-          >
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="space-y-2 min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  @if (isLiveNow) {
-                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
-                      <span class="h-1.5 w-1.5 circle bg-[var(--utopik-green-yellow)] animate-pulse"></span>
-                      En vivo • Quedan {{ minutesRemainingCurrent }}m
-                    </span>
-                  } @else {
-                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.08] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shrink-0">
-                      <lucide-icon name="flame" class="h-3 w-3 text-white/80"></lucide-icon>
-                      {{ minutesToNext !== null && minutesToNext <= 120 ? 'Próxima clase en ' + minutesToNext + ' min' : ('Siguiente sesión' | uppercase) }}
-                    </span>
-                  }
+        </header>
 
-                  @if (bannerClass.modality === 'P') {
-                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
-                      <lucide-icon name="map-pin" class="h-3 w-3 text-white/80"></lucide-icon>
-                      Presencial
-                    </span>
-                  } @else if (bannerClass.modality === 'R') {
-                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
-                      <lucide-icon name="video" class="h-3 w-3 text-white/80"></lucide-icon>
-                      Remoto Zoom
-                    </span>
-                  } @else {
-                    <span class="inline-flex items-center gap-1.5 r-control-xs bg-white/[0.06] hover:bg-white/[0.10] backdrop-blur-md px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-white/90 shrink-0">
-                      <lucide-icon name="wifi" class="h-3 w-3 text-white/80"></lucide-icon>
-                      Virtual
-                    </span>
-                  }
+        @if (isLoading) {
+          <div class="hero-slot">
+            <div class="sk" style="height:268px"></div>
+          </div>
+        } @else {
+          <!-- Hero Card Slot -->
+          <div class="hero-slot">
+            @if (bannerClass && isLiveNow) {
+            <article class="hero live" aria-live="polite">
+              <div class="hero-top">
+                <span class="status">
+                  <span class="dot live"></span>
+                  En vivo · Queda {{ minutesRemainingCurrent }} min
+                </span>
+                <span class="badge" [ngClass]="getModalityBadgeClass(bannerClass.modality)">
+                  {{ getModalityLabel(bannerClass.modality) }}
+                </span>
+              </div>
+              <span class="code">{{ getCourseCode(bannerClass) }}</span>
+              <h2>{{ parsedBannerTitle }}</h2>
+              <div class="times tn">
+                <span>{{ formatTime(bannerClass.startAt) }}</span>
+                <span>{{ formatTime(bannerClass.finishAt) }}</span>
+              </div>
+              <div class="bar" role="progressbar" [attr.aria-valuenow]="currentClassProgressPct" aria-valuemin="0" aria-valuemax="100">
+                <i [style.width.%]="currentClassProgressPct"></i>
+              </div>
+              <div class="meta">
+                <div class="cell">
+                  <small>
+                    <lucide-icon name="map-pin" class="i"></lucide-icon>
+                    Aula
+                  </small>
+                  <b>{{ getLocation(bannerClass).aula || 'Por asignar' }}</b>
                 </div>
-
-                <h3 class="text-base sm:text-lg font-black text-white leading-tight">
-                  {{ parsedBannerTitle }}
-                </h3>
-
-                <p class="text-xs text-neutral-400 flex items-center gap-2 font-sans font-medium">
-                  <span class="text-neutral-300 font-medium">
-                    {{ formatTime(bannerClass.startAt) }} – {{ formatTime(bannerClass.finishAt) }}
-                  </span>
-                </p>
+                <div class="cell">
+                  <small>
+                    <lucide-icon name="user" class="i"></lucide-icon>
+                    Docente
+                  </small>
+                  <b [class.na]="!getTeacher(bannerClass)">{{ getTeacher(bannerClass) || 'Por asignar' }}</b>
+                </div>
               </div>
-
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-subtle)]">
                 @if (bannerClass.metadata?.zoomLink) {
                   <a
                     [href]="bannerClass.metadata?.zoomLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 r-control-md bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold shadow-none transition active:scale-95 no-underline"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 r-control-md bg-white/10 hover:bg-white/20 text-white text-xs font-semibold no-underline transition"
                   >
-                    <lucide-icon name="video" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
+                    <lucide-icon name="video" class="i"></lucide-icon>
                     <span>Unirse a Zoom</span>
                   </a>
                 }
                 <button
                   (click)="onAskAiClick('¿Qué temas tocan hoy en ' + parsedBannerTitle + ' y qué preguntas clave debería hacer en clase?')"
-                  class="inline-flex items-center gap-1.5 r-control-md bg-white/[0.08] hover:bg-white/[0.16] text-white backdrop-blur-md px-3.5 py-2 text-xs font-semibold transition shadow-none active:scale-95 cursor-pointer"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 r-control-md bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white text-xs font-semibold transition cursor-pointer"
                 >
-                  <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-white/90"></lucide-icon>
+                  <lucide-icon name="sparkles" class="i text-[var(--accent-lime)]"></lucide-icon>
                   <span>Consultar IA</span>
                 </button>
+                <button
+                  (click)="selectedEventForModal = bannerClass"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 r-control-md bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white text-xs font-semibold transition cursor-pointer ml-auto"
+                >
+                  <span>Ver detalles</span>
+                  <lucide-icon name="chevron-right" class="i"></lucide-icon>
+                </button>
               </div>
-            </div>
-          </div>
-        }
-
-        <!-- 2. Flat Navigation Tabs -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-          <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] nest-1 r-control-md overflow-x-auto no-scrollbar max-w-full text-xs shadow-none">
-            <button
-              (click)="activeSection = 'todayClasses'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 r-inner font-bold"
-              [ngClass]="activeSection === 'todayClasses' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
-            >
-              <span>Clases de Hoy</span>
-              <span class="ml-0.5 text-[10px]" [ngClass]="activeSection === 'todayClasses' ? 'opacity-80' : 'opacity-60'">({{ todayEvents.length }})</span>
-            </button>
-
-            <button
-              (click)="activeSection = 'tasks'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 r-inner font-bold"
-              [ngClass]="activeSection === 'tasks' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
-            >
-              <span>Tareas</span>
-              <span class="ml-0.5 text-[10px]" [ngClass]="activeSection === 'tasks' ? 'opacity-80' : 'opacity-60'">({{ synchronizedTasks.length }})</span>
-            </button>
-
-            <button
-              (click)="activeSection = 'evaluations'"
-              class="inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-none shrink-0 cursor-pointer px-3.5 py-1.5 r-inner font-bold"
-              [ngClass]="activeSection === 'evaluations' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'bg-transparent text-neutral-400 hover:text-white hover:bg-white/5'"
-            >
-              <span>Evaluaciones</span>
-            </button>
-          </div>
-
-          <div class="flex items-center gap-2 text-xs text-neutral-500 font-sans font-medium self-end sm:self-auto">
-            <span>Semana {{ currentWeek }} de {{ totalWeeks }}</span>
-            <span>•</span>
-            <span>{{ periodName }}</span>
-          </div>
+            </article>
+          } @else if (bannerClass && !isLiveNow) {
+            <article class="hero next">
+              <div class="hero-top">
+                <span class="status">
+                  <lucide-icon name="clock" class="i"></lucide-icon>
+                  Próxima en {{ minutesToNext !== null && minutesToNext <= 120 ? minutesToNext + ' min' : (minutesToNext ? (minutesToNext / 60 | number:'1.0-0') + ' h' : 'breve') }}
+                </span>
+                <span class="badge" [ngClass]="getModalityBadgeClass(bannerClass.modality)">
+                  {{ getModalityLabel(bannerClass.modality) }}
+                </span>
+              </div>
+              <span class="code">{{ getCourseCode(bannerClass) }}</span>
+              <h2>{{ parsedBannerTitle }}</h2>
+              <div class="times tn">
+                <span>{{ formatTime(bannerClass.startAt) }}</span>
+                <span>{{ formatTime(bannerClass.finishAt) }}</span>
+              </div>
+              <div class="bar"><i style="width:0%"></i></div>
+              <div class="meta">
+                <div class="cell">
+                  <small>
+                    <lucide-icon name="map-pin" class="i"></lucide-icon>
+                    Aula
+                  </small>
+                  <b>{{ getLocation(bannerClass).aula || 'Por asignar' }}</b>
+                </div>
+                <div class="cell">
+                  <small>
+                    <lucide-icon name="user" class="i"></lucide-icon>
+                    Docente
+                  </small>
+                  <b [class.na]="!getTeacher(bannerClass)">{{ getTeacher(bannerClass) || 'Por asignar' }}</b>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-subtle)]">
+                @if (bannerClass.metadata?.zoomLink) {
+                  <a
+                    [href]="bannerClass.metadata?.zoomLink"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 r-control-md bg-white/10 hover:bg-white/20 text-white text-xs font-semibold no-underline transition"
+                  >
+                    <lucide-icon name="video" class="i"></lucide-icon>
+                    <span>Unirse a Zoom</span>
+                  </a>
+                }
+                <button
+                  (click)="onAskAiClick('¿Qué temas tocan hoy en ' + parsedBannerTitle + ' y qué preguntas clave debería hacer en clase?')"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 r-control-md bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white text-xs font-semibold transition cursor-pointer"
+                >
+                  <lucide-icon name="sparkles" class="i text-[var(--accent-orange)]"></lucide-icon>
+                  <span>Consultar IA</span>
+                </button>
+                <button
+                  (click)="selectedEventForModal = bannerClass"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 r-control-md bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white text-xs font-semibold transition cursor-pointer ml-auto"
+                >
+                  <span>Ver detalles</span>
+                  <lucide-icon name="chevron-right" class="i"></lucide-icon>
+                </button>
+              </div>
+            </article>
+          } @else {
+            <article class="hero">
+              <div class="free">
+                <svg viewBox="0 0 72 72" aria-hidden="true">
+                  <circle cx="36" cy="36" r="34"/>
+                  <circle cx="36" cy="36" r="22"/>
+                  <circle cx="36" cy="36" r="10"/>
+                  <path d="M2 36h68"/>
+                </svg>
+                <div>
+                  <h2>Sin más clases hoy</h2>
+                  <p>Completaste las sesiones del día. ¡Aprovecha para repasar tus tareas y proyectos!</p>
+                </div>
+              </div>
+            </article>
+          }
         </div>
+      }
+    </aside>
 
-        <!-- 3. Section Content -->
+    <!-- Columna Derecha: Tabs y Contenido -->
+    <div class="today-content">
+      @if (isLoading) {
+        <section class="tabs-slot" aria-label="Cargando contenido">
+          <div class="sk" style="height:112px;margin-bottom:12px"></div>
+          <div class="sk" style="height:112px;margin-bottom:12px"></div>
+          <div class="sk" style="height:112px"></div>
+        </section>
+      } @else {
+        <section class="tabs-slot" aria-label="Contenido del día">
+          <div class="seg" role="tablist">
+            <i class="thumb" [style.transform]="'translateX(' + (activeSection === 'todayClasses' ? '0%' : activeSection === 'tasks' ? '100%' : '200%') + ')'"></i>
+            <button
+              role="tab"
+              [attr.aria-selected]="activeSection === 'todayClasses'"
+              (click)="activeSection = 'todayClasses'"
+            >
+              <span class="tab-inner">
+                <span>Clases</span>
+                <span class="tn">{{ remainingClassesCount }}</span>
+              </span>
+            </button>
+            <button
+              role="tab"
+              [attr.aria-selected]="activeSection === 'tasks'"
+              (click)="activeSection = 'tasks'"
+            >
+              <span class="tab-inner">
+                <span>Tareas</span>
+                <span class="tn">{{ synchronizedTasks.length }}</span>
+              </span>
+            </button>
+            <button
+              role="tab"
+              [attr.aria-selected]="activeSection === 'evaluations'"
+              (click)="activeSection = 'evaluations'"
+            >
+              <span class="tab-inner">
+                <span>Evaluaciones</span>
+                <span class="tn">{{ sortedEvaluations.length }}</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="panels">
         
-        <!-- TAB: Clases de Hoy -->
+        <!-- Panel 0: Clases de Hoy -->
         @if (activeSection === 'todayClasses') {
-          <div class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3">
-              <h3 class="text-sm sm:text-base font-bold text-white">
-                Horario del Día: <span class="capitalize text-neutral-300 font-normal">{{ formattedTodayDate }}</span>
-              </h3>
+          @if (todayEvents.length === 0) {
+            <div class="card p-8 text-center text-sm text-[var(--text-muted)] space-y-2">
+              <p class="font-bold text-[var(--utopik-platinum)]">No tienes sesiones programadas para hoy</p>
+              <p class="text-xs">Revisa tu horario semanal para ver los próximos días.</p>
               <button
                 (click)="navigateToWeekly.emit()"
-                class="text-xs text-[var(--utopik-green-yellow)] hover:underline font-semibold transition-colors self-start sm:self-auto bg-transparent cursor-pointer"
+                class="inline-flex items-center gap-1.5 text-xs text-[var(--accent-lime)] hover:underline font-semibold mt-2 cursor-pointer"
               >
-                Ver horario semanal completo →
+                <span>Ver horario semanal completo</span>
+                <lucide-icon name="arrow-right" class="i"></lucide-icon>
+              </button>
+            </div>
+          } @else {
+            <ol class="tl">
+              @for (c of todayEvents; track c.id) {
+                <li [ngClass]="getClassStatus(c)">
+                  <div class="t tn">
+                    {{ formatTime(c.startAt) }}
+                    <span>{{ formatTime(c.finishAt) }}</span>
+                  </div>
+                  <div class="card cursor-pointer" (click)="selectedEventForModal = c">
+                    <div class="row">
+                      <span class="code">{{ getCourseCode(c) }}</span>
+                      @if (getClassStatus(c) === 'done') {
+                        <span class="chip">Completada</span>
+                      } @else if (getClassStatus(c) === 'live') {
+                        <span class="chip on">En curso</span>
+                      } @else if (isNextClass(c)) {
+                        <span class="chip nx">Siguiente</span>
+                      } @else {
+                        <span class="chip">Pendiente</span>
+                      }
+                    </div>
+                    <h3>{{ getCourseTitle(c) }}</h3>
+                    <div class="facts">
+                      <span>
+                        <lucide-icon name="user" class="i"></lucide-icon>
+                        {{ getTeacher(c) || 'Por asignar' }}
+                      </span>
+                      <span>
+                        <lucide-icon name="map-pin" class="i"></lucide-icon>
+                        {{ getLocation(c).aula || 'Por asignar' }}
+                      </span>
+                      <span class="badge" [ngClass]="getModalityBadgeClass(c.modality)">
+                        {{ getModalityLabel(c.modality) }}
+                      </span>
+                      @if (c.modality === 'R' && c.metadata?.zoomLink) {
+                        <button
+                          (click)="openZoomDirect($event, c.metadata?.zoomLink)"
+                          title="Unirse a Zoom"
+                          class="inline-flex items-center gap-1 px-2 py-0.5 r-control-xs bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold cursor-pointer ml-auto"
+                        >
+                          <lucide-icon name="video" class="i"></lucide-icon>
+                          <span>Zoom</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </li>
+              }
+            </ol>
+          }
+        }
+
+        <!-- Panel 1: Tareas -->
+        @if (activeSection === 'tasks') {
+          <div class="space-y-3">
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                (click)="taskFilter = 'all'"
+                class="chip cursor-pointer transition text-xs"
+                [ngClass]="taskFilter === 'all' ? 'on font-bold' : ''"
+              >
+                Todas ({{ synchronizedTasks.length }})
+              </button>
+              <button
+                (click)="taskFilter = 'homework'"
+                class="chip cursor-pointer transition text-xs"
+                [ngClass]="taskFilter === 'homework' ? 'on font-bold' : ''"
+              >
+                Tareas ({{ homeworkTasksCount }})
+              </button>
+              <button
+                (click)="taskFilter = 'forum'"
+                class="chip cursor-pointer transition text-xs"
+                [ngClass]="taskFilter === 'forum' ? 'on font-bold' : ''"
+              >
+                Foros ({{ forumTasksCount }})
+              </button>
+              <button
+                (click)="taskFilter = 'graded'"
+                class="chip cursor-pointer transition text-xs"
+                [ngClass]="taskFilter === 'graded' ? 'nx font-bold' : ''"
+              >
+                Calificadas ({{ gradedTasksCount }})
               </button>
             </div>
 
-            @if (todayEvents.length === 0) {
-              <div class="py-16 text-center r-card bg-[var(--utopik-carbon-black)] p-8 space-y-3 shadow-none">
-                <lucide-icon name="calendar" class="h-10 w-10 mx-auto text-neutral-600"></lucide-icon>
-                <p class="text-base font-bold text-white">¡No tienes sesiones programadas para hoy!</p>
-                <p class="text-xs text-neutral-400">Aprovecha para avanzar en tus entregables y proyectos.</p>
+            @if (filteredTasks.length === 0) {
+              <div class="card p-8 text-center text-sm text-[var(--text-muted)] space-y-2">
+                <p class="font-bold text-[var(--utopik-platinum)]">Sin tareas en este filtro</p>
+                <p class="text-xs">No tienes entregables pendientes en esta categoría para la semana.</p>
               </div>
             } @else {
-              <div class="space-y-3">
-                @for (ev of todayEvents; track ev.id) {
-                  <div
-                    (click)="selectedEventForModal = ev"
-                    class="group p-3.5 sm:p-5 r-control-lg flex items-center justify-between gap-3 transition-all duration-300 shadow-none cursor-pointer"
-                    [ngClass]="isSessionActive(ev) ? 'bg-[#25281e]' : 'bg-[var(--utopik-carbon-black)] hover:bg-[#25281e]'"
-                  >
-                    <div class="space-y-1 min-w-0 flex-1">
-                      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        @if (ev.modality === 'P') {
-                          <span class="inline-flex items-center gap-1.5 r-control-xs badge-solid-presencial px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
-                            <lucide-icon name="map-pin" class="h-3 w-3"></lucide-icon>
-                            Presencial
-                          </span>
-                        } @else if (ev.modality === 'R') {
-                          <span class="inline-flex items-center gap-1.5 r-control-xs badge-solid-zoom px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
-                            <lucide-icon name="video" class="h-3 w-3"></lucide-icon>
-                            Remoto Zoom
-                          </span>
-                        } @else {
-                          <span class="inline-flex items-center gap-1.5 r-control-xs badge-solid-virtual px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold">
-                            <lucide-icon name="wifi" class="h-3 w-3"></lucide-icon>
-                            Virtual
-                          </span>
-                        }
-
-                        <span class="font-sans font-medium text-[11px] sm:text-xs text-neutral-400 font-bold whitespace-nowrap">
-                          {{ formatTime(ev.startAt) }} – {{ formatTime(ev.finishAt) }}
+              <ul class="task-grid">
+                @for (item of filteredTasks; track item.task.id) {
+                  <li class="card flex flex-col justify-between hover:border-[var(--border-medium)] transition-all">
+                    <div>
+                      <div class="row items-center mb-2">
+                        <span class="urg-badge" [ngClass]="getTaskUrgencyClass(item.task).code">
+                          {{ getTaskUrgencyClass(item.task).label }}
                         </span>
-
-                        @if (ev.modality === 'P') {
-                          <span class="text-[10px] sm:text-[11px] font-sans font-medium text-neutral-400 truncate">
-                            • {{ getLocationForEvent(ev).aula }} ({{ getLocationForEvent(ev).pabellon }})
+                        <div class="flex items-center gap-1.5">
+                          @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
+                            <span class="chip on text-[10.5px]">
+                              <lucide-icon name="check-circle-2" class="i text-[var(--accent-lime)]"></lucide-icon>
+                              <span>Entregado</span>
+                            </span>
+                          }
+                          <span class="chip text-[10.5px]">
+                            {{ item.task.activityType === 'FORUM' ? 'Foro' : 'Tarea' }}
                           </span>
-                        }
+                        </div>
+                      </div>
 
-                        @if (isSessionActive(ev)) {
-                          <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/90 bg-white/[0.08] px-2 py-0.5 r-control-xs backdrop-blur-md">
-                            <span class="h-1.5 w-1.5 circle bg-[var(--utopik-green-yellow)] animate-pulse"></span>
-                            Sesión Actual
+                      <h3 class="text-sm font-bold text-white tracking-tight leading-snug line-clamp-2 my-2">
+                        {{ item.task.title }}
+                      </h3>
+
+                      <div class="facts">
+                        <span>
+                          <lucide-icon name="file-text" class="i"></lucide-icon>
+                          {{ formatCourse(item.task.courseName) }}
+                        </span>
+                        @if (item.task.week) {
+                          <span>Semana {{ item.task.week }}</span>
+                        }
+                        @if (item.task.evaluationSystem) {
+                          <span class="chip nx text-[10.5px] py-0 px-1.5">
+                            {{ item.task.evaluationSystem }}
+                            @if (item.syllabusContext.formulaWeight) {
+                              ({{ item.syllabusContext.formulaWeight }}%)
+                            }
+                          </span>
+                        } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
+                          <span class="chip nx text-[10.5px] py-0 px-1.5">
+                            {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
                           </span>
                         }
                       </div>
-
-                      <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-[var(--utopik-green-yellow)] transition-colors leading-snug truncate">
-                        {{ getParsedTitle(ev.title) }}
-                      </h4>
                     </div>
 
-                    <div class="flex items-center gap-2 shrink-0">
-                      @if (ev.modality === 'R' && ev.metadata?.zoomLink) {
+                    <div>
+                      <div class="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-[var(--border-subtle)]">
+                        @if (item.task.instructionsHtml) {
+                          <button
+                            (click)="selectedTaskForInstructions = item.task"
+                            class="chip cursor-pointer hover:text-white text-xs"
+                            title="Ver indicaciones oficiales"
+                          >
+                            <lucide-icon name="file-text" class="i mr-1"></lucide-icon>
+                            <span>Indicaciones</span>
+                          </button>
+                        }
+                        @if (item.task.rubric) {
+                          <button
+                            (click)="openRubric(item.task.rubric, item.task.title, item.task.courseName)"
+                            class="chip cursor-pointer hover:text-white text-xs"
+                            title="Ver rúbrica de calificación"
+                          >
+                            <lucide-icon name="award" class="i mr-1"></lucide-icon>
+                            <span>Rúbrica</span>
+                          </button>
+                        }
                         <button
-                          (click)="openZoomDirect($event, ev.metadata?.zoomLink)"
-                          title="Unirse directo a Zoom"
-                          aria-label="Unirse a Zoom"
-                          class="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center r-control-sm bg-white/10 hover:bg-white/20 text-white backdrop-blur-md shadow-none transition active:scale-95 shrink-0 cursor-pointer"
+                          (click)="onAskAiClick('¿Cómo resuelvo la actividad &quot;' + item.task.title + '&quot; del curso &quot;' + item.task.courseName + '&quot; según el sílabo y rúbrica oficial?')"
+                          class="chip cursor-pointer hover:text-white ml-auto text-[var(--accent-orange)] text-xs"
+                          title="Consultar al Copiloto IA"
                         >
-                          <lucide-icon name="video" class="h-3.5 w-3.5 text-white"></lucide-icon>
+                          <lucide-icon name="sparkles" class="i mr-1"></lucide-icon>
+                          <span>Copiloto</span>
                         </button>
+                        <button
+                          (click)="expandedTaskIds[item.task.id] = !expandedTaskIds[item.task.id]"
+                          class="chip cursor-pointer hover:text-white"
+                          title="Ver contexto del sílabo"
+                        >
+                          <lucide-icon [name]="expandedTaskIds[item.task.id] ? 'chevron-up' : 'chevron-down'" class="i"></lucide-icon>
+                        </button>
+                      </div>
+
+                      @if (expandedTaskIds[item.task.id]) {
+                        <div class="topics">
+                          <div class="flex items-center gap-1.5 font-semibold text-[var(--foreground)] mb-1">
+                            <lucide-icon name="book-open" class="i text-[var(--accent-lime)]"></lucide-icon>
+                            <span>Contexto del Sílabo</span>
+                          </div>
+                          <p class="text-xs text-[var(--text-muted)]">
+                            {{ item.task.syllabusCorrelation?.syllabusUnit || item.syllabusContext.unitTitle }}
+                          </p>
+                          @if (item.task.syllabusCorrelation?.syllabusTopic) {
+                            <p class="text-xs text-[var(--foreground)] mt-1">
+                              Tema: {{ item.task.syllabusCorrelation?.syllabusTopic }}
+                            </p>
+                          } @else if (item.syllabusContext.sessionTopics.length > 0) {
+                            <p class="text-xs text-[var(--foreground)] mt-1">
+                              Tema: {{ item.syllabusContext.sessionTopics[0] }}
+                            </p>
+                          }
+                        </div>
                       }
-                      <lucide-icon name="chevron-right" class="h-4 w-4 text-neutral-500 group-hover:text-white transition-colors shrink-0"></lucide-icon>
                     </div>
-                  </div>
+                  </li>
                 }
-              </div>
+              </ul>
             }
           </div>
         }
 
-        <!-- TAB: Tareas -->
-        @if (activeSection === 'tasks') {
-          <div class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-              <div class="flex items-center gap-2">
-                <h3 class="text-sm sm:text-base font-bold text-white">
-                  Entregables y Tareas
-                </h3>
-                <span class="text-xs text-neutral-500 font-medium">
-                  ({{ filteredTasks.length }} de {{ synchronizedTasks.length }})
-                </span>
-              </div>
-
-              <div class="inline-flex items-center gap-1 bg-[var(--utopik-carbon-black)] nest-1 r-control-md text-[11px] font-bold">
-                <button
-                  (click)="taskFilter = 'all'"
-                  class="px-3 py-1 r-inner transition cursor-pointer"
-                  [ngClass]="taskFilter === 'all' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
-                >
-                  Todas ({{ synchronizedTasks.length }})
-                </button>
-                <button
-                  (click)="taskFilter = 'homework'"
-                  class="px-3 py-1 r-inner transition cursor-pointer"
-                  [ngClass]="taskFilter === 'homework' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
-                >
-                  Tareas ({{ homeworkTasksCount }})
-                </button>
-                <button
-                  (click)="taskFilter = 'forum'"
-                  class="px-3 py-1 r-inner transition cursor-pointer"
-                  [ngClass]="taskFilter === 'forum' ? 'bg-[var(--utopik-green-yellow)] text-black font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
-                >
-                  Foros ({{ forumTasksCount }})
-                </button>
-                <button
-                  (click)="taskFilter = 'graded'"
-                  class="px-3 py-1 r-inner transition cursor-pointer"
-                  [ngClass]="taskFilter === 'graded' ? 'bg-[var(--utopik-sandy-brown)]/20 text-[var(--utopik-sandy-brown)] font-extrabold' : 'text-neutral-400 hover:text-white hover:bg-white/5'"
-                >
-                  Calificadas ({{ gradedTasksCount }})
-                </button>
-              </div>
-            </div>
-
-            <div class="space-y-2.5">
-              @if (filteredTasks.length === 0) {
-                <div class="p-8 text-center r-card bg-[var(--utopik-carbon-black)] text-xs text-neutral-400">
-                  No hay actividades en esta categoría.
-                </div>
-              } @else {
-                @for (item of filteredTasks; track item.task.id) {
-                  <div class="r-card bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] transition-colors p-4 sm:p-5 shadow-none text-white">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div class="space-y-1 flex-1 min-w-0">
-                        <div class="flex flex-wrap items-center gap-2 text-xs">
-                          <span class="font-semibold text-neutral-400">{{ item.task.courseName }}</span>
-                          <span class="text-neutral-600">•</span>
-                          <span class="text-neutral-400">Semana {{ item.task.week }}</span>
-
-                          <!-- Badge: Tipo de Actividad (FORUM / TAREA) -->
-                          @if (item.task.activityType === 'FORUM') {
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 r-control-sm bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
-                              <lucide-icon name="message-square" class="h-3 w-3"></lucide-icon>
-                              <span>Foro</span>
-                            </span>
-                          } @else {
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 r-control-sm bg-white/5 text-[var(--utopik-platinum)] font-bold text-[10.5px]">
-                              <lucide-icon name="file-text" class="h-3 w-3"></lucide-icon>
-                              <span>Tarea</span>
-                            </span>
-                          }
-
-                          @if (item.task.status === 'submitted' || item.task.homeworkStatus === 'DELIVERED') {
-                            <span class="text-neutral-600">•</span>
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 r-control-xs bg-[var(--utopik-green-yellow)]/15 text-[var(--utopik-green-yellow)] font-bold text-[11px]">
-                              <lucide-icon name="check-circle-2" class="h-3 w-3"></lucide-icon>
-                              <span>Entregado</span>
-                            </span>
-                          }
-
-                          @if (item.task.evaluationSystem) {
-                            <span class="text-neutral-600">•</span>
-                            <span class="inline-flex items-center px-2 py-0.5 r-control-xs bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
-                              {{ item.task.evaluationSystem }}
-                              @if (item.syllabusContext.formulaWeight) {
-                                ({{ item.syllabusContext.formulaWeight }}%)
-                              }
-                            </span>
-                          } @else if (item.syllabusContext.officialEvaluation && isTaskTitleMatchingEval(item.task.title, item.syllabusContext.officialEvaluation.code)) {
-                            <span class="text-neutral-600">•</span>
-                            <span class="inline-flex items-center px-2 py-0.5 r-control-xs bg-[var(--utopik-sandy-brown)]/15 text-[var(--utopik-sandy-brown)] font-bold text-[11px]">
-                              {{ item.syllabusContext.officialEvaluation.code }} ({{ item.syllabusContext.formulaWeight }}%)
-                            </span>
-                          }
-
-                          @if (item.task.status !== 'submitted' && getTaskUrgency(item.task)) {
-                            <span class="text-neutral-600">•</span>
-                            <span class="text-[11px] font-medium" [ngClass]="getTaskUrgency(item.task)?.badgeVariant === 'orange' ? 'text-[var(--utopik-sandy-brown)]' : 'text-neutral-400'">
-                              {{ getTaskUrgency(item.task)?.label }}
-                            </span>
-                          }
-                        </div>
-
-                        <h4 class="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
-                          {{ item.task.title }}
-                        </h4>
-                      </div>
-
-                      <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                        @if (item.task.instructionsHtml) {
-                          <button
-                            (click)="selectedTaskForInstructions = item.task"
-                            class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
-                          >
-                            <lucide-icon name="file-text" class="h-3.5 w-3.5"></lucide-icon>
-                            <span>Indicaciones</span>
-                          </button>
-                        }
-
-                        @if (item.task.rubric) {
-                          <button
-                            (click)="openRubric(item.task.rubric, item.task.title, item.task.courseName)"
-                            class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white hover:text-black px-3.5 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-none cursor-pointer"
-                          >
-                            <lucide-icon name="award" class="h-3.5 w-3.5"></lucide-icon>
-                            <span>Rúbrica</span>
-                          </button>
-                        }
-
-                        <button
-                          (click)="onAskAiClick('¿Cómo resuelvo la actividad &quot;' + item.task.title + '&quot; del curso &quot;' + item.task.courseName + '&quot; según el sílabo y rúbrica oficial?')"
-                          title="Consultar al Copiloto IA"
-                          class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
-                        >
-                          <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-[var(--utopik-sandy-brown)]"></lucide-icon>
-                        </button>
-
-                        <button
-                          (click)="expandedTaskIds[item.task.id] = !expandedTaskIds[item.task.id]"
-                          title="Ver detalles del sílabo"
-                          class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
-                        >
-                          @if (expandedTaskIds[item.task.id]) {
-                            <lucide-icon name="chevron-up" class="h-3.5 w-3.5"></lucide-icon>
-                          } @else {
-                            <lucide-icon name="chevron-down" class="h-3.5 w-3.5"></lucide-icon>
-                          }
-                        </button>
-                      </div>
-                    </div>
-
-                    @if (expandedTaskIds[item.task.id]) {
-                      <div class="mt-4 pt-4 text-xs space-y-2 text-neutral-300">
-                        @if (item.task.syllabusCorrelation; as sc) {
-                          <div class="flex flex-wrap items-center gap-2 text-neutral-400">
-                            <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
-                            <span class="font-bold text-white">Contexto del Sílabo:</span>
-                            <span>{{ sc.syllabusUnit || item.syllabusContext.unitTitle }}</span>
-                            @if (sc.weightPercent) {
-                              <span class="px-2 py-0.5 r-control-sm bg-[var(--utopik-sandy-brown)]/10 text-[var(--utopik-sandy-brown)] font-bold text-[10.5px]">
-                                {{ sc.evaluationType }} ({{ sc.weightPercent }}%)
-                              </span>
-                            }
-                            @if (item.task.courseCode) {
-                              <span class="text-neutral-500 font-sans font-medium text-[10.5px]">({{ item.task.courseCode }})</span>
-                            }
-                          </div>
-                          @if (sc.syllabusTopic) {
-                            <p class="text-neutral-400 pl-5">
-                              • Tema del sílabo: <span class="text-neutral-200">{{ sc.syllabusTopic }}</span>
-                            </p>
-                          } @else if (item.syllabusContext.sessionTopics.length > 0) {
-                            <p class="text-neutral-400 pl-5">
-                              • Tema de la semana: <span class="text-neutral-200">{{ item.syllabusContext.sessionTopics[0] }}</span>
-                            </p>
-                          }
-                          @if (sc.evaluationDescription) {
-                            <p class="text-neutral-400 pl-5">
-                              • Evaluación oficial: <span class="text-neutral-300">{{ sc.evaluationDescription }}</span>
-                            </p>
-                          }
-                        } @else {
-                          <div class="flex items-center gap-2 text-neutral-400">
-                            <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
-                            <span class="font-bold text-white">Contexto del Sílabo:</span>
-                            <span>{{ item.syllabusContext.unitTitle }}</span>
-                          </div>
-                          @if (item.syllabusContext.sessionTopics.length > 0) {
-                            <p class="text-neutral-400 pl-5">
-                              • Tema de la semana: {{ item.syllabusContext.sessionTopics[0] }}
-                            </p>
-                          }
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              }
-            </div>
-          </div>
-        }
-
-        <!-- TAB: Evaluaciones -->
+        <!-- Panel 2: Evaluaciones Oficiales -->
         @if (activeSection === 'evaluations') {
-          <div class="space-y-4">
-            <div class="flex items-center justify-between pb-1">
-              <h3 class="text-base sm:text-lg font-bold text-white">
-                Evaluaciones Oficiales ({{ sortedEvaluations.length }})
-              </h3>
-            </div>
-
-            <div class="space-y-2.5">
-              @for (ev of sortedEvaluations; track ev.id) {
-                <div class="p-4 sm:p-5 r-card bg-[var(--utopik-carbon-black)] hover:bg-[#25281e] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors shadow-none">
-                  <div class="space-y-1">
-                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                      <span class="font-semibold text-neutral-400">{{ ev.courseName.split(' - ')[0] }}</span>
-                      <span class="text-neutral-600">•</span>
-                      <span class="font-semibold" [ngClass]="ev.week === currentWeek ? 'text-[var(--utopik-green-yellow)]' : ev.week - currentWeek === 1 ? 'text-[var(--utopik-sandy-brown)]' : 'text-neutral-400'">
-                        Semana {{ ev.week }} {{ ev.week === currentWeek ? '(Esta semana)' : '' }}
-                      </span>
-                      <span class="text-neutral-600">•</span>
-                      <span class="font-bold text-[var(--utopik-sandy-brown)] bg-[var(--utopik-sandy-brown)]/15 px-2 py-0.5 r-control-sm text-[11px]">
-                        {{ ev.code }} ({{ ev.weightPercent }}%)
-                      </span>
+          <div>
+            <p class="sec">Semana {{ currentWeek }} · según sílabo oficial ({{ sortedEvaluations.length }})</p>
+            @if (sortedEvaluations.length === 0) {
+              <div class="card p-8 text-center text-sm text-[var(--text-muted)] space-y-2">
+                <p class="font-bold text-[var(--utopik-platinum)]">No hay evaluaciones registradas</p>
+                <p class="text-xs">Revisa los sílabos de tus cursos para conocer las fechas de evaluación.</p>
+              </div>
+            } @else {
+              <ul class="list">
+                @for (ev of sortedEvaluations; track ev.id) {
+                  <li class="card">
+                    <div class="row">
+                      <div>
+                        <span class="code">{{ ev.courseName.split(' - ')[0] }}</span>
+                        <h3 style="margin-bottom: 0;">
+                          {{ ev.code }} · Semana {{ ev.week }}
+                          @if (ev.week === currentWeek) {
+                            <span class="chip on ml-1.5 text-[10px]">Esta semana</span>
+                          }
+                        </h3>
+                      </div>
+                      <span class="w tn">{{ ev.weightPercent }}%</span>
                     </div>
 
-                    <h4 class="text-sm font-bold text-white leading-snug">{{ ev.fullName }}</h4>
-                    @if (ev.description) {
-                      <p class="text-xs text-neutral-400 max-w-2xl leading-relaxed">{{ ev.description }}</p>
+                    @if (ev.description || getEvaluationTopics(ev.courseName)) {
+                      <p class="topics">{{ ev.description || getEvaluationTopics(ev.courseName) }}</p>
                     }
-                  </div>
 
-                  <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                    <button
-                      (click)="selectedCourseForSyllabus = ev.courseName; isSyllabusModalOpen = true"
-                      class="inline-flex items-center gap-1.5 r-control-sm bg-white/5 hover:bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition shadow-none cursor-pointer"
-                    >
-                      <lucide-icon name="book-open" class="h-3.5 w-3.5 text-[var(--utopik-green-yellow)]"></lucide-icon>
-                      <span>Sílabo</span>
-                    </button>
-                    <button
-                      (click)="onAskAiClick('¿Cómo prepararme para ' + ev.code + ' (' + ev.fullName + ') de ' + ev.courseName + ' y qué rúbrica evalúa la UTP para sacar 20?')"
-                      title="Consultar al Copiloto IA"
-                      class="flex h-8 w-8 items-center justify-center r-control-md bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition shadow-none cursor-pointer"
-                    >
-                      <lucide-icon name="sparkles" class="h-3.5 w-3.5 text-[var(--utopik-sandy-brown)]"></lucide-icon>
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
+                    <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-subtle)]">
+                      <button
+                        (click)="selectedCourseForSyllabus = ev.courseName; isSyllabusModalOpen = true"
+                        class="chip cursor-pointer hover:text-white"
+                        title="Ver sílabo completo"
+                      >
+                        <lucide-icon name="book-open" class="i mr-1 text-[var(--accent-lime)]"></lucide-icon>
+                        Sílabo
+                      </button>
+                      <button
+                        (click)="onAskAiClick('¿Cómo prepararme para ' + ev.code + ' (' + ev.fullName + ') de ' + ev.courseName + ' y qué rúbrica evalúa la UTP para sacar 20?')"
+                        class="chip cursor-pointer hover:text-white ml-auto"
+                        title="Consultar al Copiloto IA"
+                      >
+                        <lucide-icon name="sparkles" class="i mr-1 text-[var(--accent-orange)]"></lucide-icon>
+                        Consultar Copiloto
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
           </div>
         }
+      </div>
+    </section>
+  }
+</div>
 
         <!-- MODAL: Detalle de Clase -->
         <app-class-detail-modal
@@ -617,7 +704,6 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             </div>
           </div>
         }
-      }
     </div>
   `
 })
@@ -1050,5 +1136,102 @@ export class TodayViewComponent implements OnInit, OnDestroy {
     const cleanTitle = title.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const cleanCode = evalCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
     return cleanTitle.includes(cleanCode) || cleanCode.includes(cleanTitle);
+  }
+
+  getClassStatus(ev: UTPEvent): 'done' | 'live' | 'wait' {
+    if (!ev.finishAt || !ev.startAt) return 'wait';
+    const s = parseDate(ev.startAt);
+    const f = parseDate(ev.finishAt);
+    if (this.now >= f) return 'done';
+    if (this.now >= s && this.now < f) return 'live';
+    return 'wait';
+  }
+
+  isNextClass(ev: UTPEvent): boolean {
+    const next = this.todayStore.nextClass();
+    return Boolean(next && next.id === ev.id);
+  }
+
+  getCourseCode(ev: UTPEvent): string {
+    if (ev.metadata?.courseId) return ev.metadata.courseId;
+    const parsed = parseEventTitle(ev.title);
+    return parsed.sectionCode || ev.metadata?.sectionCode || 'UTP';
+  }
+
+  getCourseTitle(ev: UTPEvent): string {
+    if (ev.metadata?.courseName) return ev.metadata.courseName;
+    const parsed = parseEventTitle(ev.title);
+    return parsed.cleanTitle || ev.title;
+  }
+
+  formatCourse(name: string): string {
+    return formatCourseName(name);
+  }
+
+  getLocation(ev: UTPEvent): { aula: string; pabellon: string; full: string } {
+    const loc = resolveEventLocation(ev);
+    return {
+      aula: loc.aula || '',
+      pabellon: loc.pabellon || '',
+      full: `${loc.pabellon || ''} · ${loc.aula || ''}`.trim()
+    };
+  }
+
+  getTeacher(ev: UTPEvent): string | null {
+    return ev.metadata?.teacher || null;
+  }
+
+  getModalityBadgeClass(modality?: string): string {
+    const m = (modality || 'P').toUpperCase();
+    if (m === 'P' || m === 'PRESENCIAL') return 'b-presencial';
+    if (m === 'R' || m === 'REMOTO' || m === 'ZOOM') return 'b-zoom';
+    return 'b-virtual';
+  }
+
+  getModalityLabel(modality?: string): string {
+    const m = (modality || 'P').toUpperCase();
+    if (m === 'P' || m === 'PRESENCIAL') return 'Presencial';
+    if (m === 'R' || m === 'REMOTO' || m === 'ZOOM') return 'Zoom';
+    return 'Virtual';
+  }
+
+  get remainingClassesCount(): number {
+    return this.todayEvents.filter(c => this.getClassStatus(c) !== 'done').length;
+  }
+
+  get currentClassProgressPct(): number {
+    const cur = this.todayStore.currentClass();
+    if (!cur || !cur.startAt || !cur.finishAt) return 0;
+    const s = parseDate(cur.startAt).getTime();
+    const f = parseDate(cur.finishAt).getTime();
+    const n = this.now.getTime();
+    if (f <= s) return 0;
+    return Math.min(100, Math.max(0, Math.round(((n - s) / (f - s)) * 100)));
+  }
+
+  getTaskUrgencyClass(task: CourseAssignment): { code: 'hoy' | 'man' | 'sem'; label: string } {
+    const urg = this.getTaskUrgency(task);
+    if (!urg) return { code: 'sem', label: 'Esta semana' };
+    if (urg.status === 'today') return { code: 'hoy', label: 'Vence hoy' };
+    if (task.daysRemaining === 1) return { code: 'man', label: 'Vence mañana' };
+    return { code: 'sem', label: urg.label };
+  }
+
+  getEvaluationTopics(courseName: string): string {
+    const syllabus = getCachedSyllabus(courseName);
+    if (syllabus?.weeklySchedule) {
+      const currentWeekSession = syllabus.weeklySchedule.find(s => s.week === this.currentWeek);
+      if (currentWeekSession) {
+        if (currentWeekSession.topic) return currentWeekSession.topic;
+        if (currentWeekSession.topics && currentWeekSession.topics.length > 0) {
+          return currentWeekSession.topics.join(', ');
+        }
+      }
+    }
+    const ctx = getSyllabusWeekContext(courseName, this.currentWeek);
+    if (ctx.sessionTopics && ctx.sessionTopics.length > 0) {
+      return ctx.sessionTopics.join(', ');
+    }
+    return '';
   }
 }

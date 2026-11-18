@@ -27,20 +27,36 @@ class AcademicToolRegistryTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** Las 6 herramientas realmente soportadas por el backend. */
+    /** Las 7 herramientas realmente soportadas por el backend. */
     private static final List<String> EXPECTED_TOOLS = List.of(
             "get_today_schedule",
             "get_enrolled_courses",
             "get_syllabus_details",
             "get_upcoming_evaluations",
             "get_remaining_classes_today",
+            "get_course_tasks_and_activities",
             "search_marketplace"
     );
 
     @Test
-    @DisplayName("El registro expone exactamente las 6 herramientas academicas soportadas")
+    @DisplayName("El registro expone exactamente las 7 herramientas academicas soportadas")
     void registryExposesExactlyTheFiveSupportedTools() {
         assertEquals(EXPECTED_TOOLS, AcademicToolRegistry.getSupportedToolNames());
+    }
+
+    @Test
+    @DisplayName("get_course_tasks_and_activities declara course_query como requerido y parametros opcionales")
+    void courseTasksDeclaresExpectedParameters() {
+        Map<String, Object> function = functionByName("get_course_tasks_and_activities");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parameters = (Map<String, Object>) function.get("parameters");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> properties = (Map<String, Object>) parameters.get("properties");
+
+        assertTrue(properties.containsKey("course_query"));
+        assertTrue(properties.containsKey("evaluation_type"));
+        assertTrue(properties.containsKey("status"));
+        assertEquals(List.of("course_query"), parameters.get("required"));
     }
 
     @Test

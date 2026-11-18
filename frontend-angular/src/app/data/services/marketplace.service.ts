@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { Observable, map, catchError, of, throwError } from 'rxjs';
 import { ServiceItem } from '@domain/models/marketplace';
 import { ApiResponse } from '@domain/models/utp.model';
 import { environment } from '@env/environment';
@@ -62,7 +62,7 @@ export class MarketplaceService {
       }),
       catchError(err => {
         console.warn('[MarketplaceService] Error al obtener ítems de base de datos:', err.message);
-        return of([]);
+        return throwError(() => err);
       })
     );
   }
@@ -181,7 +181,8 @@ export class MarketplaceService {
       tags: Array.isArray(raw.tags) ? raw.tags : [],
       contactMethod: raw.contactMethod ?? '',
       status: raw.status ?? undefined,
-      highlights: Array.isArray(raw.highlights) ? raw.highlights : []
+      highlights: Array.isArray(raw.highlights) ? raw.highlights : [],
+      createdAt: raw.createdAt ?? undefined
     };
   }
 }

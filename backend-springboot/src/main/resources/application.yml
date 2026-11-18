@@ -1,5 +1,6 @@
 server:
   port: ${PORT:8080}
+  forward-headers-strategy: framework
   max-http-request-header-size: 65536
   tomcat:
     max-http-response-header-size: 65536
@@ -40,7 +41,7 @@ academic:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:utp-horario-inteligente-jwt-secret-key-super-secure-32b}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 horas
   rate-limit:
     daily-quota: 6

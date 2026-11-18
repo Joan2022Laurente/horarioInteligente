@@ -97,31 +97,38 @@ export function getAllCachedSyllabi(): Record<string, ParsedSyllabus> {
   return map;
 }
 
+const syllabusMemoryCache = new Map<string, ParsedSyllabus | null>();
+
 /**
  * Busca un sílabo específico en localStorage por nombre o código de curso.
  * Telemetría [CACHE-CHECK] por consulta de sílabo (HIT/MISS con ms).
+ * Implementa caché en memoria para evitar escaneos redundantes en cada ciclo de render.
  */
 export function getCachedSyllabus(courseNameOrCode: string): ParsedSyllabus | null {
   if (typeof window === 'undefined' || !courseNameOrCode) return null;
 
+  const normalized = normalizeKey(courseNameOrCode);
+  if (syllabusMemoryCache.has(normalized)) {
+    return syllabusMemoryCache.get(normalized) ?? null;
+  }
+
   const startedAt = performance.now();
-  const settle = (hit: boolean, source: string): void => {
+  const settle = (hit: boolean, source: string, result: ParsedSyllabus | null): ParsedSyllabus | null => {
+    syllabusMemoryCache.set(normalized, result);
     const elapsedMs = Math.round((performance.now() - startedAt) * 10) / 10;
     if (hit) {
       console.log(`[CACHE-CHECK] utp_syllabus_live_* ← '${courseNameOrCode}': HIT (${source}, ${elapsedMs}ms)`);
     } else {
       console.log(`[CACHE-CHECK] utp_syllabus_live_* ← '${courseNameOrCode}': MISS (${elapsedMs}ms) -> se consultará al backend/pasarela`);
     }
+    return result;
   };
-
-  const normalized = normalizeKey(courseNameOrCode);
 
   // 1. Búsqueda directa por clave
   const directKey = `${SYLLABUS_STORAGE_PREFIX}${courseNameOrCode.toUpperCase().trim()}`;
   const direct = getStorageItem<ParsedSyllabus>(directKey);
   if (direct?.formula && direct.weeklySchedule && direct.weeklySchedule.length > 0) {
-    settle(true, 'clave directa');
-    return direct;
+    return settle(true, 'clave directa', direct);
   }
 
   // 2. Búsqueda en el mapa global con normalización insensible a tildes
@@ -135,13 +142,11 @@ export function getCachedSyllabus(courseNameOrCode: string): ParsedSyllabus | nu
       (sCode && (sCode === normalized || normalized.includes(sCode))) ||
       (sName && (sName === normalized || sName.includes(normalized) || normalized.includes(sName)))
     ) {
-      settle(true, 'mapa normalizado');
-      return syllabus;
+      return settle(true, 'mapa normalizado', syllabus);
     }
   }
 
-  settle(false, '-');
-  return null;
+  return settle(false, '-', null);
 }
 
 /**
@@ -153,11 +158,13 @@ export function saveCachedSyllabus(courseIdOrName: string, syllabus: ParsedSylla
   const startedAt = performance.now();
   const key = `${SYLLABUS_STORAGE_PREFIX}${courseIdOrName.toUpperCase().trim()}`;
   setStorageItem(key, syllabus);
+  syllabusMemoryCache.set(normalizeKey(courseIdOrName), syllabus);
 
   if (syllabus.generalInfo?.courseCode) {
     const codeKey = `${SYLLABUS_STORAGE_PREFIX}${syllabus.generalInfo.courseCode.toUpperCase().trim()}`;
     if (codeKey !== key) {
       setStorageItem(codeKey, syllabus);
+      syllabusMemoryCache.set(normalizeKey(syllabus.generalInfo.courseCode), syllabus);
     }
   }
 

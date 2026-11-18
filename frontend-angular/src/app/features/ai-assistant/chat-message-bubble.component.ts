@@ -14,6 +14,8 @@ const TOOL_MAP: Record<string, ToolBadge> = {
  get_syllabus_details: { label: 'Sílabo', icon: 'book' },
  get_enrolled_courses: { label: 'Cursos', icon: 'list' },
  get_upcoming_evaluations: { label: 'Evaluaciones', icon: 'check' },
+ get_course_tasks_and_activities: { label: 'Tareas y Actividades', icon: 'check' },
+ search_marketplace: { label: 'Marketplace', icon: 'tool' },
 };
 
 @Component({

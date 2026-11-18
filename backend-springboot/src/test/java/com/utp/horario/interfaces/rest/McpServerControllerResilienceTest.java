@@ -57,15 +57,12 @@ class McpServerControllerResilienceTest {
     @Mock
     private SecurityIdentityResolver identityResolver;
 
-    @Mock
-    private StudentSessionService studentSessionService;
-
     private McpServerController controller;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService,
+        controller = new McpServerController(toolService, mapper, identityResolver,
                 new AcademicToolDispatcher(toolService, mapper));
     }
 
@@ -196,7 +193,7 @@ class McpServerControllerResilienceTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools =
                 (List<Map<String, Object>>) ((Map<String, Object>) response.getBody().get("result")).get("tools");
-        assertEquals(6, tools.size());
+        assertEquals(AcademicToolRegistry.getSupportedToolNames().size(), tools.size());
         for (Map<String, Object> tool : tools) {
             assertNotNull(tool.get("inputSchema"));
             assertFalse(tool.containsKey("studentCode"));

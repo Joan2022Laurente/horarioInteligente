@@ -41,6 +41,13 @@ public class AcademicToolService {
      */
     public static final String DEFAULT_PERIOD_NAME = "2026 - Ciclo 2 Agosto";
 
+    @org.springframework.beans.factory.annotation.Value("${app.academic.current-period:" + DEFAULT_PERIOD_NAME + "}")
+    private String currentPeriodName = DEFAULT_PERIOD_NAME;
+
+    public String getCurrentPeriod() {
+        return (currentPeriodName != null && !currentPeriodName.isBlank()) ? currentPeriodName : DEFAULT_PERIOD_NAME;
+    }
+
     /** Zona horaria institucional de la universidad. */
     public static final ZoneId LIMA_ZONE = ZoneId.of("America/Lima");
 
@@ -55,7 +62,21 @@ public class AcademicToolService {
     private final ObjectMapper objectMapper;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.utp.horario.domain.model.repositories.ITaskSyncRepository taskRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.utp.horario.application.service.TaskQueryService taskQueryService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private CurrentRequestToken currentRequestToken;
+
+    public void setTaskRepository(com.utp.horario.domain.model.repositories.ITaskSyncRepository taskRepository) {
+        this.taskRepository = taskRepository;
+    }
+
+    public void setTaskQueryService(com.utp.horario.application.service.TaskQueryService taskQueryService) {
+        this.taskQueryService = taskQueryService;
+    }
 
 
 
@@ -111,7 +132,7 @@ public class AcademicToolService {
         Integer weekNumber = null;
 
         // 1. Intento desde repositorio local MySQL / L1 Cache
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, getCurrentPeriod());
 
         if (scheduleOpt.isEmpty() || scheduleOpt.get().getClasses() == null) {
             // Guardia de honestidad: sin horario persistido NO es "día libre"; es falta de datos.
@@ -131,17 +152,17 @@ public class AcademicToolService {
             }
 
             if (matchesDay) {
-                String startTimeStr = c.getStartAt() != null ? c.getStartAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "08:00";
-                String endTimeStr = c.getFinishAt() != null ? c.getFinishAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "10:00";
+                String startTimeStr = c.getStartAt() != null ? c.getStartAt().format(DateTimeFormatter.ofPattern("HH:mm")) : null;
+                String endTimeStr = c.getFinishAt() != null ? c.getFinishAt().format(DateTimeFormatter.ofPattern("HH:mm")) : null;
 
                 dayClasses.add(new ClassSessionDto(
-                        c.getCourseCode() != null ? c.getCourseCode() : "",
-                        c.getCourseName() != null ? c.getCourseName() : "Clase UTP",
+                        c.getCourseCode(),
+                        c.getCourseName(),
                         startTimeStr,
                         endTimeStr,
-                        c.getBuilding() != null && !c.getBuilding().isBlank() ? c.getBuilding() : "Campus UTP",
-                        c.getClassroom() != null && !c.getClassroom().isBlank() ? c.getClassroom() : "Aula Asignada",
-                        c.getTeacher() != null && !c.getTeacher().isBlank() ? c.getTeacher() : "Docente UTP"
+                        (c.getBuilding() != null && !c.getBuilding().isBlank()) ? c.getBuilding() : null,
+                        (c.getClassroom() != null && !c.getClassroom().isBlank()) ? c.getClassroom() : null,
+                        (c.getTeacher() != null && !c.getTeacher().isBlank()) ? c.getTeacher() : null
                 ));
             }
         }
@@ -195,7 +216,7 @@ public class AcademicToolService {
                     "No se identificó una sesión de estudiante activa. Inicia sesión para consultar tu horario personal.");
         }
 
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, getCurrentPeriod());
         if (scheduleOpt.isEmpty() || scheduleOpt.get().getClasses() == null) {
             log.warn("[AcademicTool] 🚫 Sin horario persistido para [{}] en getRemainingClassesToday", studentCode);
             return new RemainingClassesTodayResult(studentCode, date.toString(), dayOfWeekSpanish, currentTimeFormatted, null, 0, List.of(),
@@ -220,17 +241,18 @@ public class AcademicToolService {
         List<RemainingClassSessionDto> remaining = new ArrayList<>();
 
         for (ClassSession c : allClassesToday) {
-            LocalTime startTime = c.getStartAt().toLocalTime();
-            LocalTime finishTime = c.getFinishAt() != null ? c.getFinishAt().toLocalTime() : startTime.plusHours(2);
+            LocalTime startTime = c.getStartAt() != null ? c.getStartAt().toLocalTime() : null;
+            if (startTime == null) continue;
+            LocalTime finishTime = c.getFinishAt() != null ? c.getFinishAt().toLocalTime() : null;
 
             // Si la clase ya concluyó antes de la hora actual, se descarta deterministamente
-            if (finishTime.isBefore(time)) {
+            if (finishTime != null && finishTime.isBefore(time)) {
                 continue;
             }
 
             String status;
             long minutesUntilStart;
-            if (!time.isBefore(startTime) && !time.isAfter(finishTime)) {
+            if (finishTime != null && !time.isBefore(startTime) && !time.isAfter(finishTime)) {
                 status = "EN_CURSO";
                 minutesUntilStart = 0L;
             } else {
@@ -239,11 +261,11 @@ public class AcademicToolService {
             }
 
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("HH:mm"));
-            String finishTimeStr = finishTime.format(DateTimeFormatter.ofPattern("HH:mm"));
-            String timeWindow = startTimeStr + " - " + finishTimeStr;
+            String finishTimeStr = finishTime != null ? finishTime.format(DateTimeFormatter.ofPattern("HH:mm")) : null;
+            String timeWindow = finishTimeStr != null ? startTimeStr + " - " + finishTimeStr : startTimeStr + " (sin hora fin)";
 
             String courseCode = c.getCourseCode() != null ? c.getCourseCode().trim() : "";
-            String courseName = c.getCourseName() != null ? c.getCourseName().trim() : "Clase UTP";
+            String courseName = c.getCourseName() != null ? c.getCourseName().trim() : null;
 
             // Enriquecimiento determinista con el sílabo oficial
             String syllabusTopic = null;
@@ -290,10 +312,10 @@ public class AcademicToolService {
                     finishTimeStr,
                     minutesUntilStart,
                     modality,
-                    c.getClassroom() != null && !c.getClassroom().isBlank() ? c.getClassroom() : "Aula Asignada",
-                    c.getBuilding() != null && !c.getBuilding().isBlank() ? c.getBuilding() : "Campus UTP",
-                    c.getFloor() != null && !c.getFloor().isBlank() ? c.getFloor() : null,
-                    c.getTeacher() != null && !c.getTeacher().isBlank() ? c.getTeacher() : "Docente UTP",
+                    (c.getClassroom() != null && !c.getClassroom().isBlank()) ? c.getClassroom() : null,
+                    (c.getBuilding() != null && !c.getBuilding().isBlank()) ? c.getBuilding() : null,
+                    (c.getFloor() != null && !c.getFloor().isBlank()) ? c.getFloor() : null,
+                    (c.getTeacher() != null && !c.getTeacher().isBlank()) ? c.getTeacher() : null,
                     c.getZoomLink(),
                     syllabusTopic,
                     syllabusActivities,
@@ -338,14 +360,9 @@ public class AcademicToolService {
         if (code == null || code.isBlank()) {
             return null;
         }
-        try {
-            return scheduleRepository.findByStudentIdAndPeriod(code, DEFAULT_PERIOD_NAME)
-                    .map(ScheduleInterval::getWeekNumber)
-                    .orElse(null);
-        } catch (Exception e) {
-            log.warn("[AcademicTool] No se pudo resolver la semana lectiva vigente de [{}]: {}", code, e.getMessage());
-            return null;
-        }
+        return scheduleRepository.findByStudentIdAndPeriod(code, getCurrentPeriod())
+                .map(ScheduleInterval::getWeekNumber)
+                .orElse(null);
     }
 
     /**
@@ -363,14 +380,9 @@ public class AcademicToolService {
         if (code == null || code.isBlank()) {
             return false;
         }
-        try {
-            return scheduleRepository.findByStudentIdAndPeriod(code, DEFAULT_PERIOD_NAME)
-                    .map(this::intervalHasAcademicData)
-                    .orElse(false);
-        } catch (Exception e) {
-            log.warn("[AcademicTool] No se pudo verificar el horario persistido de [{}]: {}", code, e.getMessage());
-            return false;
-        }
+        return scheduleRepository.findByStudentIdAndPeriod(code, getCurrentPeriod())
+                .map(this::intervalHasAcademicData)
+                .orElse(false);
     }
 
     /** Criterio de datos reales: al menos una clase o un curso declarado en el intervalo. */
@@ -417,6 +429,7 @@ public class AcademicToolService {
 
         // 1. Fuente Primaria Institucional: API Externa Gateway /courses/summary
         String token = resolveStudentToken(studentCode);
+        Exception gatewayException = null;
         if (token != null && !token.isBlank()) {
             try {
                 List<CourseSummaryDto> summaries = utpPortalGateway.fetchCoursesSummary(token);
@@ -433,11 +446,12 @@ public class AcademicToolService {
                 }
             } catch (Exception e) {
                 log.warn("[AcademicTool] ⚠️ Error consultando API Externa /courses/summary para [{}]: {}", studentCode, e.getMessage());
+                gatewayException = e;
             }
         }
 
         // 2. Base de datos (MySQL / Caché local)
-        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, DEFAULT_PERIOD_NAME);
+        Optional<ScheduleInterval> scheduleOpt = scheduleRepository.findByStudentIdAndPeriod(studentCode, getCurrentPeriod());
 
         List<EnrolledCourseDto> courses = new ArrayList<>();
         if (scheduleOpt.isPresent()) {
@@ -463,6 +477,9 @@ public class AcademicToolService {
         }
         log.info("[AcademicTool] 📚 Cursos matriculados encontrados (fallback): {}", courses.size());
         if (courses.isEmpty()) {
+            if (gatewayException != null) {
+                throw new IllegalStateException("Error consultando cursos oficiales en la pasarela UTP: " + gatewayException.getMessage(), gatewayException);
+            }
             String message = "No se encontraron asignaturas persistidas para el estudiante " + studentCode
                     + ". Sincroniza el horario desde la aplicacion para habilitar esta consulta.";
             return new EnrolledCoursesResult(studentCode, 0, courses, message);
@@ -651,12 +668,12 @@ public class AcademicToolService {
 
         Syllabus s = syllabusOpt.orElseGet(() -> {
             // Regla de honestidad de datos: si solo hay markdown oficial sin franja de
-            // créditos, el campo queda null ("no indicado"); nunca se infla con 3.
+            // créditos o meta, los campos quedan null; nunca se inflan con cadenas inventadas.
             Syllabus fallback = new Syllabus();
             fallback.setCourseCode(courseCode);
             fallback.setCourseName(cleanQuery.toUpperCase());
             fallback.setFormula("");
-            fallback.setLearningGoal("Obtenido directamente desde el Sílabo Oficial UTP");
+            fallback.setLearningGoal(null);
             return fallback;
         });
 
@@ -666,16 +683,16 @@ public class AcademicToolService {
                         s.getCourseName(),
                         e.getType(),
                         e.getDescription(),
-                        e.getWeightPercent() != null ? e.getWeightPercent() : 0,
-                        e.getWeek() != null ? e.getWeek() : 1
+                        e.getWeightPercent(),
+                        e.getWeek()
                 )).toList() : List.of();
 
         List<WeeklySessionDto> weekly = s.getWeeklySchedule() != null ? s.getWeeklySchedule().stream()
                 .map(w -> new WeeklySessionDto(
-                        w.getWeek() != null ? w.getWeek() : 0,
-                        w.getUnit() != null ? w.getUnit() : "",
-                        w.getTopic() != null ? w.getTopic() : "",
-                        w.getActivities() != null ? w.getActivities() : "",
+                        w.getWeek(),
+                        w.getUnit(),
+                        w.getTopic(),
+                        w.getActivities(),
                         w.getEvaluation()
                 )).toList() : List.of();
 
@@ -740,6 +757,7 @@ public class AcademicToolService {
 
         // 1. Fuente Prioritaria Institucional: API Externa Gateway /tasks/upcoming?limit=5
         String token = resolveStudentToken(studentCode);
+        Exception gatewayException = null;
         if (token != null && !token.isBlank()) {
             try {
                 List<UpcomingEvaluationDto> externalUpcoming = utpPortalGateway.fetchUpcomingEvaluations(token, 5);
@@ -749,19 +767,19 @@ public class AcademicToolService {
                         String code = (u.courseId() != null && !u.courseId().isBlank()) ? u.courseId() : "";
                         String type = (u.evaluationSystem() != null && !u.evaluationSystem().isBlank()) 
                                 ? u.evaluationSystem() 
-                                : ((u.activityType() != null && !u.activityType().isBlank()) ? u.activityType() : "EVALUACION");
+                                : u.activityType();
                         
                         String urgencyNote = (u.urgency() != null && !u.urgency().isBlank()) ? " (" + u.urgency() + ")" : "";
-                        String desc = (u.title() != null ? u.title() : "Evaluación UTP") + urgencyNote;
+                        String desc = (u.title() != null) ? u.title() + urgencyNote : null;
                         
-                        int evaluationWeek = u.weekNumber() > 0 ? u.weekNumber() : week;
+                        Integer evaluationWeek = u.weekNumber() > 0 ? u.weekNumber() : null;
                         
                         mapped.add(new EvaluationSummaryDto(
                                 code,
-                                u.courseName() != null ? u.courseName() : "Curso UTP",
+                                u.courseName(),
                                 type,
                                 desc,
-                                0,
+                                null,
                                 evaluationWeek
                         ));
                     }
@@ -770,6 +788,7 @@ public class AcademicToolService {
                 }
             } catch (Exception e) {
                 log.warn("[AcademicTool] ⚠️ Error consultando API Externa /tasks/upcoming para [{}]: {}", studentCode, e.getMessage());
+                gatewayException = e;
             }
         }
 
@@ -791,13 +810,274 @@ public class AcademicToolService {
                                 course.courseName(),
                                 e.getType(),
                                 e.getDescription(),
-                                e.getWeightPercent() != null ? e.getWeightPercent() : 0,
-                                e.getWeek() != null ? e.getWeek() : 1
+                                e.getWeightPercent(),
+                                e.getWeek()
                         )));
             }
         }
+        if (upcoming.isEmpty() && courseList.isEmpty() && gatewayException != null) {
+            throw new IllegalStateException("Error consultando evaluaciones próximas en la pasarela UTP: " + gatewayException.getMessage(), gatewayException);
+        }
         log.info("[AcademicTool] 🎯 Evaluaciones próximas encontradas en fallback: {}", upcoming.size());
         return upcoming;
+    }
+
+    /**
+     * Tool 6: Obtiene las tareas, actividades y entregables de un curso específico del estudiante,
+     * cruzándolos con la semana lectiva actual y los rubros de evaluación del sílabo (ej. Nota de Participación 'PA').
+     *
+     * @param studentCode    código del estudiante
+     * @param courseQuery    nombre o código del curso a consultar
+     * @return resultado estructurado para el agente y MCP
+     */
+    public CourseTasksAndActivitiesResult getCourseTasksAndActivities(String studentCode, String courseQuery) {
+        return getCourseTasksAndActivities(studentCode, courseQuery, null, null);
+    }
+
+    public CourseTasksAndActivitiesResult getCourseTasksAndActivities(String studentCode, String courseQuery,
+                                                                      String evaluationType, String statusFilter) {
+        String code = resolveEffectiveStudentCode(studentCode);
+        String cleanQuery = (courseQuery != null) ? courseQuery.trim() : "";
+
+        if (code == null || code.isBlank()) {
+            return new CourseTasksAndActivitiesResult(
+                    "", cleanQuery, "Curso no especificado", null, "",
+                    false, null, 0, 0, 0, 0, List.of(), List.of(),
+                    "No se identificó una sesión de estudiante activa. Inicia sesión para consultar tus tareas."
+            );
+        }
+
+        if (cleanQuery.isBlank()) {
+            return new CourseTasksAndActivitiesResult(
+                    code, "", "Curso no especificado", null, "",
+                    false, null, 0, 0, 0, 0, List.of(), List.of(),
+                    "Argumento obligatorio 'course_query' ausente: envía el nombre o código del curso."
+            );
+        }
+
+        // 1. Resolver curso desde asignaturas matriculadas del estudiante
+        String resolvedCourseCode = null;
+        String resolvedCourseName = null;
+        try {
+            EnrolledCoursesResult enrolled = getEnrolledCourses(code);
+            if (enrolled != null && enrolled.courses() != null) {
+                String normQuery = normalizeTerm(cleanQuery);
+                for (var ec : enrolled.courses()) {
+                    String normEcName = normalizeTerm(ec.courseName());
+                    String normEcCode = normalizeTerm(ec.courseCode());
+                    if (normEcName.contains(normQuery) || normQuery.contains(normEcName)
+                            || normEcCode.equalsIgnoreCase(normQuery)) {
+                        resolvedCourseCode = ec.courseCode();
+                        resolvedCourseName = ec.courseName();
+                        log.info("[AcademicTool] 🎯 Curso resuelto para tareas: {} ({})", resolvedCourseName, resolvedCourseCode);
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AcademicTool] Error resolviendo curso matriculado para tareas: {}", e.getMessage());
+        }
+
+        String targetCourseCode = (resolvedCourseCode != null) ? resolvedCourseCode : cleanQuery;
+        String targetCourseName = (resolvedCourseName != null) ? resolvedCourseName : cleanQuery;
+
+        // 2. Resolver Sílabo del curso (para fórmula, evaluaciones y rúbricas)
+        Optional<Syllabus> syllabusOpt = Optional.empty();
+        if (resolvedCourseCode != null) {
+            syllabusOpt = syllabusRepository.findByCourseCode(resolvedCourseCode.toUpperCase());
+        }
+        if (syllabusOpt.isEmpty() && !cleanQuery.isBlank()) {
+            syllabusOpt = syllabusRepository.findByCourseCode(cleanQuery.toUpperCase());
+        }
+
+        String gradingFormula = syllabusOpt.map(Syllabus::getFormula).orElse("");
+        boolean hasParticipation = false;
+        Integer participationWeight = null;
+        List<com.utp.horario.domain.model.value_objects.SyllabusEvaluation> syllabusEvals = syllabusOpt
+                .map(Syllabus::getEvaluations)
+                .orElse(List.of());
+
+        for (var ev : syllabusEvals) {
+            String type = ev.getType() != null ? ev.getType().trim().toUpperCase() : "";
+            String desc = ev.getDescription() != null ? ev.getDescription().toLowerCase() : "";
+            if (type.equals("PA") || desc.contains("participaci") || desc.contains("continua")) {
+                hasParticipation = true;
+                participationWeight = ev.getWeightPercent();
+                break;
+            }
+        }
+
+        // 3. Resolver semana lectiva vigente (ancla temporal)
+        Integer currentWeek = resolveCurrentWeek(code);
+
+        // 4. Recuperar tareas del estudiante (Fail Fast: fallos de infraestructura se propagan)
+        List<com.utp.horario.domain.model.aggregate.TaskSyncItem> rawTasks = new ArrayList<>();
+        Exception taskInfraException = null;
+
+        if (taskRepository != null) {
+            try {
+                List<com.utp.horario.domain.model.aggregate.TaskSyncItem> local = taskRepository.findByStudentId(code);
+                if (local != null) rawTasks.addAll(local);
+            } catch (Exception ex) {
+                log.error("[AcademicTool] ❌ Error de infraestructura en taskRepository para [{}]: {}", code, ex.getMessage(), ex);
+                taskInfraException = ex;
+            }
+        }
+
+        if (rawTasks.isEmpty() && taskQueryService != null && taskInfraException == null) {
+            try {
+                String token = resolveStudentToken(code);
+                List<com.utp.horario.domain.model.aggregate.TaskSyncItem> fallback = taskQueryService.getTasksWithPortalFallback(code, token);
+                if (fallback != null) rawTasks.addAll(fallback);
+            } catch (Exception ex) {
+                log.error("[AcademicTool] ❌ Error de infraestructura en pasarela para tareas de [{}]: {}", code, ex.getMessage(), ex);
+                taskInfraException = ex;
+            }
+        }
+
+        if (taskInfraException != null && rawTasks.isEmpty()) {
+            throw new IllegalStateException("Error de infraestructura al consultar repositorio de tareas para "
+                    + code + ": " + taskInfraException.getMessage(), taskInfraException);
+        }
+
+        // 5. Filtrar tareas para este curso específico
+        String normTargetName = normalizeTerm(targetCourseName);
+        String normTargetCode = normalizeTerm(targetCourseCode);
+
+        List<com.utp.horario.domain.model.aggregate.TaskSyncItem> courseTasks = rawTasks.stream().filter(t -> {
+            if (t.getCourseCode() != null && normTargetCode.equalsIgnoreCase(normalizeTerm(t.getCourseCode()))) {
+                return true;
+            }
+            if (t.getCourseName() != null) {
+                String normTaskCourse = normalizeTerm(t.getCourseName());
+                return normTaskCourse.contains(normTargetName) || normTargetName.contains(normTaskCourse);
+            }
+            return false;
+        }).toList();
+
+        if (courseTasks.isEmpty()) {
+            String emptyMsg = "No se encontraron tareas registradas para el curso '" + targetCourseName
+                    + "' en tu cuenta institucional. Puedes sincronizar tus tareas en la sección de Tareas.";
+            return new CourseTasksAndActivitiesResult(
+                    code, targetCourseCode, targetCourseName, currentWeek, gradingFormula,
+                    hasParticipation, participationWeight, 0, 0, 0, 0,
+                    List.of(), List.of(), emptyMsg
+            );
+        }
+
+        // 6. Procesar y clasificar cada tarea
+        List<CourseTaskDto> mappedTasks = new ArrayList<>();
+        int deliveredCount = 0;
+        int pendingCount = 0;
+        int pastDueUnsubmittedCount = 0;
+
+        String normEvalFilter = (evaluationType != null && !evaluationType.isBlank() && !"TODAS".equalsIgnoreCase(evaluationType))
+                ? evaluationType.trim().toUpperCase() : null;
+        String normStatusFilter = (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter))
+                ? statusFilter.trim().toUpperCase() : null;
+
+        for (var t : courseTasks) {
+            boolean isDelivered = Boolean.TRUE.equals(t.getIsDelivered())
+                    || "DELIVERED".equalsIgnoreCase(t.getHomeworkStatus())
+                    || "GRADED".equalsIgnoreCase(t.getHomeworkStatus())
+                    || "FINISHED".equalsIgnoreCase(t.getAssignmentProgress());
+
+            // Resolver timing status relativo a la semana actual
+            String timingStatus;
+            Integer taskWeek = t.getWeek();
+            if (taskWeek != null && currentWeek != null) {
+                if (taskWeek < currentWeek) {
+                    timingStatus = isDelivered ? "ENTREGADA_A_TIEMPO" : "PASADA_NO_ENTREGADA";
+                } else if (taskWeek.equals(currentWeek)) {
+                    timingStatus = isDelivered ? "SEMANA_ACTUAL_ENTREGADA" : "SEMANA_ACTUAL_PENDIENTE";
+                } else {
+                    timingStatus = "FUTURA_PROGRAMADA";
+                }
+            } else {
+                timingStatus = isDelivered ? "ENTREGADA" : "PENDIENTE";
+            }
+
+            if (isDelivered) {
+                deliveredCount++;
+            } else {
+                pendingCount++;
+                if ("PASADA_NO_ENTREGADA".equals(timingStatus)) {
+                    pastDueUnsubmittedCount++;
+                }
+            }
+
+            // Resolver asociación al rubro de evaluación (solo fuentes oficiales, cero heurística inventada)
+            String evalType = "SIN_RUBRO_OFICIAL";
+            String evalDesc = "Actividad sin rubro de evaluación oficial vinculado";
+
+            if (t.getSyllabusCorrelation() != null && t.getSyllabusCorrelation().getEvaluationType() != null
+                    && !t.getSyllabusCorrelation().getEvaluationType().isBlank()) {
+                evalType = t.getSyllabusCorrelation().getEvaluationType().trim().toUpperCase();
+                evalDesc = (t.getSyllabusCorrelation().getEvaluationDescription() != null && !t.getSyllabusCorrelation().getEvaluationDescription().isBlank())
+                        ? t.getSyllabusCorrelation().getEvaluationDescription() : "Evaluación del sílabo: " + evalType;
+            } else if (t.getEvaluationSystem() != null && !t.getEvaluationSystem().isBlank()) {
+                evalType = t.getEvaluationSystem().trim().toUpperCase();
+                evalDesc = "Sistema de evaluación institucional: " + evalType;
+            }
+
+            // Aplicar filtros opcionales solicitados por el modelo/usuario
+            if (normEvalFilter != null && !evalType.contains(normEvalFilter) && !normEvalFilter.contains(evalType)) {
+                continue;
+            }
+            if (normStatusFilter != null) {
+                if ("DELIVERED".equals(normStatusFilter) && !isDelivered) continue;
+                if ("PENDING".equals(normStatusFilter) && isDelivered) continue;
+            }
+
+            String dueDateStr = t.getDueDate() != null ? t.getDueDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : null;
+
+            mappedTasks.add(new CourseTaskDto(
+                    t.getId(),
+                    t.getTitle() != null ? t.getTitle() : "Actividad académica",
+                    taskWeek,
+                    dueDateStr,
+                    t.getHomeworkStatus() != null ? t.getHomeworkStatus() : (isDelivered ? "DELIVERED" : "PENDING"),
+                    isDelivered,
+                    Boolean.TRUE.equals(t.getIsQualified()),
+                    t.getScore(),
+                    t.getMaxScore(),
+                    evalType,
+                    evalDesc,
+                    timingStatus
+            ));
+        }
+
+        // 7. Agrupar tareas por rubro de evaluación
+        java.util.Map<String, List<CourseTaskDto>> grouped = mappedTasks.stream()
+                .collect(java.util.stream.Collectors.groupingBy(CourseTaskDto::evaluationType, java.util.LinkedHashMap::new, java.util.stream.Collectors.toList()));
+
+        List<EvaluationTaskGroupingDto> breakdown = new ArrayList<>();
+        grouped.forEach((type, list) -> {
+            int d = (int) list.stream().filter(CourseTaskDto::isDelivered).count();
+            int p = list.size() - d;
+            int pastDue = (int) list.stream().filter(it -> "PASADA_NO_ENTREGADA".equals(it.timingStatus())).count();
+
+            Integer weight = null;
+            String desc = list.get(0).evaluationDescription();
+            for (var ev : syllabusEvals) {
+                if (ev.getType() != null && ev.getType().equalsIgnoreCase(type)) {
+                    weight = ev.getWeightPercent();
+                    if (ev.getDescription() != null && !ev.getDescription().isBlank()) {
+                        desc = ev.getDescription();
+                    }
+                    break;
+                }
+            }
+
+            breakdown.add(new EvaluationTaskGroupingDto(type, desc, weight, list.size(), d, p, pastDue, list));
+        });
+
+        return new CourseTasksAndActivitiesResult(
+                code, targetCourseCode, targetCourseName, currentWeek, gradingFormula,
+                hasParticipation, participationWeight,
+                courseTasks.size(), deliveredCount, pendingCount, pastDueUnsubmittedCount,
+                breakdown, mappedTasks, null
+        );
     }
 
 

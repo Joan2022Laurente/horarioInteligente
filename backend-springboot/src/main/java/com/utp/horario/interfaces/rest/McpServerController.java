@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,7 +50,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @RestController
 @RequestMapping({"/mcp", "/api/v1/mcp"})
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class McpServerController {
 
     /** Versión del protocolo Model Context Protocol negociada en el handshake. */
@@ -70,7 +72,6 @@ public class McpServerController {
     private final AcademicToolService toolService;
     private final ObjectMapper objectMapper;
     private final com.utp.horario.infrastructure.security.SecurityIdentityResolver identityResolver;
-    private final com.utp.horario.application.service.StudentSessionService studentSessionService;
     private final AcademicToolDispatcher toolDispatcher;
 
     /**
@@ -114,10 +115,11 @@ public class McpServerController {
         info.put("name", SERVER_NAME);
         info.put("version", SERVER_VERSION);
         info.put("protocolVersion", PROTOCOL_VERSION);
-        info.put("transport", "sse");
+        info.put("transport", "streamable-http,sse");
         info.put("tools", AcademicToolRegistry.getSupportedToolNames());
         info.put("authRequired", true);
-        info.put("authParam", "Authorization: Bearer <JWT>");
+        info.put("authType", "OAuth 2.1 / Bearer");
+        info.put("streamableEndpoint", "/mcp");
         info.put("sseEndpoint", "/mcp/sse");
         info.put("messageEndpoint", "/mcp/message");
         info.put("activeSessions", activeSessions.size());
@@ -172,36 +174,60 @@ public class McpServerController {
 
     /**
      * 2. Recepción de mensajes JSON-RPC 2.0 desde el cliente MCP (Claude Desktop / MCP Inspector / Cursor).
-     * Soporta tanto el transporte SSE tradicional (/mcp/message?sessionId=...)
-     * como el transporte Streamable HTTP moderno (POST /mcp/sse?studentCode=...).
+     * Procesa la solicitud y devuelve la respuesta JSON-RPC en el cuerpo HTTP.
      */
+    public ResponseEntity<Map<String, Object>> handleJsonRpcMessage(
+            String sessionId,
+            String authHeader,
+            JsonNode request) {
+        return handleJsonRpcMessage(sessionId, authHeader, request, null);
+    }
+
     @PostMapping(value = {"/message", "/sse", ""}, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> handleJsonRpcMessage(
             @RequestParam(required = false) String sessionId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody(required = false) JsonNode request) {
+            @RequestBody(required = false) JsonNode request,
+            HttpServletRequest httpRequest) {
 
         Map<String, Object> rpcResponse = new LinkedHashMap<>();
         rpcResponse.put("jsonrpc", "2.0");
 
-        SseEmitter emitter = null;
         boolean notification = false;
         String studentCode = null;
 
         try {
+            // ── Validación de estructura JSON-RPC 2.0 ─────────────────────────────────────────
+            if (request != null && request.isArray()) {
+                rpcResponse.put("id", NullNode.getInstance());
+                rpcResponse.put("error", jsonRpcError(INVALID_REQUEST,
+                        "Invalid Request: solicitudes en batch no soportadas."));
+                return ResponseEntity.ok(rpcResponse);
+            }
+
+            if (request == null || request.isNull() || request.isMissingNode() || !request.isObject()) {
+                rpcResponse.put("id", NullNode.getInstance());
+                rpcResponse.put("error", jsonRpcError(PARSE_ERROR,
+                        "Parse error: el cuerpo de la solicitud JSON-RPC está vacío o no es un objeto JSON válido."));
+                return ResponseEntity.ok(rpcResponse);
+            }
+
             // ── Envelope JSON-RPC: el id de la solicitud se refleja exactamente ──────────────
             // Un id ausente identifica una notificacion (sin respuesta). Un id presente y nulo
             // es una peticion legitima y debe reflejarse como "id": null en la respuesta.
-            boolean idPresent = (request != null) && request.has("id");
+            boolean idPresent = request.has("id");
             JsonNode idNode = idPresent ? request.get("id") : null;
             if (idPresent) {
                 rpcResponse.put("id", idNode == null ? NullNode.getInstance() : idNode);
+            } else {
+                rpcResponse.put("id", NullNode.getInstance());
             }
             notification = !idPresent;
 
-            if (request == null || request.isNull() || request.isMissingNode()) {
-                rpcResponse.put("error", jsonRpcError(PARSE_ERROR,
-                        "Parse error: el cuerpo de la solicitud JSON-RPC está vacío o no es un JSON válido."));
+            // Validación estricta de versión de protocolo JSON-RPC 2.0
+            if (!"2.0".equals(request.path("jsonrpc").asText(""))) {
+                rpcResponse.put("error", jsonRpcError(INVALID_REQUEST,
+                        "Invalid Request: el campo 'jsonrpc' debe ser exactamente '2.0'."));
                 return ResponseEntity.ok(rpcResponse);
             }
 
@@ -220,12 +246,19 @@ public class McpServerController {
                                 "La identidad del token no coincide con la sesión MCP."));
                         return ResponseEntity.ok(rpcResponse);
                     }
-                    emitter = session.emitter();
                 }
                 studentCode = authenticatedStudentCode;
             } catch (Exception ex) {
                 rpcResponse.put("error", jsonRpcError(AUTH_REQUIRED,
                         "Acceso no autorizado: se requiere Authorization: Bearer <JWT> de sesión UTP."));
+                // En Streamable HTTP moderno (petición a /mcp o /api/v1/mcp directamente sin /message), devolver 401 + WWW-Authenticate para Discovery OAuth 2.1
+                if (sessionId == null && httpRequest != null && !httpRequest.getRequestURI().endsWith("/message")) {
+                    String baseUrl = resolveBaseUrl(httpRequest);
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.set("WWW-Authenticate", "Bearer resource_metadata=\"" + baseUrl + "/.well-known/oauth-protected-resource\"");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).headers(headers).body(rpcResponse);
+                }
+                // En tests directos o canal legado /message, preservar 200 OK con envelope JSON-RPC de error
                 return ResponseEntity.ok(rpcResponse);
             }
 
@@ -286,20 +319,7 @@ public class McpServerController {
             return ResponseEntity.ok().build();
         }
 
-        // Enviar la respuesta vía SSE al cliente conectado si existe stream abierto
-        if (emitter != null) {
-            try {
-                String jsonPayload = objectMapper.writeValueAsString(rpcResponse);
-                emitter.send(SseEmitter.event()
-                        .name("message")
-                        .data(jsonPayload));
-                log.info("[MCP-SSE] Respuesta enviada por canal SSE (ID: {})", rpcResponse.get("id"));
-            } catch (IOException | IllegalStateException e) {
-                log.error("[MCP-SSE] Error enviando respuesta JSON-RPC a través de SSE: {}", e.getMessage());
-            }
-        }
-
-        // Retornar 200 OK con el cuerpo JSON-RPC
+        // Retornar 200 OK con el cuerpo JSON-RPC (especificación MCP 2024-11-05)
         return ResponseEntity.ok(rpcResponse);
     }
 
@@ -316,8 +336,24 @@ public class McpServerController {
         log.warn("[MCP-JSONRPC] Cuerpo JSON-RPC ilegible: {}", ex.getMessage());
         Map<String, Object> rpcResponse = new LinkedHashMap<>();
         rpcResponse.put("jsonrpc", "2.0");
+        rpcResponse.put("id", NullNode.getInstance());
         rpcResponse.put("error", jsonRpcError(PARSE_ERROR,
                 "Parse error: el cuerpo de la solicitud JSON-RPC no es un JSON valido."));
+        return ResponseEntity.ok(rpcResponse);
+    }
+
+    /**
+     * Manejador local de Content-Type no soportado.
+     * Garantiza que el cliente reciba siempre un envelope JSON-RPC válido con HTTP 200.
+     */
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnsupportedMediaType(org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        log.warn("[MCP-JSONRPC] Content-Type no soportado: {}", ex.getMessage());
+        Map<String, Object> rpcResponse = new LinkedHashMap<>();
+        rpcResponse.put("jsonrpc", "2.0");
+        rpcResponse.put("id", NullNode.getInstance());
+        rpcResponse.put("error", jsonRpcError(INVALID_REQUEST,
+                "Invalid Request: se requiere Content-Type application/json."));
         return ResponseEntity.ok(rpcResponse);
     }
 
@@ -390,56 +426,22 @@ public class McpServerController {
     }
 
     /**
-     * Normaliza el encabezado de autorización aceptando el token con o sin prefijo {@code Bearer}.
-     */
-    private String normalizeAuthHeader(String authHeader, String token) {
-        if (authHeader != null && !authHeader.isBlank()) {
-            return authHeader;
-        }
-        if (token != null && !token.isBlank()) {
-            return token.startsWith("Bearer ") ? token : "Bearer " + token;
-        }
-        return null;
-    }
-
-    private String firstNonBlank(String primary, String secondary) {
-        if (primary != null && !primary.isBlank()) {
-            return primary;
-        }
-        if (secondary != null && !secondary.isBlank()) {
-            return secondary;
-        }
-        return null;
-    }
-
-    /**
-     * Resuelve la identidad contra el registro persistido en MySQL (Aiven Cloud) cuando no hay
-     * token de sesión UTP activo. Devuelve {@code null} si el estudiante no existe persistido.
-     */
-    private String resolvePersistedStudent(String candidate) {
-        try {
-            return toolService.resolvePersistedStudentCode(candidate);
-        } catch (Exception e) {
-            log.warn("[MCP] No se pudo consultar el registro persistido del estudiante: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
      * Evicta la sesión más antigua cuando se supera el tope de sesiones simultáneas.
+     * Sincronizado atómicamente para prevenir carreras en accesos concurrentes.
      */
     private void evictOldestSessionsIfNeeded() {
-        if (activeSessions.size() < maxSessions) {
-            return;
+        synchronized (activeSessions) {
+            while (activeSessions.size() >= maxSessions) {
+                activeSessions.entrySet().stream()
+                        .min(Map.Entry.comparingByValue(java.util.Comparator.comparingLong(McpSession::createdAt)))
+                        .ifPresent(oldest -> {
+                            log.warn("[MCP-SSE] Tope de sesiones alcanzado ({}). Evictando la sesión más antigua: {}",
+                                    maxSessions, oldest.getKey());
+                            activeSessions.remove(oldest.getKey());
+                            safeComplete(oldest.getValue().emitter());
+                        });
+            }
         }
-        activeSessions.entrySet().stream()
-                .min(Map.Entry.comparingByValue(java.util.Comparator.comparingLong(McpSession::createdAt)))
-                .ifPresent(oldest -> {
-                    log.warn("[MCP-SSE] Tope de sesiones alcanzado ({}). Evictando la sesión más antigua: {}",
-                            maxSessions, oldest.getKey());
-                    activeSessions.remove(oldest.getKey());
-                    safeComplete(oldest.getValue().emitter());
-                });
     }
 
     private void safeComplete(SseEmitter emitter) {
@@ -453,5 +455,12 @@ public class McpServerController {
     private String safeMessage(Exception ex) {
         String message = ex.getMessage();
         return (message == null || message.isBlank()) ? ex.getClass().getSimpleName() : message;
+    }
+
+    private String resolveBaseUrl(HttpServletRequest request) {
+        if (request == null) {
+            return "https://horario-inteligente-utp-31065a33a7ec.herokuapp.com";
+        }
+        return ServletUriComponentsBuilder.fromContextPath(request).build().toUriString();
     }
 }

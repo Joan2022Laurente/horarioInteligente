@@ -11,6 +11,9 @@ import com.utp.horario.application.dtos.AcademicToolDto.SyllabusDetailsResult;
 import com.utp.horario.application.dtos.AcademicToolDto.WeeklySessionDto;
 import com.utp.horario.application.dtos.AcademicToolDto.RemainingClassesTodayResult;
 import com.utp.horario.application.dtos.AcademicToolDto.RemainingClassSessionDto;
+import com.utp.horario.application.dtos.AcademicToolDto.CourseTasksAndActivitiesResult;
+import com.utp.horario.application.dtos.AcademicToolDto.CourseTaskDto;
+import com.utp.horario.application.dtos.AcademicToolDto.EvaluationTaskGroupingDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -216,6 +219,49 @@ class AcademicToolDispatcherTest {
         assertTrue(execution.isError());
         assertTrue(execution.json().contains("Argumento 'time' inválido"));
         verify(toolService, never()).getRemainingClassesToday(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("get_course_tasks_and_activities serializa tareas y correlación de notas")
+    void dispatchesCourseTasksAndActivities() throws Exception {
+        CourseTaskDto task = new CourseTaskDto(
+                "task-1", "Foro de debate 1", 3, "2026-09-15 23:59", "DELIVERED",
+                true, true, 18.0, 20.0, "PA", "Participación en clase", "ENTREGADA_A_TIEMPO"
+        );
+        EvaluationTaskGroupingDto group = new EvaluationTaskGroupingDto(
+                "PA", "Participación en clase", 20, 1, 1, 0, 0, List.of(task)
+        );
+        CourseTasksAndActivitiesResult result = new CourseTasksAndActivitiesResult(
+                STUDENT, "100000SI58", "Desarrollo Web Integrado", 11,
+                "20%[PA] + 30%[PC] + 50%[EXFN]", true, 20, 1, 1, 0, 0,
+                List.of(group), List.of(task), null
+        );
+
+        when(toolService.getCourseTasksAndActivities(STUDENT, "Desarrollo Web Integrado", "PA", "ALL"))
+                .thenReturn(result);
+
+        AcademicToolDispatcher.ToolExecution execution = dispatcher.dispatch(
+                "get_course_tasks_and_activities",
+                args("{\"course_query\": \"Desarrollo Web Integrado\", \"evaluation_type\": \"PA\", \"status\": \"ALL\"}"),
+                STUDENT
+        );
+
+        assertFalse(execution.isError());
+        assertTrue(execution.json().contains("Foro de debate 1"));
+        assertTrue(execution.json().contains("Participación en clase"));
+        verify(toolService).getCourseTasksAndActivities(STUDENT, "Desarrollo Web Integrado", "PA", "ALL");
+    }
+
+    @Test
+    @DisplayName("get_course_tasks_and_activities rechaza ausencia de course_query")
+    void courseTasksRejectsMissingCourseQuery() throws Exception {
+        AcademicToolDispatcher.ToolExecution execution = dispatcher.dispatch(
+                "get_course_tasks_and_activities", args("{}"), STUDENT
+        );
+
+        assertTrue(execution.isError());
+        assertTrue(execution.json().contains("Argumento obligatorio 'course_query' ausente"));
+        verify(toolService, never()).getCourseTasksAndActivities(anyString(), anyString(), anyString(), anyString());
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

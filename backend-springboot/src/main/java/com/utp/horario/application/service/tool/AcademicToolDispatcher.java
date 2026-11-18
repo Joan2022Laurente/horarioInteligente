@@ -158,6 +158,19 @@ public class AcademicToolDispatcher {
                     resultJson = objectMapper.writeValueAsString(toolService.getRemainingClassesToday(studentCode, date, time));
                 }
 
+                case "get_course_tasks_and_activities" -> {
+                    String query = AcademicToolRegistry.resolveCourseQuery(args).trim();
+                    if (query.isEmpty()) {
+                        return ToolExecution.error(toolErrorPayload(
+                                "Argumento obligatorio 'course_query' ausente. Envía el código oficial "
+                                        + "de la asignatura (ej. 100000SI58) o su nombre natural.",
+                                AcademicToolRegistry.getSupportedToolNames()));
+                    }
+                    String evalType = args.hasNonNull("evaluation_type") ? args.path("evaluation_type").asText().trim() : null;
+                    String status = args.hasNonNull("status") ? args.path("status").asText().trim() : null;
+                    resultJson = objectMapper.writeValueAsString(toolService.getCourseTasksAndActivities(studentCode, query, evalType, status));
+                }
+
                 case "search_marketplace" -> {
                     String query = args.hasNonNull("query") ? args.path("query").asText() : null;
                     String type = args.hasNonNull("type") ? args.path("type").asText() : null;
@@ -258,12 +271,7 @@ public class AcademicToolDispatcher {
         if (explicitValue != null) {
             return clampCurrentWeek(explicitValue);
         }
-        Integer dynamicWeek = null;
-        try {
-            dynamicWeek = toolService.resolveCurrentWeek(studentCode);
-        } catch (Exception ex) {
-            log.warn("[ToolDispatcher] resolveCurrentWeek falló para {}: {}", studentCode, safeMessage(ex));
-        }
+        Integer dynamicWeek = toolService.resolveCurrentWeek(studentCode);
         return dynamicWeek == null ? null : clampCurrentWeek(dynamicWeek);
     }
 
@@ -344,6 +352,10 @@ public class AcademicToolDispatcher {
                         && node.path("weeklySchedule").isEmpty()) {
                     return true;
                 }
+                if (node.path("totalCourseTasks").asInt(-1) == 0 && node.has("tasks")
+                        && node.path("tasks").isArray() && node.path("tasks").isEmpty()) {
+                    return true;
+                }
                 JsonNode message = node.path("message");
                 if (message.isTextual() && !message.asText("").isBlank()) {
                     return true;
@@ -418,9 +430,22 @@ public class AcademicToolDispatcher {
             map.put("sellerName", sanitizeForLlm(item.getTutorName()));
             map.put("sellerCareer", sanitizeForLlm(item.getTutorCareer()));
             map.put("sellerCycle", item.getTutorCycle());
-            String tutor = item.getTutorName() != null ? item.getTutorName() : "estudiante";
-            String teamsEmail = (tutor.matches("[uU]\\d{8}") ? tutor : "u" + tutor.replaceAll("\\D", "")) + "@utp.edu.pe";
-            map.put("teamsContactUrl", "https://teams.microsoft.com/l/chat/0/0?users=" + teamsEmail);
+            String contact = item.getContactMethod();
+            if (contact != null && !contact.isBlank()) {
+                String cleanContact = sanitizeForLlm(contact);
+                map.put("contactMethod", cleanContact);
+                if (cleanContact.startsWith("http") || cleanContact.contains("teams.microsoft.com")) {
+                    map.put("teamsContactUrl", cleanContact);
+                } else if (cleanContact.matches("(?i)^[uU]\\d{8}@.*$") || cleanContact.matches("(?i)^[uU]\\d{8}$")) {
+                    String email = cleanContact.contains("@") ? cleanContact : cleanContact + "@utp.edu.pe";
+                    map.put("teamsContactUrl", "https://teams.microsoft.com/l/chat/0/0?users=" + email);
+                } else {
+                    map.put("teamsContactUrl", null);
+                }
+            } else {
+                map.put("contactMethod", null);
+                map.put("teamsContactUrl", null);
+            }
             return map;
         }).toList();
 

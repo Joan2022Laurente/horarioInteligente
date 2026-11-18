@@ -1,4 +1,5 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
+import { UiFeedbackService } from '@core/services/ui-feedback.service';
 import { MarketplaceService, PublishItemPayload } from '@data/services/marketplace.service';
 import { ServiceItem, ServiceFilter, ServiceCategory, ServiceSortBy, MarketplaceItem } from '@domain/models/marketplace';
 import { INITIAL_MARKETPLACE_ITEMS } from './marketplace.catalog';
@@ -10,9 +11,11 @@ export type SortOption = 'NEWEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'RATING' | Serv
 })
 export class MarketplaceStore {
   private readonly marketplaceService = inject(MarketplaceService);
+  private readonly uiFeedback = inject(UiFeedbackService);
 
   readonly items = signal<MarketplaceItem[]>(INITIAL_MARKETPLACE_ITEMS);
   readonly loading = signal<boolean>(false);
+  readonly loadError = signal<string | null>(null);
   readonly selectedCategory = signal<string>('ALL');
   readonly searchQuery = signal<string>('');
   readonly sortBy = signal<SortOption>('NEWEST');
@@ -53,11 +56,18 @@ export class MarketplaceStore {
       );
     }
 
-    const sort = this.sortBy() !== 'NEWEST' ? this.sortBy() : filter.sortBy;
+    // La senal sortBy es la unica fuente de verdad del orden. El valor por defecto
+    // 'NEWEST' debe ordenar por fecha real, no caer en filter.sortBy='POPULAR'.
+    const sort = this.sortBy();
     return [...list].sort((a, b) => {
       if (sort === 'PRICE_ASC' || sort === 'PRICE_LOW') return (a.numericPrice || 0) - (b.numericPrice || 0);
       if (sort === 'PRICE_DESC' || sort === 'PRICE_HIGH') return (b.numericPrice || 0) - (a.numericPrice || 0);
       if (sort === 'RATING') return (b.rating || 0) - (a.rating || 0);
+      if (sort === 'NEWEST' || sort === 'RECENT') {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return tb - ta;
+      }
       if (sort === 'POPULAR') return (b.salesCount || 0) - (a.salesCount || 0);
       return (b.salesCount || 0) - (a.salesCount || 0);
     });
@@ -65,16 +75,19 @@ export class MarketplaceStore {
 
   loadItems(): void {
     this.loading.set(true);
+    this.loadError.set(null);
     this.marketplaceService.getItems().subscribe({
       next: (res: ServiceItem[]) => {
         // Se reemplaza siempre con la respuesta real, aunque esté vacía.
         this.items.set(Array.isArray(res) ? res : []);
         this.loading.set(false);
       },
-      error: () => {
-        // Ante un fallo no se conserva ningún catálogo previo o simulado.
-        this.items.set([]);
+      error: (err) => {
+        // No se inventa contenido: se conserva el ultimo catalogo real cargado y
+        // se informa del fallo para que el usuario pueda reintentar.
+        this.loadError.set(err?.message || 'No se pudo cargar el marketplace.');
         this.loading.set(false);
+        this.uiFeedback.error('No se pudo cargar el marketplace.', err?.message);
       }
     });
   }
@@ -114,6 +127,7 @@ export class MarketplaceStore {
   }
 
   addItem(item: MarketplaceItem): void {
+    this.loadError.set(null);
     this.items.update(list => [item, ...list]);
   }
 

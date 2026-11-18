@@ -45,6 +45,7 @@ export interface ServiceItem {
   tags: string[];
   contactMethod: string;
   status?: 'AVAILABLE' | 'RESERVED' | 'SOLD' | 'PAUSED';
+  createdAt?: string;
   highlights?: string[];
 }
 

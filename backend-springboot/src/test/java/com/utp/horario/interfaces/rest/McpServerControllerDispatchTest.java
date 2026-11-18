@@ -54,15 +54,12 @@ class McpServerControllerDispatchTest {
     @Mock
     private SecurityIdentityResolver identityResolver;
 
-    @Mock
-    private StudentSessionService studentSessionService;
-
     private McpServerController controller;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        controller = new McpServerController(toolService, mapper, identityResolver, studentSessionService,
+        controller = new McpServerController(toolService, mapper, identityResolver,
                 new AcademicToolDispatcher(toolService, mapper));
     }
 

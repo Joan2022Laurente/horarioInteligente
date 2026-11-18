@@ -134,6 +134,22 @@ public class AcademicToolRegistry {
                 Map.of(
                         "type", "function",
                         "function", Map.of(
+                                "name", "get_course_tasks_and_activities",
+                                "description", "Obtiene todas las tareas, actividades calificadas, foros y entregables de un curso específico del estudiante. Permite correlacionar con rubros de evaluación del sílabo (ej. Nota de Participación 'PA', Tareas Académicas 'TA', Prácticas Calificadas 'PC'), identificando qué actividades corresponden al promedio, cuáles ya fueron entregadas o calificadas, cuáles están pendientes o atrasadas de semanas anteriores, y cuáles corresponden a la semana lectiva actual.",
+                                "parameters", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of(
+                                                "course_query", Map.of("type", "string", "description", "Nombre del curso o código oficial exacto (ej. 'Desarrollo Web Integrado' o '100000SI58')."),
+                                                "evaluation_type", Map.of("type", "string", "description", "Rubro o tipo de evaluación a consultar (ej. 'PA' para Participación, 'TA' para Tareas Académicas, 'PC' para Prácticas Calificadas, 'TODAS'). Opcional."),
+                                                "status", Map.of("type", "string", "description", "Filtro por estado de entrega: 'ALL' (todas), 'PENDING' (pendientes/no entregadas), 'DELIVERED' (entregadas). Opcional.")
+                                        ),
+                                        "required", List.of("course_query")
+                                )
+                        )
+                ),
+                Map.of(
+                        "type", "function",
+                        "function", Map.of(
                                 "name", "search_marketplace",
                                 "description", "Busca productos de segunda mano, tecnología, libros o servicios de tutoría 1 a 1 ofrecidos por compañeros en el Marketplace estudiantil UTP.",
                                 "parameters", Map.of(
