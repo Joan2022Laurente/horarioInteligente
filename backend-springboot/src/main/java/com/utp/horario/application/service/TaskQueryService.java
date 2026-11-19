@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -145,11 +147,19 @@ public class TaskQueryService {
         return null;
     }
 
-    /** Mapeo de la evaluación próxima oficial ➜ agregado de tarea del usuario. */
+    /**
+     * Mapeo de la evaluación oficial del portal ➜ agregado de tarea del usuario.
+     * Se conservan TODOS los campos institucionales disponibles (incluidos
+     * evaluationSystem, courseCode, fecha de entrega y calificación) para que la
+     * correlación con el sílabo no dependa de datos ausentes.
+     */
     private static TaskSyncItem toTaskSyncItem(UpcomingEvaluationDto u) {
+        String institutionalCourseCode = u.courseId();
         return TaskSyncItem.builder()
                 .id(u.id() != null && !u.id().isBlank() ? u.id() : u.activityId())
                 .courseName(u.courseName())
+                .courseCode(institutionalCourseCode)
+                .courseId(institutionalCourseCode)
                 .sectionId(u.sectionId())
                 .homeworkId(u.activityId())
                 .title(u.title())
@@ -157,7 +167,29 @@ public class TaskQueryService {
                 .week(u.weekNumber())
                 .homeworkStatus(u.studentStatus() != null && !u.studentStatus().isBlank() ? u.studentStatus() : "PENDING")
                 .assignmentProgress("IN_PROGRESS")
+                .dueDate(parseDueDate(u.finishAt() != null && !u.finishAt().isBlank() ? u.finishAt() : u.startAt()))
                 .isDelivered("DELIVERED".equalsIgnoreCase(u.studentStatus()) || "SUBMITTED".equalsIgnoreCase(u.studentStatus()))
+                .isQualified(u.isQualified())
+                .evaluationSystem(u.evaluationSystem())
+                .classificationCategory(u.classificationCategory())
+                .urgency(u.urgency())
+                .daysRemaining(u.daysRemaining())
                 .build();
+    }
+
+    /** Parsea la fecha de entrega oficial sin inventar un valor por defecto. */
+    private static LocalDateTime parseDueDate(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = raw.trim();
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception ignored) {
+            // se prueba con offset
+        }
+        try {
+            return OffsetDateTime.parse(value).toLocalDateTime();
+        } catch (Exception ignored) {
+            return null; // ausencia explícita, nunca una fecha fabricada
+        }
     }
 }

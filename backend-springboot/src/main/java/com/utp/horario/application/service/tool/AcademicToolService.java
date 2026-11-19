@@ -933,10 +933,14 @@ public class AcademicToolService {
         if (rawTasks.isEmpty() && taskQueryService != null && taskInfraException == null) {
             try {
                 String token = resolveStudentToken(code);
-                List<com.utp.horario.domain.model.aggregate.TaskSyncItem> fallback = taskQueryService.getTasksWithPortalFallback(code, token);
-                if (fallback != null) rawTasks.addAll(fallback);
+                // intervalMode="period" consulta el historial completo del ciclo (semanas 1-18).
+                // NO usar getTasksWithPortalFallback: /tasks/upcoming solo entrega tareas vigentes/futuras
+                // y descarta deliberadamente las semanas vencidas (causa del historial truncado).
+                List<com.utp.horario.domain.model.aggregate.TaskSyncItem> periodActivities =
+                        taskQueryService.getActivities(code, token, "period", null, null, null, null);
+                if (periodActivities != null) rawTasks.addAll(periodActivities);
             } catch (Exception ex) {
-                log.error("[AcademicTool] ❌ Error de infraestructura en pasarela para tareas de [{}]: {}", code, ex.getMessage(), ex);
+                log.error("[AcademicTool] ❌ Error de infraestructura consultando el historial de tareas de [{}]: {}", code, ex.getMessage(), ex);
                 taskInfraException = ex;
             }
         }
@@ -1012,7 +1016,9 @@ public class AcademicToolService {
                 }
             }
 
-            // Resolver asociación al rubro de evaluación (solo fuentes oficiales, cero heurística inventada)
+            // Resolver asociación al rubro: 1) correlación oficial de la tarea, 2) sistema de
+            // evaluación del portal, 3) cruce con las evaluaciones del SÍLABO OFICIAL ya cargado.
+            // El tercer nivel usa denominaciones institucionales reales, nunca títulos inventados.
             String evalType = "SIN_RUBRO_OFICIAL";
             String evalDesc = "Actividad sin rubro de evaluación oficial vinculado";
 
@@ -1021,9 +1027,21 @@ public class AcademicToolService {
                 evalType = t.getSyllabusCorrelation().getEvaluationType().trim().toUpperCase();
                 evalDesc = (t.getSyllabusCorrelation().getEvaluationDescription() != null && !t.getSyllabusCorrelation().getEvaluationDescription().isBlank())
                         ? t.getSyllabusCorrelation().getEvaluationDescription() : "Evaluación del sílabo: " + evalType;
-            } else if (t.getEvaluationSystem() != null && !t.getEvaluationSystem().isBlank()) {
-                evalType = t.getEvaluationSystem().trim().toUpperCase();
-                evalDesc = "Sistema de evaluación institucional: " + evalType;
+            } else {
+                String institutionalSystem = trimToNull(t.getEvaluationSystem());
+                if (institutionalSystem != null) {
+                    evalType = institutionalSystem.toUpperCase();
+                    evalDesc = "Sistema de evaluación institucional: " + evalType;
+                }
+                // Si el sistema institucional no es ya un rubro oficial del sílabo, se contrasta
+                // el título normalizado contra las evaluaciones oficiales persistidas.
+                if (!isOfficialRubroType(syllabusEvals, evalType)) {
+                    RubroMatch match = resolveRubroFromSyllabus(t.getTitle(), syllabusEvals);
+                    if (match != null) {
+                        evalType = match.type();
+                        evalDesc = match.description();
+                    }
+                }
             }
 
             // Aplicar filtros opcionales solicitados por el modelo/usuario
@@ -1236,14 +1254,85 @@ public class AcademicToolService {
             nameByCode.forEach((code, name) -> {
                 String resolvedCode = resolveOfficialCode(schedule, name, code);
                 String finalCode = resolvedCode != null ? resolvedCode : (isOfficialCatalogCode(code) ? code : "");
-                String key = (finalCode != null && !finalCode.isBlank())
-                        ? finalCode
-                        : "name:" + normalizeTerm(name == null ? "" : name);
-                resolved.putIfAbsent(key, new EnrolledCourseDto(finalCode != null ? finalCode : "", name != null ? name : code));
+                resolved.put(finalCode, new EnrolledCourseDto(finalCode, name != null ? name : code));
             });
         }
 
         return new ArrayList<>(resolved.values());
+    }
+
+    /** Rubro oficial resuelto desde el sílabo persistido (nunca fabricado). */
+    private record RubroMatch(String type, String description) {}
+
+    /**
+     * Correlaciona el título de una actividad con las evaluaciones OFICIALES del sílabo ya cargado.
+     * Precedencia: descripción oficial completa → código del rubro como token independiente.
+     * Se exigen límites de token para no asociar "PAGAR"/"PADRE" al rubro "PA".
+     */
+    private RubroMatch resolveRubroFromSyllabus(String title,
+            List<com.utp.horario.domain.model.value_objects.SyllabusEvaluation> syllabusEvals) {
+        if (title == null || title.isBlank() || syllabusEvals == null || syllabusEvals.isEmpty()) {
+            return null;
+        }
+        String normTitle = normalizeTerm(title);
+
+        for (com.utp.horario.domain.model.value_objects.SyllabusEvaluation ev : syllabusEvals) {
+            String type = trimToNull(ev.getType());
+            String desc = trimToNull(ev.getDescription());
+            if (type == null || desc == null) continue;
+            String normDesc = normalizeTerm(desc);
+            if (normDesc.equals(normTitle) || containsNormalizedPhrase(normTitle, normDesc)) {
+                return new RubroMatch(type.toUpperCase(), desc);
+            }
+        }
+
+        for (com.utp.horario.domain.model.value_objects.SyllabusEvaluation ev : syllabusEvals) {
+            String type = trimToNull(ev.getType());
+            if (type == null) continue;
+            String normType = normalizeTerm(type);
+            if (normType.isBlank() || !containsCodeToken(normTitle, normType)) continue;
+            String desc = trimToNull(ev.getDescription());
+            return new RubroMatch(type.toUpperCase(),
+                    desc != null ? desc : "Evaluación del sílabo: " + type);
+        }
+        return null;
+    }
+
+    private static boolean isOfficialRubroType(
+            List<com.utp.horario.domain.model.value_objects.SyllabusEvaluation> syllabusEvals, String candidate) {
+        if (candidate == null || syllabusEvals == null) return false;
+        return syllabusEvals.stream()
+                .map(com.utp.horario.domain.model.value_objects.SyllabusEvaluation::getType)
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(t -> t.trim().equalsIgnoreCase(candidate.trim()));
+    }
+
+    private boolean containsNormalizedPhrase(String haystack, String phrase) {
+        String p = normalizeTerm(phrase);
+        if (p.isBlank()) return false;
+        return (" " + normalizeTerm(haystack) + " ").contains(" " + p + " ");
+    }
+
+    /** Comprueba un código de rubro (PA, PC1, PROY) como PALABRA completa, no como subcadena. */
+    private static boolean containsCodeToken(String haystack, String code) {
+        String needle = stripDiacritics(code);
+        String text = " " + stripDiacritics(haystack) + " ";
+        if (needle.isBlank()) return false;
+        int from = 0;
+        while ((from = text.indexOf(needle, from)) >= 0) {
+            int end = from + needle.length();
+            boolean left = from == 0 || !Character.isLetterOrDigit(text.charAt(from - 1));
+            boolean right = end == text.length() || !Character.isLetterOrDigit(text.charAt(end));
+            if (left && right) return true;
+            from = end;
+        }
+        return false;
+    }
+
+    private static String stripDiacritics(String text) {
+        if (text == null) return "";
+        String nfd = java.text.Normalizer.normalize(text.toLowerCase(), java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
     private static String trimToNull(String value) {
