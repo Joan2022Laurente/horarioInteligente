@@ -11,6 +11,7 @@ import { AiAssistantService } from '@data/services/ai-assistant.service';
 import { MEME_STICKERS, MemeSticker } from '@data/constants/stickers.config';
 import { MatrixOrbComponent } from './matrix-orb.component';
 import { ChatMessageBubbleComponent } from './chat-message-bubble.component';
+import { McpGuideModalComponent } from '../mcp-guide/mcp-guide-modal.component';
 
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
@@ -31,7 +32,7 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
 @Component({
   selector: 'app-ai-assistant-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, MatrixOrbComponent, ChatMessageBubbleComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, MatrixOrbComponent, ChatMessageBubbleComponent, McpGuideModalComponent],
   template: `
     @if (isOpen) {
       <div 
@@ -97,6 +98,17 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
                     }
                   </span>
                 }
+
+                <!-- Botón Conectar MCP -->
+                <button
+                  type="button"
+                  (click)="isMcpModalOpen = true"
+                  title="Conectar con Claude, ChatGPT o Cursor vía MCP"
+                  class="inline-flex items-center gap-1.5 h-8 px-2.5 r-control-md bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-[var(--accent-lime)] transition cursor-pointer shrink-0 border border-white/10 hover:border-[var(--accent-lime)]/40 text-xs font-semibold"
+                >
+                  <lucide-icon name="plug" class="h-3.5 w-3.5 text-[var(--accent-lime)]"></lucide-icon>
+                  <span class="hidden sm:inline">Conectar MCP</span>
+                </button>
 
                 <!-- Botón Toggle Pantalla Completa / Reducir -->
                 <button
@@ -202,6 +214,10 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
 
         </div>
       </div>
+
+      @if (isMcpModalOpen) {
+        <app-mcp-guide-modal (closed)="isMcpModalOpen = false"></app-mcp-guide-modal>
+      }
     }
   `,
   styles: [`
@@ -237,6 +253,7 @@ export class AiAssistantModalComponent implements OnChanges, OnDestroy {
   input = '';
   isLoading = false;
   isExpanded = false;
+  isMcpModalOpen = false;
   lastUserPrompt: string | null = null;
   isStickerDrawerOpen = false;
   selectedStickerCategory = 'all';

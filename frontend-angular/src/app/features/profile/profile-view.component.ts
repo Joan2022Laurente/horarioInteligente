@@ -7,11 +7,12 @@ import { ScheduleService } from '@data/services/schedule.service';
 import { ProfileService } from '@data/services/profile.service';
 import { UiFeedbackService } from '@core/services/ui-feedback.service';
 import { StudentProfile } from '@domain/models/utp.model';
+import { McpGuideModalComponent } from '../mcp-guide/mcp-guide-modal.component';
 
 @Component({
   selector: 'app-profile-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, McpGuideModalComponent],
   template: `
     <div class="mx-auto w-full max-w-5xl px-3 sm:px-6 py-4 sm:py-8 space-y-6 text-white font-sans text-left">
 
@@ -292,7 +293,40 @@ import { StudentProfile } from '@domain/models/utp.model';
       </div>
 
       <!-- ===================================================================== -->
-      <!-- 3. SESIÓN & MANTENIMIENTO                                             -->
+      <!-- 3. INTEGRACIÓN MODEL CONTEXT PROTOCOL (MCP)                           -->
+      <!-- ===================================================================== -->
+      <section class="profile-card p-5 sm:p-7 shadow-md shadow-black/40 space-y-4" aria-labelledby="mcpTitle">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="h-10 w-10 rounded-[var(--r-control-lg)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] flex items-center justify-center text-[var(--accent-lime)] shrink-0">
+              <lucide-icon name="plug" class="h-5 w-5"></lucide-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="mcpTitle" class="text-base font-bold text-white tracking-tight">Servidor MCP Académico</h2>
+                <span class="text-[11px] font-semibold text-[var(--accent-lime)] bg-[rgba(187,244,81,0.08)] border border-[rgba(187,244,81,0.2)] rounded-[var(--r-control-sm)] px-2 py-0.5 font-mono">v2024-11-05</span>
+              </div>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Conecta tu horario, evaluaciones y sílabos oficiales a Claude, ChatGPT o Cursor en tiempo real.</p>
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            (click)="isMcpModalOpen.set(true)"
+            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--r-control-md)] bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[var(--accent-lime)] text-white font-semibold text-xs tracking-wider transition cursor-pointer shrink-0"
+          >
+            <lucide-icon name="plug" class="h-3.5 w-3.5 text-[var(--accent-lime)]"></lucide-icon>
+            <span>Configurar Conexión</span>
+          </button>
+        </div>
+      </section>
+
+      @if (isMcpModalOpen()) {
+        <app-mcp-guide-modal (closed)="isMcpModalOpen.set(false)"></app-mcp-guide-modal>
+      }
+
+      <!-- ===================================================================== -->
+      <!-- 4. SESIÓN & MANTENIMIENTO                                             -->
       <!-- ===================================================================== -->
       <section class="profile-card p-5 sm:p-7 shadow-md shadow-black/40" aria-labelledby="sesTitle">
         <h2 id="sesTitle" class="text-base font-bold flex items-center gap-2">
@@ -432,6 +466,7 @@ export class ProfileViewComponent implements OnInit {
     return (s?.studentCode || s?.username || '').toUpperCase();
   });
   readonly avatarUrl = signal<string>('');
+  readonly isMcpModalOpen = signal(false);
 
   phoneWhatsapp = '';
   campusLocation = '';

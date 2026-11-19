@@ -1771,6 +1771,10 @@ video {
   border-radius: var(--r-control-md);
 }
 
+.rounded-\[var\(--r-control-sm\)\]{
+  border-radius: var(--r-control-sm);
+}
+
 .rounded-full{
   border-radius: var(--r-pill);
 }
@@ -4053,6 +4057,10 @@ h1, h2, h3, h4, h5, h6 {
   --tw-scale-x: 1.02;
   --tw-scale-y: 1.02;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.hover\:border-\[var\(--accent-lime\)\]:hover{
+  border-color: var(--accent-lime);
 }
 
 .hover\:border-\[var\(--border-medium\)\]:hover{
