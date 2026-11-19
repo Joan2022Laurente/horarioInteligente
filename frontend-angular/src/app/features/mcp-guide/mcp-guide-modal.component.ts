@@ -18,6 +18,7 @@ interface McpTool {
   description: string;
 }
 
+const MCP_PATH = '/api/v1/mcp';
 const SSE_PATH = '/api/v1/mcp/sse';
 
 const TOOLS: readonly McpTool[] = [
@@ -108,26 +109,26 @@ const PROMPTS: readonly string[] = [
             <!-- URL -->
             <div class="space-y-1.5">
               <label class="text-[11px] font-medium uppercase tracking-wider text-white/40">
-                URL del servidor MCP (SSE)
+                URL del servidor MCP
               </label>
               <div class="flex items-stretch gap-2">
                 <div
                   class="flex-1 min-w-0 flex items-center px-3 py-2.5 bg-[var(--surface-input)]
                          border border-[var(--border-subtle)] rounded-[var(--r-control-sm)]"
                 >
-                  <span class="font-mono text-[12px] text-white/80 truncate select-all">{{ sseUrl }}</span>
+                  <span class="font-mono text-[12px] text-white/80 truncate select-all">{{ mcpUrl }}</span>
                 </div>
                 <button
                   type="button"
-                  (click)="copy('sse-url', sseUrl)"
+                  (click)="copy('mcp-url', mcpUrl)"
                   class="shrink-0 inline-flex items-center gap-1.5 px-3.5 text-[12px] font-medium
                          border transition-colors rounded-[var(--r-control-sm)]"
-                  [class]="copiedKey() === 'sse-url'
+                  [class]="copiedKey() === 'mcp-url'
                     ? 'bg-[var(--accent-lime)] text-black border-[var(--accent-lime)]'
                     : 'bg-[var(--surface-subtle)] text-white/80 border-[var(--border-medium)] hover:text-white hover:border-white/30'"
                 >
-                  <lucide-icon [name]="copiedKey() === 'sse-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
-                  {{ copiedKey() === 'sse-url' ? 'Copiado' : 'Copiar URL' }}
+                  <lucide-icon [name]="copiedKey() === 'mcp-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
+                  {{ copiedKey() === 'mcp-url' ? 'Copiado' : 'Copiar URL' }}
                 </button>
               </div>
             </div>
@@ -304,18 +305,18 @@ const PROMPTS: readonly string[] = [
                         </p>
                         <div class="flex items-stretch gap-2">
                           <div class="flex-1 min-w-0 flex items-center px-3 py-2 bg-[var(--surface-input)] border border-[var(--border-subtle)] rounded-[var(--r-control-sm)]">
-                            <span class="font-mono text-[11px] text-white/80 truncate select-all">{{ sseUrl }}</span>
+                            <span class="font-mono text-[11px] text-white/80 truncate select-all">{{ mcpUrl }}</span>
                           </div>
                           <button
                             type="button"
-                            (click)="copy('sse-url', sseUrl)"
+                            (click)="copy('claude-url', mcpUrl)"
                             class="shrink-0 inline-flex items-center gap-1.5 px-3 text-[11px] font-medium border transition-colors rounded-[var(--r-control-sm)]"
-                            [class]="copiedKey() === 'sse-url'
+                            [class]="copiedKey() === 'claude-url'
                               ? 'bg-[var(--accent-lime)] text-black border-[var(--accent-lime)]'
                               : 'bg-[var(--surface-subtle)] text-white/80 border-[var(--border-medium)] hover:text-white'"
                           >
-                            <lucide-icon [name]="copiedKey() === 'sse-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
-                            {{ copiedKey() === 'sse-url' ? 'Copiado' : 'Copiar' }}
+                            <lucide-icon [name]="copiedKey() === 'claude-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
+                            {{ copiedKey() === 'claude-url' ? 'Copiado' : 'Copiar' }}
                           </button>
                         </div>
                       </div>
@@ -366,18 +367,18 @@ const PROMPTS: readonly string[] = [
                       <span class="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-[11px] text-[var(--accent-lime)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] rounded-full">2</span>
                       <div class="min-w-0 flex-1 space-y-2">
                         <p class="text-[13px] leading-relaxed text-white/70">
-                          En <strong class="font-medium text-white">URL del servidor de MCP</strong>, pega la URL SSE de conexión:
+                          En <strong class="font-medium text-white">URL del servidor de MCP</strong>, pega la URL del servidor:
                         </p>
                         <button
                           type="button"
-                          (click)="copy('gemini-url', sseUrl)"
+                          (click)="copy('gemini-url', mcpUrl)"
                           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border transition-colors rounded-[var(--r-control-sm)]"
                           [class]="copiedKey() === 'gemini-url'
                             ? 'bg-[var(--accent-lime)] text-black border-[var(--accent-lime)]'
                             : 'bg-[var(--surface-subtle)] text-white/80 border-[var(--border-medium)] hover:text-white'"
                         >
                           <lucide-icon [name]="copiedKey() === 'gemini-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
-                          {{ copiedKey() === 'gemini-url' ? 'Copiado' : 'Copiar URL SSE' }}
+                          {{ copiedKey() === 'gemini-url' ? 'Copiado' : 'Copiar URL' }}
                         </button>
                       </div>
                     </li>
@@ -503,6 +504,7 @@ export class McpGuideModalComponent {
   readonly tools = TOOLS;
   readonly prompts = PROMPTS;
 
+  readonly mcpUrl = window.location.origin + MCP_PATH;
   readonly sseUrl = window.location.origin + SSE_PATH;
 
   readonly tab = signal<TabId>('chatgpt');
