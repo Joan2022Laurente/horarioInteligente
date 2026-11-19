@@ -1061,20 +1061,25 @@ public class AcademicToolService {
                 if (institutionalSystem != null) {
                     evalType = institutionalSystem.toUpperCase();
                     evalDesc = "Sistema de evaluación institucional: " + evalType;
-                    RubroMatch sysMatch = resolveRubroFromSyllabus(institutionalSystem, syllabusEvals);
-                    if (sysMatch != null) {
-                        evalType = sysMatch.type();
-                        evalDesc = sysMatch.description();
-                    }
                 }
-                // Si el sistema institucional no es ya un rubro oficial del sílabo, se contrasta
-                // el título normalizado contra las evaluaciones oficiales persistidas.
-                if (!isOfficialRubroType(syllabusEvals, evalType)) {
-                    RubroMatch match = resolveRubroFromSyllabus(t.getTitle(), syllabusEvals);
-                    if (match != null) {
-                        evalType = match.type();
-                        evalDesc = match.description();
-                    }
+            }
+
+            // Si evalType no es ya un código oficial del sílabo (ej. "PC1", "PA", "PROY"), se normaliza
+            // contrastando contra las evaluaciones oficiales del sílabo:
+            // 1) Por el código o descripción institucional actual (ej. "PRÁCTICA CALIFICADA 1" -> "PC1")
+            // 2) Por el sistema de evaluación institucional de la sección
+            // 3) Por el título de la actividad
+            if (!isOfficialRubroType(syllabusEvals, evalType)) {
+                RubroMatch match = resolveRubroFromSyllabus(evalType, syllabusEvals);
+                if (match == null && t.getEvaluationSystem() != null) {
+                    match = resolveRubroFromSyllabus(t.getEvaluationSystem(), syllabusEvals);
+                }
+                if (match == null) {
+                    match = resolveRubroFromSyllabus(t.getTitle(), syllabusEvals);
+                }
+                if (match != null) {
+                    evalType = match.type();
+                    evalDesc = match.description();
                 }
             }
 
@@ -1124,6 +1129,20 @@ public class AcademicToolService {
                         desc = ev.getDescription();
                     }
                     break;
+                }
+            }
+            if (weight == null) {
+                RubroMatch m = resolveRubroFromSyllabus(type, syllabusEvals);
+                if (m != null) {
+                    for (var ev : syllabusEvals) {
+                        if (ev.getType() != null && ev.getType().equalsIgnoreCase(m.type())) {
+                            weight = ev.getWeightPercent();
+                            if (ev.getDescription() != null && !ev.getDescription().isBlank()) {
+                                desc = ev.getDescription();
+                            }
+                            break;
+                        }
+                    }
                 }
             }
 
