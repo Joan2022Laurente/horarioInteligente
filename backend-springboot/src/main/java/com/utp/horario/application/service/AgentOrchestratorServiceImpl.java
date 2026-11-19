@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Primary
@@ -67,6 +68,8 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
     private String defaultModelName;
 
     private static final int MAX_ITERATIONS = 5;
+    private static final Pattern PATTERN_2_REPEAT = Pattern.compile("^(..)\\1{5,}$");
+    private static final Pattern PATTERN_3_REPEAT = Pattern.compile("^(...)\\1{4,}$");
 
     /**
      * Guía local del Pre-Flight Guard (Fase 0.7.1): respuesta instantánea y a costo $0.00
@@ -723,6 +726,7 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
              * Usa encabezados breves con `###`.
              * Usa viñetas con guion `- ` para listar aulas, horarios, docentes o temas.
              * Resalta en **negrita** nombres de asignaturas, aulas, docentes y temas clave.
+             * En tablas Markdown, usa separadores compactos tipo `|---|---|` y nunca repitas filas idénticas.
         """.formatted(
                 formattedDate,
                 formattedTime,
@@ -818,19 +822,34 @@ public class AgentOrchestratorServiceImpl implements AiAssistantService {
         return evt;
     }
 
-    private boolean isDegenerateRepetition(StringBuilder sb) {
+    private static boolean isStructuralMarkdownChar(char c) {
+        return switch (c) {
+            case '-', '=', '_', '*', '#', '~', '`', '|', ':', '+', '>', ' ', '\t', '\n', '\r' -> true;
+            default -> false;
+        };
+    }
+
+    boolean isDegenerateRepetition(StringBuilder sb) {
         if (sb.length() < 20) return false;
-        // 1. Repetición del mismo carácter (ej. !!!!!!!!!!!!!!)
+        // 1. Repetición del mismo carácter (diferenciando sintaxis estructural de texto plano)
         char lastChar = sb.charAt(sb.length() - 1);
+        int maxAllowed = isStructuralMarkdownChar(lastChar) ? 150 : 12;
         int consecutive = 0;
         for (int i = sb.length() - 1; i >= 0 && sb.charAt(i) == lastChar; i--) {
             consecutive++;
-            if (consecutive >= 12) return true;
+            if (consecutive >= maxAllowed) return true;
         }
-        // 2. Repetición de patrón de 2 o 3 caracteres al final
+        // 2. Repetición de patrón de 2 o 3 caracteres al final (solo si contiene caracteres no estructurales)
         if (sb.length() >= 30) {
             String tail = sb.substring(sb.length() - 20);
-            if (tail.matches("^(..)\\1{5,}$") || tail.matches("^(...)\\1{4,}$")) {
+            boolean hasNonStructural = false;
+            for (int i = 0; i < tail.length(); i++) {
+                if (!isStructuralMarkdownChar(tail.charAt(i))) {
+                    hasNonStructural = true;
+                    break;
+                }
+            }
+            if (hasNonStructural && (PATTERN_2_REPEAT.matcher(tail).matches() || PATTERN_3_REPEAT.matcher(tail).matches())) {
                 return true;
             }
         }

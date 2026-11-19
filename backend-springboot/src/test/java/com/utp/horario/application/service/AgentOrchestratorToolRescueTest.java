@@ -13,6 +13,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,5 +114,20 @@ class AgentOrchestratorToolRescueTest {
         assertNull(orchestrator.rescueToolCalls("Primero debemos confirmar la clase de hoy."));
         assertNull(orchestrator.rescueToolCalls(""));
         assertNull(orchestrator.rescueToolCalls(null));
+    }
+
+    @Test
+    @DisplayName("isDegenerateRepetition no corta separadores de tablas Markdown")
+    void markdownTableSeparatorIsNotALoop() {
+        String sep = "| Asignatura | Tipo de evaluación | Peso % | Semana programada |\n"
+                + "|----------------|----------------|----------------|----------------|\n";
+        assertFalse(orchestrator.isDegenerateRepetition(new StringBuilder(sep)));
+    }
+
+    @Test
+    @DisplayName("isDegenerateRepetition detecta bucles reales de signos o texto patológico")
+    void plainCharacterLoopIsDetected() {
+        StringBuilder sb = new StringBuilder("¡Atención alumno" + "!".repeat(25));
+        assertTrue(orchestrator.isDegenerateRepetition(sb));
     }
 }
