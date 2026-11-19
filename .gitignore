@@ -49,8 +49,12 @@ yarn-error.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 .agents/
-!.agents/rules/
-!.agents/rules/**
+AGENTS.md
+DIVISION_TRABAJO_EQUIPO.md
+Estructura_Informe.md
+INFORME_TECNICO_PROYECTO.md
+SUSTENTACION_MODULO_IA_MCP.md
+response.md
 .gemini/
 .engram/
 .DS_Store
