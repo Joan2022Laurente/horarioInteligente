@@ -248,6 +248,8 @@ export function getProcessedCourses(events: UTPEvent[]): ProcessedCourse[] {
 
     for (const session of data.sessions) {
       if (session.isLongLasting) continue; // no recurrente por horario especifico
+      // Sin ancla temporal real no existe horario recurrente: evitar el espurio "Jueves 00:00 – 00:00".
+      if (!session.startAt || !session.finishAt || session.modality === 'VT') continue;
       const d = parseDate(session.startAt);
       const dayNumber = d.getDay(); // 0 = Domingo
       const startH = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });

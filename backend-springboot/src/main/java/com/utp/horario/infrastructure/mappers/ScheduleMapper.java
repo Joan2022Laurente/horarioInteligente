@@ -87,7 +87,9 @@ public class ScheduleMapper {
         }
         if (schedule.getClasses() != null) {
             for (ClassSession session : schedule.getClasses()) {
-                if (session.getStartAt() == null && session.getFinishAt() == null) {
+                if (session.getStartAt() == null) {
+                    log.debug("[ScheduleMapper] Sesión omitida en horario: curso='{}', sección='{}' sin startAt (no es evento agendable)",
+                            session.getCourseName(), session.getSection());
                     continue;
                 }
                 ScheduleCourseEntity owner = findOwner(session, root.getCourses());
@@ -114,7 +116,9 @@ public class ScheduleMapper {
         List<ScheduleSessionEntity> orphans = new ArrayList<>();
         if (schedule == null || schedule.getClasses() == null || root == null) return orphans;
         for (ClassSession session : schedule.getClasses()) {
-            if (session.getStartAt() == null && session.getFinishAt() == null) {
+            if (session.getStartAt() == null) {
+                log.debug("[ScheduleMapper] Sesión huérfana omitida: curso='{}', sección='{}' sin startAt",
+                        session.getCourseName(), session.getSection());
                 continue;
             }
             if (findOwner(session, root.getCourses()) == null) {

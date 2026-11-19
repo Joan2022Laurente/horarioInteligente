@@ -159,6 +159,8 @@ export class WeeklyScheduleComponent implements OnInit {
   events: UTPEvent[] = [];
   processedCourses: ProcessedCourse[] = [];
   virtual247Courses: ProcessedCourse[] = [];
+  /** Catálogo oficial de asignaturas de la respuesta del backend (independiente de `classes`). */
+  private enrolledCourses: any[] = [];
   startOfInterval = '';
   currentInterval: UTPCurrentInterval | null = null;
 
@@ -173,6 +175,9 @@ export class WeeklyScheduleComponent implements OnInit {
     this.scheduleService.getSchedule().subscribe({
       next: (res) => {
         if (res.success && res.data) {
+          // El catálogo oficial debe capturarse ANTES de elegir la rama de hidratación:
+          // los cursos VT no generan eventos, pero sí deben poblar la tarjeta 24/7.
+          this.enrolledCourses = Array.isArray(res.data.courses) ? res.data.courses : [];
           const interval = this.scheduleService.currentInterval();
           if (interval && interval.events && interval.events.length > 0) {
             this.applyIntervalData(interval);
@@ -208,6 +213,7 @@ export class WeeklyScheduleComponent implements OnInit {
   }
 
   private applyScheduleData(scheduleData: any): void {
+    this.enrolledCourses = Array.isArray(scheduleData.courses) ? scheduleData.courses : [];
     this.currentWeek = scheduleData.weekNumber || 1;
     this.totalWeeks = scheduleData.totalWeeks || 18;
     this.selectedWeek = this.currentWeek;
@@ -243,20 +249,45 @@ export class WeeklyScheduleComponent implements OnInit {
   }
 
   computeVirtualCourses(): void {
-    const raw = this.processedCourses.filter(c => 
-      c.modalities.includes('VT') || 
-      c.weeklySchedules.length === 0
-    );
+    const isVirtual = (modality: unknown, modalityType?: string): boolean => {
+      const value = String(modality ?? '').toUpperCase();
+      return modalityType === 'ASYNC_VIRTUAL'
+        || value === 'VT' || value === 'V'
+        || value.includes('VIRTUAL 24/7') || value.includes('ASYNC');
+    };
 
     const seen = new Set<string>();
     const unique: ProcessedCourse[] = [];
-    for (const c of raw) {
-      const key = normalizeKey((c.name || '').replace(/-\s*\d{4,6}$/g, ''));
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(c);
-      }
+    const add = (course: ProcessedCourse): void => {
+      const key = normalizeKey((course.name || '').replace(/-\s*\d{4,6}$/g, ''));
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      unique.push(course);
+    };
+
+    // Fuente primaria: el catálogo oficial de asignaturas, que existe aunque
+    // el backend no emita ni una sola sesión para el curso asíncrono.
+    for (const c of this.enrolledCourses) {
+      if (!isVirtual(c?.modality, c?.modalityType)) continue;
+      add({
+        courseId: c.code || c.id || c.name || '',
+        name: c.name || '',
+        sectionCode: c.section || c.classNumber || '',
+        sectionId: c.sectionId,
+        modalities: ['VT'],
+        classLink: c.classLink,
+        totalSessions: 0,
+        upcomingSessions: [],
+        pastSessions: [],
+        weeklySchedules: [],
+      });
     }
+
+    // Compatibilidad con cachés históricos que aún contuvieran sesiones VT.
+    for (const c of this.processedCourses) {
+      if (c.modalities.includes('VT')) add(c);
+    }
+
     this.virtual247Courses = unique;
   }
 
@@ -364,12 +395,12 @@ export class WeeklyScheduleComponent implements OnInit {
       this.selectedEventForModal = existingEvt;
     } else {
       this.selectedEventForModal = {
-        id: course.courseId || `virtual-${Date.now()}`,
+        id: 'virtual:' + (course.courseId || course.sectionCode),
         title: `${course.name} (Virtual 24/7)`,
         modality: 'VT',
         type: 'SESSION',
-        startAt: new Date().toISOString(),
-        finishAt: new Date().toISOString(),
+        startAt: '',
+        finishAt: '',
         metadata: {
           courseName: course.name,
           sectionCode: course.sectionCode,

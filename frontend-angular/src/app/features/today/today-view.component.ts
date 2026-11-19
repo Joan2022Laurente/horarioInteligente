@@ -995,7 +995,7 @@ export class TodayViewComponent implements OnInit, OnDestroy {
               events: res.data.classes.map(c => ({
                 id: c.id,
                 title: `${c.courseName.toUpperCase()}${c.section && c.section !== 'Sección Única' ? ' (' + c.section + ')' : ''} (Semana ${this.currentWeek}) - Sesión`,
-                modality: c.modality || 'P',
+                modality: c.modality ?? '',
                 type: 'SESSION',
                 startAt: typeof c.startAt === 'string' ? c.startAt : (c.startAt ? String(c.startAt) : ''),
                 finishAt: typeof c.finishAt === 'string' ? c.finishAt : (c.finishAt ? String(c.finishAt) : ''),
