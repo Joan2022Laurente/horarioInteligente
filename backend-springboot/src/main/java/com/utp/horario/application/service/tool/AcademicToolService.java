@@ -1061,6 +1061,11 @@ public class AcademicToolService {
                 if (institutionalSystem != null) {
                     evalType = institutionalSystem.toUpperCase();
                     evalDesc = "Sistema de evaluación institucional: " + evalType;
+                    RubroMatch sysMatch = resolveRubroFromSyllabus(institutionalSystem, syllabusEvals);
+                    if (sysMatch != null) {
+                        evalType = sysMatch.type();
+                        evalDesc = sysMatch.description();
+                    }
                 }
                 // Si el sistema institucional no es ya un rubro oficial del sílabo, se contrasta
                 // el título normalizado contra las evaluaciones oficiales persistidas.
