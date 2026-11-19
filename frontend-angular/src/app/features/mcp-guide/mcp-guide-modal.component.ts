@@ -269,12 +269,12 @@ const PROMPTS: readonly string[] = [
                   </ol>
 
                   <a
-                    href="https://chatgpt.com/gpts/editor"
+                    href="https://chatgpt.com/plugins"
                     target="_blank" rel="noopener noreferrer"
                     class="inline-flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-black
                            bg-[var(--accent-lime)] hover:brightness-95 transition rounded-[var(--r-control-sm)]"
                   >
-                    Abrir editor de GPTs
+                    Abrir plugins y conectores de ChatGPT
                     <lucide-icon name="external-link" class="w-3.5 h-3.5"></lucide-icon>
                   </a>
                 </div>
@@ -358,16 +358,16 @@ const PROMPTS: readonly string[] = [
                     <li class="flex gap-3.5 p-3.5 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-[var(--r-control-md)]">
                       <span class="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-[11px] text-[var(--accent-lime)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] rounded-full">1</span>
                       <p class="text-[13px] leading-relaxed text-white/70">
-                        Entra a <strong class="font-medium text-white">gemini.google.com</strong> &gt;
-                        <strong class="font-medium text-white">Gems</strong> &gt;
-                        <strong class="font-medium text-white">Nuevo Gem</strong>.
+                        Entra a <strong class="font-medium text-white">Conectores de Gemini</strong> (o ve a
+                        <strong class="font-medium text-white">Ajustes</strong> &gt;
+                        <strong class="font-medium text-white">Conectores</strong>).
                       </p>
                     </li>
                     <li class="flex gap-3.5 p-3.5 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-[var(--r-control-md)]">
                       <span class="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-[11px] text-[var(--accent-lime)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] rounded-full">2</span>
                       <div class="min-w-0 flex-1 space-y-2">
                         <p class="text-[13px] leading-relaxed text-white/70">
-                          Copia la URL de conexión y pégala en las instrucciones del Gem para que consulte tus datos.
+                          Copia la URL de conexión y pégala en las instrucciones del conector o Gem para que consulte tus datos.
                         </p>
                         <button
                           type="button"
@@ -385,19 +385,19 @@ const PROMPTS: readonly string[] = [
                     <li class="flex gap-3.5 p-3.5 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-[var(--r-control-md)]">
                       <span class="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-[11px] text-[var(--accent-lime)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] rounded-full">3</span>
                       <p class="text-[13px] leading-relaxed text-white/70">
-                        Guarda el Gem y pruébalo con una de las preguntas de la pestaña
+                        Guarda y pruébalo con una de las preguntas de la pestaña
                         <strong class="font-medium text-white">Herramientas</strong>.
                       </p>
                     </li>
                   </ol>
 
                   <a
-                    href="https://gemini.google.com/gems/create"
+                    href="https://gemini.google.com/customize/connectors"
                     target="_blank" rel="noopener noreferrer"
                     class="inline-flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-black
                            bg-[var(--accent-lime)] hover:brightness-95 transition rounded-[var(--r-control-sm)]"
                   >
-                    Crear un Gem
+                    Abrir conectores de Gemini
                     <lucide-icon name="external-link" class="w-3.5 h-3.5"></lucide-icon>
                   </a>
 
