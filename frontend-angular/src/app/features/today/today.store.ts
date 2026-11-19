@@ -44,7 +44,7 @@ export class TodayStore {
  });
 
  readonly classStatus = computed(() => {
- return getCurrentAndNextClass(this.events(), this.now());
+ return getCurrentAndNextClass(this.eventsForToday(), this.now());
  });
 
  readonly currentClass = computed(() => this.classStatus().currentClass);
