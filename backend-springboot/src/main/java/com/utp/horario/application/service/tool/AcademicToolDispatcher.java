@@ -171,6 +171,23 @@ public class AcademicToolDispatcher {
                     resultJson = objectMapper.writeValueAsString(toolService.getCourseTasksAndActivities(studentCode, query, evalType, status));
                 }
 
+                case "get_task_detail" -> {
+                    String courseQuery = AcademicToolRegistry.resolveCourseQuery(args).trim();
+                    String taskQuery = readTaskQuery(args);
+                    if (courseQuery.isEmpty()) {
+                        return ToolExecution.error(toolErrorPayload(
+                                "Argumento obligatorio 'course_query' ausente. Envía el código oficial "
+                                        + "de la asignatura (ej. 100000SI58) o su nombre natural.",
+                                AcademicToolRegistry.getSupportedToolNames()));
+                    }
+                    if (taskQuery.isEmpty()) {
+                        return ToolExecution.error(toolErrorPayload(
+                                "Argumento obligatorio 'task_query' ausente. Envía el título, nombre o ID de la tarea a consultar.",
+                                AcademicToolRegistry.getSupportedToolNames()));
+                    }
+                    resultJson = objectMapper.writeValueAsString(toolService.getTaskDetail(studentCode, courseQuery, taskQuery));
+                }
+
                 case "search_marketplace" -> {
                     String query = args.hasNonNull("query") ? args.path("query").asText() : null;
                     String type = args.hasNonNull("type") ? args.path("type").asText() : null;
@@ -316,6 +333,23 @@ public class AcademicToolDispatcher {
             return null;
         }
         return value;
+    }
+
+    private String readTaskQuery(JsonNode arguments) {
+        if (arguments == null) return "";
+        if (arguments.hasNonNull("task_query")) {
+            return arguments.path("task_query").asText("").trim();
+        }
+        if (arguments.hasNonNull("task_id")) {
+            return arguments.path("task_id").asText("").trim();
+        }
+        if (arguments.hasNonNull("title")) {
+            return arguments.path("title").asText("").trim();
+        }
+        if (arguments.hasNonNull("query")) {
+            return arguments.path("query").asText("").trim();
+        }
+        return "";
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

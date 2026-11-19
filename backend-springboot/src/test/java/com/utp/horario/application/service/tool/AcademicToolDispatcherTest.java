@@ -14,6 +14,9 @@ import com.utp.horario.application.dtos.AcademicToolDto.RemainingClassSessionDto
 import com.utp.horario.application.dtos.AcademicToolDto.CourseTasksAndActivitiesResult;
 import com.utp.horario.application.dtos.AcademicToolDto.CourseTaskDto;
 import com.utp.horario.application.dtos.AcademicToolDto.EvaluationTaskGroupingDto;
+import com.utp.horario.application.dtos.AcademicToolDto.RubricRatingDto;
+import com.utp.horario.application.dtos.AcademicToolDto.RubricCriterionDto;
+import com.utp.horario.application.dtos.AcademicToolDto.TaskDetailResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -262,6 +265,51 @@ class AcademicToolDispatcherTest {
         assertTrue(execution.isError());
         assertTrue(execution.json().contains("Argumento obligatorio 'course_query' ausente"));
         verify(toolService, never()).getCourseTasksAndActivities(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("get_task_detail serializa especificación, consigna y rúbrica")
+    void dispatchesTaskDetail() throws Exception {
+        RubricRatingDto rating = new RubricRatingDto(7.0, "ESTÁNDAR ESPERADO", "Pronuncia con claridad");
+        RubricCriterionDto criterion = new RubricCriterionDto("Expresión oral", 7.0, "Criterio de voz", List.of(rating));
+        TaskDetailResult result = new TaskDetailResult(
+                STUDENT, "100000S72V", "Herramientas para la Comunicación Efectiva",
+                "task-123", "Avance de Portafolio 2", 7, "AP2", "PENDING", 20.0, 1,
+                "2026-09-21 00:00:00", "2026-09-28 23:59:00", "2026-09-28 23:59:00",
+                false, List.of("online_upload"), "## Consigna en Markdown", "## Entregables",
+                "Rubrica-S72V", 20.0, List.of(criterion), null
+        );
+
+        when(toolService.getTaskDetail(STUDENT, "Herramientas", "Avance de Portafolio 2"))
+                .thenReturn(result);
+
+        AcademicToolDispatcher.ToolExecution execution = dispatcher.dispatch(
+                "get_task_detail",
+                args("{\"course_query\": \"Herramientas\", \"task_query\": \"Avance de Portafolio 2\"}"),
+                STUDENT
+        );
+
+        assertFalse(execution.isError());
+        assertTrue(execution.json().contains("Avance de Portafolio 2"));
+        assertTrue(execution.json().contains("Expresión oral"));
+        assertTrue(execution.json().contains("Consigna en Markdown"));
+        verify(toolService).getTaskDetail(STUDENT, "Herramientas", "Avance de Portafolio 2");
+    }
+
+    @Test
+    @DisplayName("get_task_detail rechaza ausencia de course_query o task_query")
+    void taskDetailRejectsMissingParameters() throws Exception {
+        AcademicToolDispatcher.ToolExecution noCourse = dispatcher.dispatch(
+                "get_task_detail", args("{\"task_query\": \"Tarea 1\"}"), STUDENT
+        );
+        assertTrue(noCourse.isError());
+        assertTrue(noCourse.json().contains("Argumento obligatorio 'course_query' ausente"));
+
+        AcademicToolDispatcher.ToolExecution noTask = dispatcher.dispatch(
+                "get_task_detail", args("{\"course_query\": \"Desarrollo Web\"}"), STUDENT
+        );
+        assertTrue(noTask.isError());
+        assertTrue(noTask.json().contains("Argumento obligatorio 'task_query' ausente"));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

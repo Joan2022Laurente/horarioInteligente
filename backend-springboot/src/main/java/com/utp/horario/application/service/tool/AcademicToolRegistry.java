@@ -150,6 +150,21 @@ public class AcademicToolRegistry {
                 Map.of(
                         "type", "function",
                         "function", Map.of(
+                                "name", "get_task_detail",
+                                "description", "Obtiene la especificación y detalle completo de una tarea o evaluación académica: consigna completa en Markdown, orientaciones, formatos de entrega admitidos, fechas límites y rúbrica de evaluación detallada por criterios y niveles de desempeño.",
+                                "parameters", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of(
+                                                "course_query", Map.of("type", "string", "description", "Nombre del curso o código oficial exacto (ej. 'Desarrollo Web Integrado' o '100000SI58')."),
+                                                "task_query", Map.of("type", "string", "description", "Título, nombre o identificador de la tarea/actividad a consultar (ej. 'Avance de Portafolio 2', 'Foro de debate 1', 'S07').")
+                                        ),
+                                        "required", List.of("course_query", "task_query")
+                                )
+                        )
+                ),
+                Map.of(
+                        "type", "function",
+                        "function", Map.of(
                                 "name", "search_marketplace",
                                 "description", "Busca productos de segunda mano, tecnología, libros o servicios de tutoría 1 a 1 ofrecidos por compañeros en el Marketplace estudiantil UTP.",
                                 "parameters", Map.of(

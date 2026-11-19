@@ -238,5 +238,60 @@ public class AcademicToolDto {
         }
     }
 
+    public record RubricRatingDto(
+            Double score,
+            String name,
+            String description
+    ) {}
+
+    public record RubricCriterionDto(
+            String name,
+            Double score,
+            String description,
+            List<RubricRatingDto> performanceRatings
+    ) {}
+
+    /**
+     * Especificación completa de una tarea (de qué trata, consigna en Markdown, formato de entrega y rúbrica).
+     */
+    public record TaskDetailResult(
+            String studentCode,
+            String courseCode,
+            String courseName,
+            String taskId,
+            String title,
+            Integer week,
+            String evaluationSystem,
+            String homeworkStatus,
+            Double evaluationTopScore,
+            Integer maxAttempts,
+            String availableFrom,
+            String availableUntil,
+            String dueAt,
+            Boolean isGroup,
+            List<String> submissionTypes,
+            String descriptionMarkdown,
+            String deliverablesMarkdown,
+            String rubricName,
+            Double rubricScore,
+            List<RubricCriterionDto> gradingRubric,
+            String message
+    ) {
+        public TaskDetailResult(String studentCode, String courseCode, String courseName,
+                                String taskId, String title, Integer week,
+                                String evaluationSystem, String homeworkStatus,
+                                Double evaluationTopScore, Integer maxAttempts,
+                                String availableFrom, String availableUntil, String dueAt,
+                                Boolean isGroup, List<String> submissionTypes,
+                                String descriptionMarkdown, String deliverablesMarkdown,
+                                String rubricName, Double rubricScore,
+                                List<RubricCriterionDto> gradingRubric) {
+            this(studentCode, courseCode, courseName, taskId, title, week, evaluationSystem,
+                    homeworkStatus, evaluationTopScore, maxAttempts, availableFrom, availableUntil,
+                    dueAt, isGroup, submissionTypes, descriptionMarkdown, deliverablesMarkdown,
+                    rubricName, rubricScore, gradingRubric, null);
+        }
+    }
+
 }
 

@@ -1157,6 +1157,233 @@ public class AcademicToolService {
         );
     }
 
+    public TaskDetailResult getTaskDetail(String studentCode, String courseQuery, String taskQuery) {
+        String code = resolveEffectiveStudentCode(studentCode);
+        String cleanCourseQuery = (courseQuery != null) ? courseQuery.trim() : "";
+        String cleanTaskQuery = (taskQuery != null) ? taskQuery.trim() : "";
+
+        if (code == null || code.isBlank()) {
+            return new TaskDetailResult(
+                    "", cleanCourseQuery, "", "", cleanTaskQuery, null, "", "",
+                    null, null, null, null, null, null, List.of(), "", "",
+                    null, null, List.of(),
+                    "No se identificó una sesión de estudiante activa. Inicia sesión para consultar el detalle de la tarea."
+            );
+        }
+
+        if (cleanCourseQuery.isBlank()) {
+            return new TaskDetailResult(
+                    code, "", "", "", cleanTaskQuery, null, "", "",
+                    null, null, null, null, null, null, List.of(), "", "",
+                    null, null, List.of(),
+                    "Argumento obligatorio 'course_query' ausente: indica el nombre o código oficial del curso."
+            );
+        }
+
+        if (cleanTaskQuery.isBlank()) {
+            return new TaskDetailResult(
+                    code, cleanCourseQuery, "", "", "", null, "", "",
+                    null, null, null, null, null, null, List.of(), "", "",
+                    null, null, List.of(),
+                    "Argumento obligatorio 'task_query' ausente: indica el título, nombre o identificador de la tarea."
+            );
+        }
+
+        // 1. Resolver curso desde asignaturas matriculadas
+        String resolvedCourseCode = null;
+        String resolvedCourseName = null;
+        try {
+            EnrolledCoursesResult enrolled = getEnrolledCourses(code);
+            if (enrolled != null && enrolled.courses() != null) {
+                String normQuery = normalizeTerm(cleanCourseQuery);
+                for (var ec : enrolled.courses()) {
+                    String normEcName = normalizeTerm(ec.courseName());
+                    String normEcCode = normalizeTerm(ec.courseCode());
+                    if (normEcName.contains(normQuery) || normQuery.contains(normEcName)
+                            || normEcCode.equalsIgnoreCase(normQuery)) {
+                        resolvedCourseCode = ec.courseCode();
+                        resolvedCourseName = ec.courseName();
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AcademicTool] Error resolviendo curso matriculado para detalle de tarea: {}", e.getMessage());
+        }
+
+        String targetCourseCode = (resolvedCourseCode != null) ? resolvedCourseCode : cleanCourseQuery;
+        String targetCourseName = (resolvedCourseName != null) ? resolvedCourseName : cleanCourseQuery;
+
+        // 2. Resolver sectionId de la sección asignada
+        String resolvedSectionId = resolveSectionIdForCourse(code, targetCourseCode, targetCourseName);
+
+        // 3. Obtener lista de tareas del curso para emparejar la tarea solicitada
+        CourseTasksAndActivitiesResult courseTasks = getCourseTasksAndActivities(code, targetCourseCode);
+        List<CourseTaskDto> candidateTasks = (courseTasks != null && courseTasks.tasks() != null)
+                ? courseTasks.tasks()
+                : List.of();
+
+        CourseTaskDto matchedTask = null;
+        String normTaskQuery = normalizeTerm(cleanTaskQuery);
+
+        for (var t : candidateTasks) {
+            if (t.id() != null && t.id().equalsIgnoreCase(cleanTaskQuery)) {
+                matchedTask = t;
+                break;
+            }
+            if (t.title() != null) {
+                String normTitle = normalizeTerm(t.title());
+                if (normTitle.equalsIgnoreCase(normTaskQuery) || normTitle.contains(normTaskQuery) || normTaskQuery.contains(normTitle)) {
+                    matchedTask = t;
+                    break;
+                }
+            }
+        }
+
+        String effectiveSectionId = resolvedSectionId;
+        String effectiveActivityId = (matchedTask != null && matchedTask.id() != null && !matchedTask.id().isBlank())
+                ? matchedTask.id()
+                : cleanTaskQuery;
+
+        if (effectiveSectionId == null || effectiveSectionId.isBlank()) {
+            return new TaskDetailResult(
+                    code, targetCourseCode, targetCourseName, effectiveActivityId, cleanTaskQuery, null, "", "",
+                    null, null, null, null, null, null, List.of(), "", "",
+                    null, null, List.of(),
+                    "No se pudo determinar la sección (sectionId) para el curso " + targetCourseName + ". Sincroniza tu horario e intenta nuevamente."
+            );
+        }
+
+        // 4. Invocar pasarela oficial para obtener detalle, consigna y rúbrica
+        String token = resolveStudentToken(code);
+        com.fasterxml.jackson.databind.JsonNode detailNode = null;
+        try {
+            if (taskQueryService != null) {
+                detailNode = taskQueryService.getTaskDetail(code, token, effectiveSectionId, effectiveActivityId);
+            } else if (utpPortalGateway != null) {
+                detailNode = utpPortalGateway.fetchTaskDetail(token, effectiveSectionId, effectiveActivityId);
+            }
+        } catch (Exception ex) {
+            log.error("[AcademicTool] ❌ Error consultando detalle de tarea {} en sección {}: {}",
+                    effectiveActivityId, effectiveSectionId, ex.getMessage(), ex);
+            return new TaskDetailResult(
+                    code, targetCourseCode, targetCourseName, effectiveActivityId,
+                    matchedTask != null ? matchedTask.title() : cleanTaskQuery,
+                    matchedTask != null ? matchedTask.week() : null,
+                    matchedTask != null ? matchedTask.evaluationType() : "",
+                    matchedTask != null ? matchedTask.homeworkStatus() : "PENDING",
+                    matchedTask != null ? matchedTask.maxScore() : 20.0,
+                    1, null, null,
+                    matchedTask != null ? matchedTask.dueDate() : null,
+                    false, List.of(), "", "",
+                    null, null, List.of(),
+                    "Error al obtener detalle oficial de la tarea desde el portal UTP: " + ex.getMessage()
+            );
+        }
+
+        if (detailNode == null || detailNode.isMissingNode() || detailNode.isNull()) {
+            return new TaskDetailResult(
+                    code, targetCourseCode, targetCourseName, effectiveActivityId,
+                    matchedTask != null ? matchedTask.title() : cleanTaskQuery,
+                    matchedTask != null ? matchedTask.week() : null,
+                    matchedTask != null ? matchedTask.evaluationType() : "",
+                    matchedTask != null ? matchedTask.homeworkStatus() : "PENDING",
+                    matchedTask != null ? matchedTask.maxScore() : 20.0,
+                    1, null, null,
+                    matchedTask != null ? matchedTask.dueDate() : null,
+                    false, List.of(), "", "",
+                    null, null, List.of(),
+                    "La tarea " + cleanTaskQuery + " no cuenta con especificación o rúbrica disponible en el aula virtual de UTP."
+            );
+        }
+
+        return parseTaskDetailNode(code, targetCourseCode, targetCourseName, matchedTask, detailNode);
+    }
+
+    private TaskDetailResult parseTaskDetailNode(String studentCode, String courseCode, String courseName,
+                                                 CourseTaskDto matchedTask, com.fasterxml.jackson.databind.JsonNode data) {
+        String id = data.path("id").asText(matchedTask != null ? matchedTask.id() : "");
+        String title = data.path("title").asText(matchedTask != null ? matchedTask.title() : "");
+        Integer week = matchedTask != null ? matchedTask.week() : null;
+        String evalSystem = data.hasNonNull("evaluationSystem") ? data.path("evaluationSystem").asText() :
+                (matchedTask != null ? matchedTask.evaluationType() : "");
+        String status = data.hasNonNull("homeworkStatus") ? data.path("homeworkStatus").asText() :
+                (matchedTask != null ? matchedTask.homeworkStatus() : "PENDING");
+        Double topScore = data.hasNonNull("evaluationTopScore") ? data.path("evaluationTopScore").asDouble() :
+                (matchedTask != null ? matchedTask.maxScore() : 20.0);
+        Integer maxAttempts = data.hasNonNull("attempts") ? data.path("attempts").asInt() :
+                (data.hasNonNull("maxAttempts") ? data.path("maxAttempts").asInt() : 1);
+        String availableFrom = data.path("availableFrom").asText(null);
+        String availableUntil = data.path("availableUntil").asText(null);
+        String dueAt = data.hasNonNull("dueAt") ? data.path("dueAt").asText(null) : availableUntil;
+        Boolean isGroup = data.path("isGroup").asBoolean(false);
+
+        List<String> submissionTypes = new ArrayList<>();
+        if (data.has("submissionTypes") && data.path("submissionTypes").isArray()) {
+            for (com.fasterxml.jackson.databind.JsonNode st : data.path("submissionTypes")) {
+                submissionTypes.add(st.asText());
+            }
+        }
+
+        String descMd = data.path("descriptionMarkdown").asText("");
+        if (descMd.isBlank() && data.hasNonNull("content")) {
+            descMd = data.path("content").asText("");
+        }
+
+        String deliverablesMd = data.path("deliverablesMarkdown").asText("");
+        if (deliverablesMd.isBlank() && data.hasNonNull("deliverables")) {
+            deliverablesMd = data.path("deliverables").asText("");
+        }
+
+        String rubricName = null;
+        Double rubricScore = null;
+        List<RubricCriterionDto> rubricCriteria = new ArrayList<>();
+
+        com.fasterxml.jackson.databind.JsonNode rubricNode = data.hasNonNull("rubric") ? data.path("rubric") : null;
+        if (rubricNode != null && rubricNode.isObject()) {
+            rubricName = rubricNode.path("name").asText(null);
+            rubricScore = rubricNode.hasNonNull("score") ? rubricNode.path("score").asDouble() : null;
+            com.fasterxml.jackson.databind.JsonNode criterionsNode = rubricNode.path("criterions");
+            if (criterionsNode != null && criterionsNode.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode cNode : criterionsNode) {
+                    rubricCriteria.add(parseRubricCriterion(cNode));
+                }
+            }
+        } else if (data.has("gradingRubric") && data.path("gradingRubric").isArray()) {
+            rubricName = data.path("rubricName").asText(null);
+            rubricScore = data.hasNonNull("rubricScore") ? data.path("rubricScore").asDouble() : null;
+            for (com.fasterxml.jackson.databind.JsonNode cNode : data.path("gradingRubric")) {
+                rubricCriteria.add(parseRubricCriterion(cNode));
+            }
+        }
+
+        return new TaskDetailResult(
+                studentCode, courseCode, courseName, id, title, week, evalSystem, status,
+                topScore, maxAttempts, availableFrom, availableUntil, dueAt, isGroup,
+                submissionTypes, descMd, deliverablesMd, rubricName, rubricScore,
+                rubricCriteria, null
+        );
+    }
+
+    private RubricCriterionDto parseRubricCriterion(com.fasterxml.jackson.databind.JsonNode cNode) {
+        String name = cNode.path("name").asText("Criterio");
+        Double score = cNode.hasNonNull("score") ? cNode.path("score").asDouble() : 0.0;
+        String desc = cNode.path("description").asText("");
+        List<RubricRatingDto> ratings = new ArrayList<>();
+        com.fasterxml.jackson.databind.JsonNode prNode = cNode.has("performanceRatings") ? cNode.path("performanceRatings") :
+                (cNode.has("levels") ? cNode.path("levels") : null);
+        if (prNode != null && prNode.isArray()) {
+            for (com.fasterxml.jackson.databind.JsonNode r : prNode) {
+                ratings.add(new RubricRatingDto(
+                        r.hasNonNull("score") ? r.path("score").asDouble() : 0.0,
+                        r.path("name").asText(""),
+                        r.path("description").asText("")
+                ));
+            }
+        }
+        return new RubricCriterionDto(name, score, desc, ratings);
+    }
+
 
 
     private String normalizeTerm(String text) {
