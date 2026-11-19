@@ -79,6 +79,23 @@ class OAuth2FlowTest {
     }
 
     @Test
+    @DisplayName("RFC 7591: DCR registra cliente para Google Gemini Web (sandbox y prod) con 201 Created")
+    void dynamicClientRegistrationForGoogleGeminiWeb() throws Exception {
+        Map<String, Object> regRequest = Map.of(
+                "client_name", "Google Gemini Web",
+                "redirect_uris", List.of("https://oauth-redirect-sandbox.googleusercontent.com/r/user_bound_custom-mcp-e807e9e1ae8ba2926a525488")
+        );
+
+        mockMvc.perform(post("/oauth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.client_id").exists())
+                .andExpect(jsonPath("$.client_name").value("Google Gemini Web"))
+                .andExpect(jsonPath("$.redirect_uris[0]").value("https://oauth-redirect-sandbox.googleusercontent.com/r/user_bound_custom-mcp-e807e9e1ae8ba2926a525488"));
+    }
+
+    @Test
     @DisplayName("GET /oauth/authorize renderiza formulario de login con campos ocultos")
     void authorizeRendersHtmlForm() throws Exception {
         mockMvc.perform(get("/oauth/authorize")

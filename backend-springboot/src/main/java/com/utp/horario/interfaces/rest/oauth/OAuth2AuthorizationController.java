@@ -88,11 +88,18 @@ public class OAuth2AuthorizationController {
                 "ChatGPT Web Connector",
                 now
         ));
+        registeredClients.put("gemini-web", new RegisteredClient(
+                "gemini-web",
+                null,
+                List.of("https://oauth-redirect.googleusercontent.com/r/*", "https://oauth-redirect-sandbox.googleusercontent.com/r/*"),
+                "Google Gemini Web Connector",
+                now
+        ));
     }
 
     /**
      * RFC 7591: Dynamic Client Registration (DCR).
-     * Permite que Claude y ChatGPT registren clientes de forma dinámica.
+     * Permite que Claude, ChatGPT y Gemini registren clientes de forma dinámica.
      */
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> registerClient(@RequestBody JsonNode body) {
@@ -111,7 +118,7 @@ public class OAuth2AuthorizationController {
                 log.warn("[OAuth-DCR] Intento de registro con redirect_uri no permitida: {}", uri);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                         "error", "invalid_redirect_uri",
-                        "error_description", "La redirect_uri [" + uri + "] no pertenece a la allowlist autorizada (claude.ai, chatgpt.com o localhost)."
+                        "error_description", "La redirect_uri [" + uri + "] no pertenece a la allowlist autorizada (claude.ai, chatgpt.com, googleusercontent.com o localhost)."
                 ));
             }
         }
@@ -312,6 +319,10 @@ public class OAuth2AuthorizationController {
                 || lower.startsWith("https://claude.com/api/mcp/auth_callback")
                 || lower.startsWith("https://chatgpt.com/connector/oauth/")
                 || lower.startsWith("https://chatgpt.com/connector_platform_oauth_redirect")
+                || lower.startsWith("https://oauth-redirect.googleusercontent.com/r/")
+                || lower.startsWith("https://oauth-redirect-sandbox.googleusercontent.com/r/")
+                || (lower.startsWith("https://") && lower.contains(".googleusercontent.com/r/"))
+                || lower.startsWith("https://gemini.google.com/")
                 || lower.startsWith("http://localhost:")
                 || lower.startsWith("http://127.0.0.1:")
                 || lower.contains(".trycloudflare.com");
