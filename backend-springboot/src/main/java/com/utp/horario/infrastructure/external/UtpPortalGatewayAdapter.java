@@ -45,6 +45,10 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
     private final ObjectMapper objectMapper;
     private final String gatewayBaseUrl;
 
+    /** Ruta del árbol completo de la sección en la pasarela institucional. */
+    @Value("${academic.gateway.section-full-path:/sections/{sectionId}/full}")
+    private String sectionFullPath = "/sections/{sectionId}/full";
+
     public UtpPortalGatewayAdapter(
             @Value("${academic.gateway.url:https://utp-academic-gateway-c0da87808dcb.herokuapp.com/api/v1}") String gatewayBaseUrl) {
         this.gatewayBaseUrl = gatewayBaseUrl.replaceAll("/+$", "");
@@ -249,6 +253,122 @@ public class UtpPortalGatewayAdapter implements IUtpPortalGateway {
         } catch (Exception e) {
             throw new UpstreamServiceException("Error al procesar las actividades de la pasarela: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    public List<TaskSyncItem> fetchSectionActivities(String token, String sectionId,
+                                                      String courseCode, String courseName) {
+        if (sectionId == null || sectionId.isBlank()) {
+            throw new IllegalArgumentException("Se requiere sectionId para consultar el árbol de contenidos.");
+        }
+        String auth = bearer(token);
+        String path = sectionFullPath.replace("{sectionId}",
+                URLEncoder.encode(sectionId.trim(), StandardCharsets.UTF_8));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(gatewayBaseUrl + path))
+                .timeout(Duration.ofSeconds(15))
+                .header("Accept", "application/json")
+                .header("Authorization", auth)
+                .GET()
+                .build();
+        try {
+            HttpResponse<String> response = sendChecked(request);
+            JsonNode root = objectMapper.readTree(response.body());
+            JsonNode data = root.hasNonNull("data") ? root.get("data") : root;
+            return parseSectionTree(data, sectionId, courseCode, courseName);
+        } catch (AuthenticationException | ResourceNotFoundException | UpstreamServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new UpstreamServiceException(
+                    "Error al procesar el árbol de contenidos de la sección " + sectionId + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Deserializa {@code unities[] -> themes[] -> contents[]} sin asumir identificadores ni títulos.
+     * Solo se conservan entregables o actividades evaluativas; el resto del árbol se descarta.
+     * Paquete-privado para permitir pruebas unitarias del parser sin red.
+     */
+    static List<TaskSyncItem> parseSectionTree(JsonNode data, String sectionId,
+                                               String courseCode, String courseName) {
+        if (data == null || data.isNull()) {
+            throw new UpstreamServiceException("La pasarela no devolvió datos del árbol de la sección.");
+        }
+        JsonNode unities = data.path("unities");
+        if (!unities.isArray()) {
+            // Algunas versiones de la pasarela envían las unidades directamente en "data".
+            unities = data.isArray() ? data : null;
+        }
+        if (unities == null || !unities.isArray()) {
+            throw new UpstreamServiceException("El árbol de la sección no contiene 'unities[]'.");
+        }
+
+        List<TaskSyncItem> items = new ArrayList<>();
+        for (JsonNode unity : unities) {
+            JsonNode themes = unity.path("themes");
+            for (JsonNode theme : themes) {
+                Integer week = theme.hasNonNull("weekNumber")
+                        ? theme.get("weekNumber").asInt()
+                        : (theme.hasNonNull("week") ? theme.get("week").asInt() : null);
+                JsonNode contents = theme.path("contents");
+                for (JsonNode content : contents) {
+                    JsonNode meta = content.path("metadata");
+                    String type = content.path("type").asText("");
+                    String evalSystem = firstText(meta.path("evaluationSystem"), content.path("evaluationSystem"));
+                    boolean isQualified = meta.path("isQualified").asBoolean(false)
+                            || content.path("isQualified").asBoolean(false);
+                    if (!isEvaluativeContent(type, evalSystem, isQualified)) {
+                        continue;
+                    }
+                    String contentId = firstText(meta.path("contentId"), content.path("contentId"), content.path("id"));
+                    String title = firstText(content.path("title"), meta.path("title"));
+                    String visibleTo = firstText(meta.path("visibleTo"), content.path("visibleTo"),
+                            meta.path("finishAt"), content.path("finishAt"));
+                    String status = firstText(meta.path("studentStatus"), meta.path("homeworkStatus"));
+                    boolean delivered = "DELIVERED".equalsIgnoreCase(status)
+                            || "SUBMITTED".equalsIgnoreCase(status)
+                            || "DELIVERED_ON_TIME".equalsIgnoreCase(status);
+
+                    items.add(TaskSyncItem.builder()
+                            .id(contentId)
+                            .contentId(contentId)
+                            .homeworkId(contentId)
+                            .studentId(null)
+                            .courseCode(courseCode)
+                            .courseName(courseName)
+                            .sectionId(sectionId)
+                            .title(title)
+                            .type(type)
+                            .week(week)
+                            .homeworkStatus(status != null ? status : "PENDING")
+                            .assignmentProgress(delivered ? "FINISHED" : "NOT_STARTED")
+                            .dueDate(ClassSession.parseDateTimeSafely(visibleTo))
+                            .isDelivered(delivered)
+                            .isQualified(isQualified)
+                            .evaluationSystem(evalSystem)
+                            .build());
+                }
+            }
+        }
+        return items;
+    }
+
+    private static boolean isEvaluativeContent(String type, String evalSystem, boolean isQualified) {
+        String normalized = type == null ? "" : type.trim().toUpperCase();
+        return "HOMEWORK".equals(normalized)
+                || "EVALUATION".equals(normalized)
+                || "FORUM".equals(normalized)
+                || isQualified
+                || (evalSystem != null && !evalSystem.isBlank());
+    }
+
+    private static String firstText(JsonNode... candidates) {
+        for (JsonNode candidate : candidates) {
+            if (candidate != null && candidate.isValueNode() && !candidate.asText().isBlank()) {
+                return candidate.asText();
+            }
+        }
+        return null;
     }
 
     @Override

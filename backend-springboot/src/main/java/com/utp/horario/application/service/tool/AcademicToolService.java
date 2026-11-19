@@ -887,6 +887,9 @@ public class AcademicToolService {
         String targetCourseCode = (resolvedCourseCode != null) ? resolvedCourseCode : cleanQuery;
         String targetCourseName = (resolvedCourseName != null) ? resolvedCourseName : cleanQuery;
 
+        // 1b. sectionId oficial de la sección asignada al estudiante, resuelto del horario persistido.
+        String resolvedSectionId = resolveSectionIdForCourse(code, targetCourseCode, targetCourseName);
+
         // 2. Resolver Sílabo del curso (para fórmula, evaluaciones y rúbricas)
         Optional<Syllabus> syllabusOpt = Optional.empty();
         if (resolvedCourseCode != null) {
@@ -950,11 +953,37 @@ public class AcademicToolService {
                     + code + ": " + taskInfraException.getMessage(), taskInfraException);
         }
 
+        // 4b. Enriquecimiento con el ÁRBOL CANÓNICO del aula virtual (todas las semanas).
+        // El calendario personal solo contiene alertas; aquí se incorporan las actividades reales.
+        List<com.utp.horario.domain.model.aggregate.TaskSyncItem> collectedTasks = new ArrayList<>(rawTasks);
+        if (resolvedSectionId != null && taskInfraException == null) {
+            String sectionToken = resolveStudentToken(code);
+            if (sectionToken != null && !sectionToken.isBlank()) {
+                try {
+                    List<com.utp.horario.domain.model.aggregate.TaskSyncItem> sectionActivities =
+                            utpPortalGateway.fetchSectionActivities(
+                                    sectionToken, resolvedSectionId, targetCourseCode, targetCourseName);
+                    if (sectionActivities != null && !sectionActivities.isEmpty()) {
+                        collectedTasks = mergeTasks(collectedTasks, sectionActivities);
+                    }
+                    log.info("[AcademicTool] 🌳 Árbol de la sección [{}]: {} actividad(es) evaluativas",
+                            resolvedSectionId, sectionActivities == null ? 0 : sectionActivities.size());
+                } catch (Exception ex) {
+                    // Degradación transparente: se conservan calendario/Read Model, sin inventar tareas.
+                    log.warn("[AcademicTool] No se pudo enriquecer desde el árbol de la sección [{}]: {} "
+                            + "— se usan solo los registros ya disponibles", resolvedSectionId, ex.getMessage());
+                }
+            } else {
+                log.warn("[AcademicTool] Sin token institucional; se omite el árbol de la sección [{}]", resolvedSectionId);
+            }
+        }
+        final List<com.utp.horario.domain.model.aggregate.TaskSyncItem> allTasks = collectedTasks;
+
         // 5. Filtrar tareas para este curso específico
         String normTargetName = normalizeTerm(targetCourseName);
         String normTargetCode = normalizeTerm(targetCourseCode);
 
-        List<com.utp.horario.domain.model.aggregate.TaskSyncItem> courseTasks = rawTasks.stream().filter(t -> {
+        List<com.utp.horario.domain.model.aggregate.TaskSyncItem> courseTasks = allTasks.stream().filter(t -> {
             if (t.getCourseCode() != null && normTargetCode.equalsIgnoreCase(normalizeTerm(t.getCourseCode()))) {
                 return true;
             }
@@ -1259,6 +1288,103 @@ public class AcademicToolService {
         }
 
         return new ArrayList<>(resolved.values());
+    }
+
+    /**
+     * Resuelve el sectionId oficial del estudiante para la asignatura, desde el horario persistido.
+     * Precedencia: ClassSession.sectionId emparejado por código → Course.section por código/nombre.
+     */
+    private String resolveSectionIdForCourse(String studentCode, String courseCode, String courseName) {
+        Optional<ScheduleInterval> scheduleOpt =
+                scheduleRepository.findByStudentIdAndPeriod(studentCode, getCurrentPeriod());
+        if (scheduleOpt.isEmpty()) return null;
+        ScheduleInterval schedule = scheduleOpt.get();
+        String code = trimToNull(courseCode);
+        String name = trimToNull(courseName);
+
+        if (schedule.getClasses() != null && code != null) {
+            for (ClassSession cl : schedule.getClasses()) {
+                if (code.equalsIgnoreCase(trimToNull(cl.getCourseCode()))) {
+                    String sectionId = trimToNull(cl.getSectionId());
+                    if (sectionId != null) return sectionId;
+                }
+            }
+        }
+        if (schedule.getCourses() != null) {
+            for (Course c : schedule.getCourses()) {
+                String cCode = trimToNull(c.getCode());
+                String cName = trimToNull(c.getName());
+                if ((code != null && code.equalsIgnoreCase(cCode))
+                        || (name != null && name.equalsIgnoreCase(cName))) {
+                    String section = trimToNull(c.getSection());
+                    if (section != null) return section;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Fusión por clave canónica: el calendario aporta estado de entrega; el árbol aporta semana/rubro. */
+    private List<com.utp.horario.domain.model.aggregate.TaskSyncItem> mergeTasks(
+            List<com.utp.horario.domain.model.aggregate.TaskSyncItem> calendarTasks,
+            List<com.utp.horario.domain.model.aggregate.TaskSyncItem> sectionTasks) {
+        Map<String, com.utp.horario.domain.model.aggregate.TaskSyncItem> merged = new LinkedHashMap<>();
+        for (com.utp.horario.domain.model.aggregate.TaskSyncItem t : sectionTasks) {
+            merged.putIfAbsent(taskKey(t), t);
+        }
+        for (com.utp.horario.domain.model.aggregate.TaskSyncItem t : calendarTasks) {
+            // Map.merge(existing, incoming): "existing" es la versión del árbol (insertada antes);
+            // "incoming" es la del calendario, que aporta el estado real de entrega del alumno.
+            merged.merge(taskKey(t), t,
+                    (section, calendar) -> mergeTaskSyncItems(calendar, section));
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    private String taskKey(com.utp.horario.domain.model.aggregate.TaskSyncItem t) {
+        String title = trimToNull(t.getTitle());
+        if (title != null) return "title:" + normalizeTerm(title);
+        String contentId = trimToNull(t.getContentId());
+        if (contentId != null) return "content:" + contentId;
+        String id = trimToNull(t.getId());
+        return "id:" + (id != null ? id : "");
+    }
+
+    private static com.utp.horario.domain.model.aggregate.TaskSyncItem mergeTaskSyncItems(
+            com.utp.horario.domain.model.aggregate.TaskSyncItem calendar,
+            com.utp.horario.domain.model.aggregate.TaskSyncItem section) {
+        return com.utp.horario.domain.model.aggregate.TaskSyncItem.builder()
+                .id(firstNonBlank(calendar.getId(), section.getId()))
+                .studentId(firstNonBlank(calendar.getStudentId(), section.getStudentId()))
+                .courseCode(firstNonBlank(calendar.getCourseCode(), section.getCourseCode()))
+                .courseName(firstNonBlank(calendar.getCourseName(), section.getCourseName()))
+                .sectionId(firstNonBlank(calendar.getSectionId(), section.getSectionId()))
+                .contentId(firstNonBlank(calendar.getContentId(), section.getContentId()))
+                .homeworkId(firstNonBlank(calendar.getHomeworkId(), section.getHomeworkId()))
+                .title(firstNonBlank(calendar.getTitle(), section.getTitle()))
+                .type(firstNonBlank(calendar.getType(), section.getType()))
+                .week(calendar.getWeek() != null ? calendar.getWeek() : section.getWeek())
+                .homeworkStatus(firstNonBlank(calendar.getHomeworkStatus(), section.getHomeworkStatus()))
+                .assignmentProgress(firstNonBlank(calendar.getAssignmentProgress(), section.getAssignmentProgress()))
+                .dueDate(calendar.getDueDate() != null ? calendar.getDueDate() : section.getDueDate())
+                .maxScore(calendar.getMaxScore() != null ? calendar.getMaxScore() : section.getMaxScore())
+                .score(calendar.getScore() != null ? calendar.getScore() : section.getScore())
+                .isDelivered(calendar.getIsDelivered() != null ? calendar.getIsDelivered() : section.getIsDelivered())
+                .isQualified(calendar.getIsQualified() != null ? calendar.getIsQualified() : section.getIsQualified())
+                .evaluationSystem(firstNonBlank(calendar.getEvaluationSystem(), section.getEvaluationSystem()))
+                .classificationCategory(firstNonBlank(calendar.getClassificationCategory(), section.getClassificationCategory()))
+                .urgency(firstNonBlank(calendar.getUrgency(), section.getUrgency()))
+                .daysRemaining(calendar.getDaysRemaining() != null ? calendar.getDaysRemaining() : section.getDaysRemaining())
+                .syllabusCorrelation(calendar.getSyllabusCorrelation() != null
+                        ? calendar.getSyllabusCorrelation() : section.getSyllabusCorrelation())
+                .build();
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return value;
+        }
+        return null;
     }
 
     /** Rubro oficial resuelto desde el sílabo persistido (nunca fabricado). */
