@@ -79,11 +79,14 @@ class OAuth2FlowTest {
     }
 
     @Test
-    @DisplayName("RFC 7591: DCR registra cliente para Google Gemini Web (sandbox y prod) con 201 Created")
+    @DisplayName("RFC 7591: DCR registra cliente para Google Gemini Web (rutas /a/ y /r/) con 201 Created")
     void dynamicClientRegistrationForGoogleGeminiWeb() throws Exception {
         Map<String, Object> regRequest = Map.of(
                 "client_name", "Google Gemini Web",
-                "redirect_uris", List.of("https://oauth-redirect-sandbox.googleusercontent.com/r/user_bound_custom-mcp-e807e9e1ae8ba2926a525488")
+                "redirect_uris", List.of(
+                        "https://oauth-redirect-sandbox.googleusercontent.com/r/test_custom_mcp_gemini_client",
+                        "https://oauth-redirect-sandbox.googleusercontent.com/a/test_custom_mcp_gemini_client"
+                )
         );
 
         mockMvc.perform(post("/oauth/register")
@@ -92,7 +95,8 @@ class OAuth2FlowTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.client_id").exists())
                 .andExpect(jsonPath("$.client_name").value("Google Gemini Web"))
-                .andExpect(jsonPath("$.redirect_uris[0]").value("https://oauth-redirect-sandbox.googleusercontent.com/r/user_bound_custom-mcp-e807e9e1ae8ba2926a525488"));
+                .andExpect(jsonPath("$.redirect_uris[0]").value("https://oauth-redirect-sandbox.googleusercontent.com/r/test_custom_mcp_gemini_client"))
+                .andExpect(jsonPath("$.redirect_uris[1]").value("https://oauth-redirect-sandbox.googleusercontent.com/a/test_custom_mcp_gemini_client"));
     }
 
     @Test

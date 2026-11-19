@@ -91,7 +91,7 @@ public class OAuth2AuthorizationController {
         registeredClients.put("gemini-web", new RegisteredClient(
                 "gemini-web",
                 null,
-                List.of("https://oauth-redirect.googleusercontent.com/r/*", "https://oauth-redirect-sandbox.googleusercontent.com/r/*"),
+                List.of("https://oauth-redirect.googleusercontent.com/*", "https://oauth-redirect-sandbox.googleusercontent.com/*", "https://gemini.google.com/*"),
                 "Google Gemini Web Connector",
                 now
         ));
@@ -319,9 +319,7 @@ public class OAuth2AuthorizationController {
                 || lower.startsWith("https://claude.com/api/mcp/auth_callback")
                 || lower.startsWith("https://chatgpt.com/connector/oauth/")
                 || lower.startsWith("https://chatgpt.com/connector_platform_oauth_redirect")
-                || lower.startsWith("https://oauth-redirect.googleusercontent.com/r/")
-                || lower.startsWith("https://oauth-redirect-sandbox.googleusercontent.com/r/")
-                || (lower.startsWith("https://") && lower.contains(".googleusercontent.com/r/"))
+                || (lower.startsWith("https://") && lower.contains(".googleusercontent.com/"))
                 || lower.startsWith("https://gemini.google.com/")
                 || lower.startsWith("http://localhost:")
                 || lower.startsWith("http://127.0.0.1:")
