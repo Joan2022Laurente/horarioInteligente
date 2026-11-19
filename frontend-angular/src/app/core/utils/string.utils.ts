@@ -32,7 +32,7 @@ export function cleanCourseName(name: string): string {
  * Normaliza un string de fecha ISO o formato SQL 'YYYY-MM-DD HH:mm:ss' a objeto Date.
  */
 export function parseNormalizedDate(dateStr: string): Date {
-  if (!dateStr) return new Date();
+  if (!dateStr) return new Date(0);
   const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
   return new Date(normalized);
 }

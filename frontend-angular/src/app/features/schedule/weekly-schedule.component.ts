@@ -295,8 +295,9 @@ export class WeeklyScheduleComponent implements OnInit {
       const templateEvents: UTPEvent[] = [];
 
       for (const evt of this.events) {
-        if (evt.isLongLasting) continue;
+        if (evt.isLongLasting || evt.modality === 'VT' || !evt.startAt || !evt.finishAt) continue;
         const d = parseDate(evt.startAt);
+        if (isNaN(d.getTime()) || d.getTime() === 0) continue;
         const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         const key = `${d.getDay()}_${evt.title}_${timeStr}`;
 
@@ -313,7 +314,9 @@ export class WeeklyScheduleComponent implements OnInit {
       : weekEvents.filter(e => e.modality === this.selectedModality);
 
     return filtered.filter(evt => {
+      if (evt.modality === 'VT' || !evt.startAt || !evt.finishAt) return false;
       const d = parseDate(evt.startAt);
+      if (isNaN(d.getTime()) || d.getTime() === 0) return false;
       if (d.getDay() !== dayNum) return false;
 
       if (evt.modality === 'VT') return false;

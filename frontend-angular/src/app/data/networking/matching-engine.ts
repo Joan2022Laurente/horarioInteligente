@@ -7,7 +7,7 @@ import { parseDate, DAYS_OF_WEEK, getCanonicalCourseKey, formatCourseName } from
  */
 export function calculateStudentFreeWindows(events: UTPEvent[], campus = 'Lima Centro'): FreeWindow[] {
   const windows: FreeWindow[] = [];
-  const regularEvents = events.filter(e => !e.isLongLasting && e.modality !== 'VT');
+  const regularEvents = events.filter(e => !e.isLongLasting && e.modality !== 'VT' && !!e.startAt && !!e.finishAt);
 
   // Agrupar eventos por día de la semana (1 = Lunes .. 6 = Sábado)
   const eventsByDay = new Map<number, UTPEvent[]>();

@@ -87,6 +87,9 @@ public class ScheduleMapper {
         }
         if (schedule.getClasses() != null) {
             for (ClassSession session : schedule.getClasses()) {
+                if (session.getStartAt() == null && session.getFinishAt() == null) {
+                    continue;
+                }
                 ScheduleCourseEntity owner = findOwner(session, root.getCourses());
                 if (owner != null) {
                     ScheduleSessionEntity row = toSessionEntity(root, session);
@@ -111,6 +114,9 @@ public class ScheduleMapper {
         List<ScheduleSessionEntity> orphans = new ArrayList<>();
         if (schedule == null || schedule.getClasses() == null || root == null) return orphans;
         for (ClassSession session : schedule.getClasses()) {
+            if (session.getStartAt() == null && session.getFinishAt() == null) {
+                continue;
+            }
             if (findOwner(session, root.getCourses()) == null) {
                 orphans.add(toSessionEntity(root, session));
             }

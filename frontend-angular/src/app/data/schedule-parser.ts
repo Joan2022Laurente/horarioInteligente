@@ -113,22 +113,28 @@ export function parseDate(dateStr: string): Date {
 }
 
 export function formatTime(dateStr: string): string {
+  if (!dateStr) return '';
   try {
     const d = parseDate(dateStr);
+    if (isNaN(d.getTime()) || d.getTime() === 0) return '';
     const hours = d.getHours();
     const minutes = d.getMinutes().toString().padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const h12 = hours % 12 || 12;
     return `${h12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
   } catch {
-    return dateStr;
+    return dateStr || '';
   }
 }
 
 export function formatScheduleTimeRange(startStr: string, finishStr: string): string {
+  if (!startStr || !finishStr) return 'Asíncrono / 24/7';
   try {
     const s = parseDate(startStr);
     const f = parseDate(finishStr);
+    if (isNaN(s.getTime()) || s.getTime() === 0 || isNaN(f.getTime()) || f.getTime() === 0) {
+      return 'Asíncrono / 24/7';
+    }
 
     const sHours = s.getHours();
     const sMinutes = s.getMinutes().toString().padStart(2, '0');
@@ -150,11 +156,13 @@ export function formatScheduleTimeRange(startStr: string, finishStr: string): st
 }
 
 export function formatDateShort(dateStr: string): string {
+  if (!dateStr) return '';
   try {
     const d = parseDate(dateStr);
+    if (isNaN(d.getTime()) || d.getTime() === 0) return '';
     return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
   } catch {
-    return dateStr;
+    return dateStr || '';
   }
 }
 
@@ -304,12 +312,13 @@ export function getCurrentAndNextClass(
   let minDiff = Infinity;
   let minutesRemainingCurrent: number | null = null;
 
-  // Filtrar eventos con horas validas y no 'isLongLasting'
-  const regularEvents = events.filter(e => !e.isLongLasting);
+  // Filtrar eventos con horas validas y no 'isLongLasting' ni modalidad asíncrona VT
+  const regularEvents = events.filter(e => !e.isLongLasting && e.modality !== 'VT' && !!e.startAt && !!e.finishAt);
 
   for (const event of regularEvents) {
     const startTime = parseDate(event.startAt).getTime();
     const finishTime = parseDate(event.finishAt).getTime();
+    if (isNaN(startTime) || startTime === 0 || isNaN(finishTime) || finishTime === 0) continue;
 
     // En curso
     if (refTime >= startTime && refTime <= finishTime) {
@@ -344,8 +353,9 @@ export function getEventsForDay(events: UTPEvent[], targetDate: Date): UTPEvent[
 
   return events
     .filter(event => {
-      if (event.isLongLasting) return false;
+      if (event.isLongLasting || event.modality === 'VT' || !event.startAt || !event.finishAt) return false;
       const d = parseDate(event.startAt);
+      if (isNaN(d.getTime()) || d.getTime() === 0) return false;
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
     })
     .sort((a, b) => parseDate(a.startAt).getTime() - parseDate(b.startAt).getTime());
@@ -364,9 +374,9 @@ export function getEventsByDateRange(
 ): UTPEvent[] {
   return events
     .filter(event => {
-      if (event.isLongLasting) return false;
+      if (event.isLongLasting || event.modality === 'VT' || !event.startAt || !event.finishAt) return false;
       const t = parseDate(event.startAt).getTime();
-      return t >= startMs && t < endMs;
+      return !isNaN(t) && t > 0 && t >= startMs && t < endMs;
     })
     .sort((a, b) => parseDate(a.startAt).getTime() - parseDate(b.startAt).getTime());
 }
