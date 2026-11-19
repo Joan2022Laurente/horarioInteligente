@@ -1292,35 +1292,59 @@ public class AcademicToolService {
 
     /**
      * Resuelve el sectionId oficial del estudiante para la asignatura, desde el horario persistido.
-     * Precedencia: ClassSession.sectionId emparejado por código → Course.section por código/nombre.
+     * Soporta coincidencia cruzada por código oficial (p. ej. 100000SI97) o por nombre
+     * (p. ej. Servicios Cloud), ya que la pasarela institucional puede almacenar el nombre de la
+     * asignatura en la columna course_code de las sesiones de clase.
      */
     private String resolveSectionIdForCourse(String studentCode, String courseCode, String courseName) {
         Optional<ScheduleInterval> scheduleOpt =
                 scheduleRepository.findByStudentIdAndPeriod(studentCode, getCurrentPeriod());
-        if (scheduleOpt.isEmpty()) return null;
+        if (scheduleOpt.isEmpty()) {
+            log.warn("[AcademicTool] No se halló horario para [{}] en periodo [{}] al resolver sectionId",
+                    studentCode, getCurrentPeriod());
+            return null;
+        }
         ScheduleInterval schedule = scheduleOpt.get();
         String code = trimToNull(courseCode);
         String name = trimToNull(courseName);
+        String normCode = normalizeTerm(code);
+        String normName = normalizeTerm(name);
 
-        if (schedule.getClasses() != null && code != null) {
+        if (schedule.getClasses() != null) {
             for (ClassSession cl : schedule.getClasses()) {
-                if (code.equalsIgnoreCase(trimToNull(cl.getCourseCode()))) {
+                String clCode = normalizeTerm(cl.getCourseCode());
+                String clName = normalizeTerm(cl.getCourseName());
+                boolean matches = (!normCode.isBlank() && (normCode.equals(clCode) || normCode.equals(clName)))
+                        || (!normName.isBlank() && (normName.equals(clCode) || normName.equals(clName)));
+                if (matches) {
                     String sectionId = trimToNull(cl.getSectionId());
-                    if (sectionId != null) return sectionId;
+                    if (sectionId == null) sectionId = trimToNull(cl.getSection());
+                    if (sectionId != null) {
+                        log.info("[AcademicTool] 🎯 sectionId resuelto desde ClassSession para [code='{}', name='{}']: {}",
+                                code, name, sectionId);
+                        return sectionId;
+                    }
                 }
             }
         }
         if (schedule.getCourses() != null) {
             for (Course c : schedule.getCourses()) {
-                String cCode = trimToNull(c.getCode());
-                String cName = trimToNull(c.getName());
-                if ((code != null && code.equalsIgnoreCase(cCode))
-                        || (name != null && name.equalsIgnoreCase(cName))) {
+                String cCode = normalizeTerm(c.getCode());
+                String cName = normalizeTerm(c.getName());
+                boolean matches = (!normCode.isBlank() && (normCode.equals(cCode) || normCode.equals(cName)))
+                        || (!normName.isBlank() && (normName.equals(cCode) || normName.equals(cName)));
+                if (matches) {
                     String section = trimToNull(c.getSection());
-                    if (section != null) return section;
+                    if (section != null) {
+                        log.info("[AcademicTool] 🎯 sectionId resuelto desde Course para [code='{}', name='{}']: {}",
+                                code, name, section);
+                        return section;
+                    }
                 }
             }
         }
+        log.warn("[AcademicTool] No se pudo resolver sectionId para curso [code='{}', name='{}'] en horario de [{}]",
+                code, name, studentCode);
         return null;
     }
 
