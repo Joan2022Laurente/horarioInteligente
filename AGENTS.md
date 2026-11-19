@@ -22,3 +22,7 @@
 - **Fuente de Verdad Histórica:** Utilizar `engram` (`mem_search`, `mem_context`, `mem_get_observation`) para consultar decisiones previas, incidentes resueltos y restricciones arquitectónicas antes de modificar módulos críticos.
 - **Persistencia Inmediata:** Guardar recuerdos (`mem_save`) al resolver un bug de arquitectura, negociar una regla operativa o descubrir una restricción externa con formato: `Título concreto`, `Causa raíz`, `Solución` y `topic_key` estable (ej. `security/sso-jwks-utp`, `architecture/no-silent-fallbacks`).
 - **Cero Amnesia:** Prohibido asumir que algo "nunca se discutió" sin antes consultar la memoria persistente del proyecto.
+
+## 5. Control de Despliegue y Git (PROHIBICIÓN ESTRICTA DE PUSH)
+- **PROHIBIDO PUSH A REMOTO SIN AUTORIZACIÓN EXPLÍCITA:** Queda terminantemente prohibido ejecutar `git push`, `git push origin ...`, `git push heroku ...` o cualquier comando que envíe código a repositorios remotos o despliegue en producción sin la confirmación y aprobación explícita y directa del usuario en el turno actual.
+- **CAMBIOS CONFINADOS EN LOCAL:** Todo commit, compilación, refactor o fix debe permanecer exclusivamente en el entorno local para revisión y validación del usuario. Jamás asumir que se debe sincronizar con producción o GitHub automáticamente.
