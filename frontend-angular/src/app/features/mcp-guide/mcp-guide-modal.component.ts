@@ -19,7 +19,6 @@ interface McpTool {
 }
 
 const SSE_PATH = '/api/v1/mcp/sse';
-const INFO_PATH = '/api/v1/mcp/info';
 
 const TOOLS: readonly McpTool[] = [
   { name: 'get_today_schedule', description: 'Horario, aulas y docentes de tus clases de hoy.' },
@@ -109,26 +108,26 @@ const PROMPTS: readonly string[] = [
             <!-- URL -->
             <div class="space-y-1.5">
               <label class="text-[11px] font-medium uppercase tracking-wider text-white/40">
-                URL de conexión web
+                URL del servidor MCP (SSE)
               </label>
               <div class="flex items-stretch gap-2">
                 <div
                   class="flex-1 min-w-0 flex items-center px-3 py-2.5 bg-[var(--surface-input)]
                          border border-[var(--border-subtle)] rounded-[var(--r-control-sm)]"
                 >
-                  <span class="font-mono text-[12px] text-white/80 truncate select-all">{{ infoUrl }}</span>
+                  <span class="font-mono text-[12px] text-white/80 truncate select-all">{{ sseUrl }}</span>
                 </div>
                 <button
                   type="button"
-                  (click)="copy('info-url', infoUrl)"
+                  (click)="copy('sse-url', sseUrl)"
                   class="shrink-0 inline-flex items-center gap-1.5 px-3.5 text-[12px] font-medium
                          border transition-colors rounded-[var(--r-control-sm)]"
-                  [class]="copiedKey() === 'info-url'
+                  [class]="copiedKey() === 'sse-url'
                     ? 'bg-[var(--accent-lime)] text-black border-[var(--accent-lime)]'
                     : 'bg-[var(--surface-subtle)] text-white/80 border-[var(--border-medium)] hover:text-white hover:border-white/30'"
                 >
-                  <lucide-icon [name]="copiedKey() === 'info-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
-                  {{ copiedKey() === 'info-url' ? 'Copiado' : 'Copiar URL' }}
+                  <lucide-icon [name]="copiedKey() === 'sse-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
+                  {{ copiedKey() === 'sse-url' ? 'Copiado' : 'Copiar URL' }}
                 </button>
               </div>
             </div>
@@ -255,8 +254,8 @@ const PROMPTS: readonly string[] = [
                     <li class="flex gap-3.5 p-3.5 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-[var(--r-control-md)]">
                       <span class="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-[11px] text-[var(--accent-lime)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] rounded-full">2</span>
                       <p class="text-[13px] leading-relaxed text-white/70">
-                        Al fondo, clic en <strong class="font-medium text-white">Crear nueva acción</strong> &gt;
-                        <strong class="font-medium text-white">Importar desde URL</strong> y pega la URL de conexión web.
+                        En <strong class="font-medium text-white">Conector personalizado</strong> o <strong class="font-medium text-white">Crear nueva acción</strong>,
+                        pega la URL del servidor MCP (SSE).
                       </p>
                     </li>
                     <li class="flex gap-3.5 p-3.5 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-[var(--r-control-md)]">
@@ -367,18 +366,18 @@ const PROMPTS: readonly string[] = [
                       <span class="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-[11px] text-[var(--accent-lime)] bg-[var(--surface-subtle)] border border-[var(--border-medium)] rounded-full">2</span>
                       <div class="min-w-0 flex-1 space-y-2">
                         <p class="text-[13px] leading-relaxed text-white/70">
-                          Copia la URL de conexión y pégala en las instrucciones del conector o Gem para que consulte tus datos.
+                          En <strong class="font-medium text-white">URL del servidor de MCP</strong>, pega la URL SSE de conexión:
                         </p>
                         <button
                           type="button"
-                          (click)="copy('gemini-url', infoUrl)"
+                          (click)="copy('gemini-url', sseUrl)"
                           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border transition-colors rounded-[var(--r-control-sm)]"
                           [class]="copiedKey() === 'gemini-url'
                             ? 'bg-[var(--accent-lime)] text-black border-[var(--accent-lime)]'
                             : 'bg-[var(--surface-subtle)] text-white/80 border-[var(--border-medium)] hover:text-white'"
                         >
                           <lucide-icon [name]="copiedKey() === 'gemini-url' ? 'check' : 'copy'" class="w-3.5 h-3.5"></lucide-icon>
-                          {{ copiedKey() === 'gemini-url' ? 'Copiado' : 'Copiar URL' }}
+                          {{ copiedKey() === 'gemini-url' ? 'Copiado' : 'Copiar URL SSE' }}
                         </button>
                       </div>
                     </li>
@@ -505,7 +504,6 @@ export class McpGuideModalComponent {
   readonly prompts = PROMPTS;
 
   readonly sseUrl = window.location.origin + SSE_PATH;
-  readonly infoUrl = window.location.origin + INFO_PATH;
 
   readonly tab = signal<TabId>('chatgpt');
   readonly copiedKey = signal<string | null>(null);
