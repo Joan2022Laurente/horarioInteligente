@@ -90,6 +90,9 @@ public class ScheduleMapper {
                 ScheduleCourseEntity owner = findOwner(session, root.getCourses());
                 if (owner != null) {
                     ScheduleSessionEntity row = toSessionEntity(root, session);
+                    if (row.getCourseCode() == null && owner.getCourseCode() != null) {
+                        row.setCourseCode(owner.getCourseCode());
+                    }
                     row.setCourse(owner);
                     owner.getSessions().add(row);
                 }
@@ -262,9 +265,17 @@ public class ScheduleMapper {
     }
 
     private ScheduleSessionEntity toSessionEntity(StudentScheduleEntity root, ClassSession session) {
+        String sessionCode = session.getCourseCode();
+        String sessionName = session.getCourseName();
+        if (sessionCode != null && (sessionCode.contains(" ")
+                || (sessionName != null && normalizeTerm(sessionCode).equals(normalizeTerm(sessionName)))
+                || isBogusCode(sessionCode))) {
+            sessionCode = null;
+        }
+
         ScheduleSessionEntity row = ScheduleSessionEntity.builder()
                 .id(rowId(session.getId()))
-                .courseCode(truncateSafely(session.getCourseCode(), 128))
+                .courseCode(truncateSafely(sessionCode, 128))
                 .courseName(truncateSafely(session.getCourseName(), 255))
                 .section(truncateSafely(session.getSection(), 64))
                 .classroom(truncateSafely(session.getClassroom(), 128))

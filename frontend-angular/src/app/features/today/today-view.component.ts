@@ -310,7 +310,7 @@ export type TodayTabSection = 'todayClasses' | 'tasks' | 'evaluations';
             >
               <span class="tab-inner">
                 <span>Clases</span>
-                <span class="tn">{{ remainingClassesCount }}</span>
+                <span class="tn">{{ todayEvents.length }}</span>
               </span>
             </button>
             <button
@@ -1153,9 +1153,14 @@ export class TodayViewComponent implements OnInit, OnDestroy {
   }
 
   getCourseCode(ev: UTPEvent): string {
-    if (ev.metadata?.courseId) return ev.metadata.courseId;
+    const courseId = ev.metadata?.courseId?.trim();
+    const title = (ev.metadata?.courseName || parseEventTitle(ev.title).cleanTitle || ev.title || '').trim();
+    if (courseId && courseId.toLowerCase() !== title.toLowerCase() && !courseId.includes(' ')) {
+      return courseId;
+    }
     const parsed = parseEventTitle(ev.title);
-    return parsed.sectionCode || ev.metadata?.sectionCode || 'UTP';
+    const sec = ev.metadata?.sectionCode || parsed.sectionCode;
+    return sec && sec !== 'UTP' ? sec : '';
   }
 
   getCourseTitle(ev: UTPEvent): string {
